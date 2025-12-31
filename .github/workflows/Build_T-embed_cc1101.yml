@@ -8,6 +8,11 @@ on:
         required: true
         default: 'dev'
         type: string
+      version_name:
+        description: 'Version name (Ninja-Jr 1.0, Ninja-Jr dev, etc)'
+        required: true
+        default: 'Ninja-Jr dev'
+        type: string
 
 jobs:
   compile_sketch:
@@ -15,7 +20,6 @@ jobs:
     runs-on: ubuntu-latest
     env:
       BOARD_ENV: "lilygo-t-embed-cc1101"
-      BRUCE_VERSION: "Ninja-Jr"
 
     steps:
       - name: Checkout repository
@@ -58,12 +62,37 @@ jobs:
       - name: Install PlatformIO and configure version
         run: |
           pip install platformio
-          sed -i "s/-DBRUCE_VERSION=\"[^\"]*\"/-DBRUCE_VERSION=\"${{ env.BRUCE_VERSION }}\"/" ./platformio.ini
           GIT_HASH=$(git describe --always --dirty)
-          sed -i "s|-DGIT_COMMIT_HASH='\"Homebrew\"'|!echo '-DGIT_COMMIT_HASH=\\\\\\\\\"${GIT_HASH}\\\\\\\\\"'|g" ./platformio.ini
+          sed -i "s|-DGIT_COMMIT_HASH='\"Homebrew\"'|!echo '-DGIT_COMMIT_HASH=\\\\\"${GIT_HASH}\\\\\"'|g" ./platformio.ini
 
       - name: Compile for lilygo-t-embed-cc1101
         run: |
+          platformio run -e ${{ env.BOARD_ENV }} --build-flag="-DBRUCE_VERSION=\"${{ github.event.inputs.version_name }}\""
+
+      - name: Save PIO Build Cache
+        uses: actions/cache/save@v4
+        with:
+          path: ${{ github.workspace }}/.pio
+          key: Bruce-pio-${{ env.BOARD_ENV }}-${{ github.run_id }}-${{ github.run_attempt }}
+
+      - name: Upload Binary Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: Bruce-${{ env.BOARD_ENV }}-${{ github.event.inputs.version_name }}
+          path: |
+            Bruce-*.bin
+            Bruce-*.elf
+            Bruce-*.map
+          retention-days: 30
+          if-no-files-found: error
+
+      - name: Display Build Info
+        run: |
+          echo "Build completed successfully!"
+          echo "Environment: ${{ env.BOARD_ENV }}"
+          echo "Version: ${{ github.event.inputs.version_name }}"
+          echo "Git Hash: $(git describe --always --dirty)"
+          ls -la Bruce-*.* 2>/dev/null || echo "No Bruce files found"        run: |
           platformio run -e ${{ env.BOARD_ENV }}
 
       - name: Save PIO Build Cache
