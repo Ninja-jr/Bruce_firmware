@@ -1,3 +1,4 @@
 .gitattributes merge=ours
 .github/workflows/auto-sync.yml merge=ours
-.github/workflows/ninja-jr-*.yml merge=ours
+.github/workflows/Build_T-embed_cc1101_only.yml merge=ours
+.github/workflows/ninja-jr_*.yml merge=ours
