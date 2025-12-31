@@ -24,7 +24,7 @@ jobs:
     name: Build ${{ matrix.board.env }}
     runs-on: ubuntu-latest
     env:
-  VERSION_NAME: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.version_name || github.ref == 'refs/heads/main' && 'Ninja-Jr 1.0' || github.ref == 'refs/heads/dev' && 'Ninja-Jr dev' || github.ref_type == 'tag' && github.ref_name || 'Ninja-Jr' }}
+      VERSION_NAME: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.version_name || github.ref == 'refs/heads/main' && 'Ninja-Jr 1.0' || github.ref == 'refs/heads/dev' && 'Ninja-Jr dev' || github.ref_type == 'tag' && github.ref_name || 'Ninja-Jr' }}
   
     strategy:
       fail-fast: false
