@@ -1,4 +1,4 @@
-name: CYD-2432S028 Build
+name: CYD-2432S028 Build (Single)
 
 on:
   workflow_dispatch:
@@ -9,7 +9,7 @@ on:
         default: 'dev'
         type: string
       version_name:
-        description: 'Version name (CYD Stable, CYD dev, etc)'
+        description: 'Version name (CYD 1.0, CYD dev, etc)'
         required: true
         default: 'CYD dev'
         type: string
@@ -19,7 +19,7 @@ jobs:
     name: Build CYD-2432S028
     runs-on: ubuntu-latest
     env:
-      BOARD_ENV: "cyd-2432s028"
+      BOARD_ENV: "CYD-2432S028"
 
     steps:
       - name: Checkout repository
