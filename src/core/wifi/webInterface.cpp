@@ -29,6 +29,7 @@ AsyncWebServer *server = nullptr;
 const char *host = "bruce";
 String uploadFolder = "";
 static bool mdnsRunning = false;
+static bool forceScreenLogging = false;
 
 String generateToken(int length = 24) {
     String token = "";
@@ -38,6 +39,7 @@ String generateToken(int length = 24) {
 }
 
 void stopWebUi() {
+    forceScreenLogging = false;
     tft.setLogging(false);
     isWebUIActive = false;
     server->end();
@@ -65,7 +67,6 @@ void loopOptionsWebUi() {
         {"my Network", lambdaHelper(startWebUi, false)},
         {"AP mode",    lambdaHelper(startWebUi, true) },
     };
-
     loopOptions(options);
 }
 
@@ -82,7 +83,6 @@ String listFiles(FS &fs, String folder) {
     _webFS = fs;
     File root = fs.open(folder);
     uploadFolder = folder;
-
     while (true) {
         bool isDir;
         String fullPath = root.getNextFileName(&isDir);
@@ -162,7 +162,6 @@ void handleUpload(
                 goto RETRY;
             }
         }
-
         if (len) {
             if (request->hasArg("password")) {
                 static int chunck_no = 0;
@@ -191,7 +190,6 @@ void notFound(AsyncWebServerRequest *request) { request->send(404, "text/plain",
 
 void drawWebUiScreen(bool mode_ap) {
     tft.fillScreen(bruceConfig.bgColor);
-    tft.fillScreen(bruceConfig.bgColor);
     tft.drawRoundRect(5, 5, tftWidth - 10, tftHeight - 10, 5, ALCOLOR);
     if (mode_ap) {
         setTftDisplay(0, 0, bruceConfig.bgColor, FM);
@@ -203,10 +201,8 @@ void drawWebUiScreen(bool mode_ap) {
     if (!mode_ap) txt = WiFi.localIP().toString();
     else txt = WiFi.softAPIP().toString();
     tft.setTextColor(bruceConfig.priColor);
-
     tft.drawCentreString("http://bruce.local", tftWidth / 2, 45, 1);
     setTftDisplay(7, 67);
-
     tft.setTextSize(FM);
     tft.print("IP: ");
     tft.println(txt);
@@ -218,7 +214,6 @@ void drawWebUiScreen(bool mode_ap) {
     tft.setTextColor(TFT_RED);
     tft.setTextSize(FP);
     tft.drawCentreString("press Esc to stop", tftWidth / 2, tftHeight - 2 * LH * FP, 1);
-
 #if defined(HAS_TOUCH)
     TouchFooter();
 #endif
@@ -622,93 +617,53 @@ h1 {
             return;
         }
         
+        forceScreenLogging = true;
+        tft.setLogging(true);
+        drawMainBorder(true);
+        
         const char* navigator_html = R"=====(
 <!DOCTYPE html>
 <html>
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>ESP32 Navigator</title>
+<title>Bruce Navigator</title>
 <style>
-body {
-    margin: 0;
-    background: #000;
-    color: #0f0;
-    font-family: monospace;
-}
-.header {
-    background: #111;
-    padding: 10px;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    border-bottom: 1px solid #0f0;
-}
-.screen {
-    padding: 20px;
-    text-align: center;
-}
-canvas {
-    border: 1px solid #0f0;
-    max-width: 100%;
-}
-.controls {
-    display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    gap: 10px;
-    padding: 20px;
-}
-.nav-btn {
-    background: #111;
-    border: 1px solid #0f0;
-    color: #0f0;
-    padding: 20px;
-    font-size: 18px;
-    cursor: pointer;
-    transition: all 0.2s;
-}
-.nav-btn:hover {
-    background: #0f0;
-    color: #000;
-}
-.small-btn {
-    padding: 12px;
-    font-size: 14px;
-}
-.ok-btn {
-    border-radius: 50%;
-}
-.nav-menu {
-    display: flex;
-    gap: 10px;
-    padding: 10px 20px;
-    background: #111;
-    border-top: 1px solid #0f0;
-}
-.menu-btn {
-    background: #111;
-    border: 1px solid #0f0;
-    color: #0f0;
-    padding: 8px 15px;
-    cursor: pointer;
-    text-decoration: none;
-    font-size: 14px;
-}
-.menu-btn:hover {
-    background: #0f0;
-    color: #000;
-}
+body { margin:0; background:#000; color:#0f0; font-family:monospace; }
+.header { background:#111; padding:10px; display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid #0f0; flex-wrap:wrap; }
+.header-left { font-size:18px; }
+.header-right { display:flex; gap:5px; flex-wrap:wrap; justify-content:flex-end; }
+.screen-container { position:relative; padding:20px; text-align:center; }
+#display { border:1px solid #0f0; max-width:100%; background:#000; }
+#status-overlay { position:absolute; top:20px; left:20px; right:20px; height:20px; color:#0f0; font-size:12px; display:flex; justify-content:space-between; }
+#menu-icons { position:absolute; top:40px; left:20px; display:flex; flex-direction:column; gap:5px; }
+.controls { display:grid; grid-template-columns:repeat(3, 1fr); gap:10px; padding:20px; }
+.nav-btn { background:#111; border:1px solid #0f0; color:#0f0; padding:20px; font-size:18px; cursor:pointer; transition:all 0.2s; }
+.nav-btn:hover { background:#0f0; color:#000; }
+.small-btn { padding:12px; font-size:14px; }
+.ok-btn { border-radius:50%; }
+.nav-menu { display:flex; gap:10px; padding:10px 20px; background:#111; border-top:1px solid #0f0; flex-wrap:wrap; }
+.menu-btn { background:#111; border:1px solid #0f0; color:#0f0; padding:8px 12px; cursor:pointer; text-decoration:none; font-size:13px; }
+.menu-btn:hover { background:#0f0; color:#000; }
+.status-bar { padding:5px 10px; background:#111; border-top:1px solid #0f0; font-size:12px; color:#888; }
+.icon-img { width:32px; height:32px; image-rendering:pixelated; }
 </style>
 </head>
 <body>
 <div class="header">
-    <div>🎮 ESP32 Navigator</div>
-    <div>
-        <a href="/" class="menu-btn" style="margin-left: auto;">Switch Interface</a>
+    <div class="header-left">🦈 Bruce Navigator</div>
+    <div class="header-right">
+        <a href="/" class="menu-btn">Switch</a>
         <a href="/logout" class="menu-btn">Logout</a>
     </div>
 </div>
-<div class="screen">
+<div class="screen-container">
+    <div id="status-overlay">
+        <span id="time">--:--</span>
+        <span id="battery">100%</span>
+        <span id="wifi-status">WiFi: --</span>
+    </div>
+    <div id="menu-icons"></div>
     <canvas id="display" width="320" height="240"></canvas>
 </div>
 <div class="controls">
@@ -722,61 +677,135 @@ canvas {
     <button class="nav-btn" data-cmd="nav down">↓</button>
     <div></div>
     <button class="nav-btn small-btn" data-cmd="nav esc">Back</button>
-    <button class="nav-btn small-btn" data-cmd="nav menu">Menu</button>
-    <button class="nav-btn small-btn" data-cmd="nav nextpage">Pg↓</button>
+    <button class="nav-btn small-btn" data-cmd="nav menu" style="order:2;">Menu</button>
+    <div></div>
 </div>
 <div class="nav-menu">
     <button class="menu-btn" onclick="refreshScreen()">🔄 Refresh</button>
-    <button class="menu-btn" onclick="toggleAutoRefresh()">⏱️ Auto-refresh: <span id="autoRefreshStatus">Off</span></button>
-    <a href="/logout" class="menu-btn">🚪 Exit</a>
+    <button class="menu-btn" onclick="forceRedraw()">🖼️ Force Redraw</button>
+    <button class="menu-btn" onclick="toggleAutoRefresh()">⏱️ Auto: <span id="autoRefreshStatus">Off</span></button>
+    <button class="menu-btn" onclick="loadThemeIcons()">🎨 Load Icons</button>
 </div>
+<div class="status-bar" id="status">Status: Loading...</div>
 <script>
 const canvas = document.getElementById('display');
 const ctx = canvas.getContext('2d');
 let autoRefreshInterval = null;
 let autoRefreshEnabled = false;
+let currentTheme = null;
+let menuIcons = {};
 
 async function sendCommand(cmd) {
     try {
         const form = new FormData();
         form.append('cmnd', cmd);
         const response = await fetch('/cm', { method: 'POST', body: form });
-        if (!response.ok) {
-            throw new Error(`Command failed: ${response.status}`);
-        }
+        if (!response.ok) throw new Error(`Command failed: ${response.status}`);
+        document.getElementById('status').textContent = `Status: Sent "${cmd}"`;
         setTimeout(updateScreen, 200);
     } catch (error) {
         console.error('Command failed:', error);
-        alert(`Command failed: ${error.message}`);
+        document.getElementById('status').textContent = `Status: Error - ${error.message}`;
     }
 }
 
 async function updateScreen() {
     try {
-        const response = await fetch('/getscreen', {
+        document.getElementById('status').textContent = 'Status: Updating...';
+        
+        await fetch('/forceredraw');
+        
+        const screenResponse = await fetch('/getscreen', {
             method: 'GET',
-            cache: 'no-cache',
-            headers: {
-                'Cache-Control': 'no-cache'
-            }
+            headers: { 'Cache-Control': 'no-cache' }
         });
         
-        if (!response.ok) {
-            throw new Error(`HTTP ${response.status}: ${await response.text()}`);
-        }
+        if (!screenResponse.ok) throw new Error(`Screen: HTTP ${screenResponse.status}`);
         
-        const buffer = await response.arrayBuffer();
+        const buffer = await screenResponse.arrayBuffer();
         if (buffer.byteLength === 0) {
-            console.warn('Empty screen data received');
-            drawPlaceholder();
+            drawPlaceholder("No screen data");
             return;
         }
         
         renderTFT(new Uint8Array(buffer));
+        
+        await updateStatus();
+        
+        document.getElementById('status').textContent = 'Status: Updated';
     } catch (error) {
-        console.error('Screen update failed:', error);
+        console.error('Update failed:', error);
         drawError(error.message);
+        document.getElementById('status').textContent = `Status: Error - ${error.message}`;
     }
+}
+
+async function updateStatus() {
+    try {
+        const response = await fetch('/statusdata');
+        if (!response.ok) return;
+        
+        const data = await response.json();
+        
+        if (data.time) {
+            document.getElementById('time').textContent = data.time;
+        }
+        
+        let batteryText = `${data.battery || 100}%`;
+        if (data.charging) batteryText += " ⚡";
+        document.getElementById('battery').textContent = batteryText;
+        
+        let wifiText = "WiFi: ";
+        if (data.wifi) {
+            wifiText += data.ssid ? data.ssid.substring(0, 10) : "Connected";
+        } else {
+            wifiText += "Off";
+        }
+        document.getElementById('wifi-status').textContent = wifiText;
+        
+    } catch (error) {
+        console.error('Status update failed:', error);
+    }
+}
+
+async function loadThemeIcons() {
+    try {
+        document.getElementById('status').textContent = 'Status: Loading theme...';
+        
+        const themeResponse = await fetch('/themeinfo');
+        if (!themeResponse.ok) return;
+        
+        const themeData = await themeResponse.json();
+        currentTheme = themeData;
+        
+        if (themeData.currentMenu) {
+            const iconResponse = await fetch(`/menuicon?menu=${encodeURIComponent(themeData.currentMenu)}`);
+            if (iconResponse.ok) {
+                const blob = await iconResponse.blob();
+                const img = new Image();
+                img.onload = () => {
+                    const iconContainer = document.getElementById('menu-icons');
+                    iconContainer.innerHTML = '';
+                    const imgElem = document.createElement('img');
+                    imgElem.src = img.src;
+                    imgElem.className = 'icon-img';
+                    imgElem.title = themeData.currentMenu;
+                    iconContainer.appendChild(imgElem);
+                };
+                img.src = URL.createObjectURL(blob);
+            }
+        }
+        
+        document.getElementById('status').textContent = 'Status: Theme loaded';
+    } catch (error) {
+        console.error('Theme load failed:', error);
+    }
+}
+
+async function forceRedraw() {
+    document.getElementById('status').textContent = 'Status: Forcing redraw...';
+    await fetch('/forceredraw');
+    setTimeout(updateScreen, 300);
 }
 
 function refreshScreen() {
@@ -805,7 +834,7 @@ function color565toCSS(color565) {
 
 function renderTFT(data) {
     if (!data || data.length === 0) {
-        console.error('No screen data received');
+        drawPlaceholder("No data");
         return;
     }
     
@@ -814,7 +843,7 @@ function renderTFT(data) {
     
     while (offset < data.length) {
         if (data[offset] !== 0xAA) {
-            console.warn('Invalid packet start byte at offset', offset);
+            console.warn('Invalid packet at offset', offset);
             break;
         }
         
@@ -822,10 +851,7 @@ function renderTFT(data) {
         const size = data[offset + 1];
         const fn = data[offset + 2];
         
-        if (offset + size > data.length) {
-            console.warn('Packet extends beyond data length');
-            break;
-        }
+        if (offset + size > data.length) break;
         
         const packet = data.slice(offset, offset + size);
         offset += size;
@@ -886,12 +912,14 @@ function processCommand(fn, data) {
             const fg = readShort();
             const bg = readShort();
             const text = readString(data.length - idx);
+            
             ctx.fillStyle = color565toCSS(bg);
             const fw = size === 3 ? 13.5 : size === 2 ? 9 : 4.5;
             let offset = 0;
             if (fn === 15) offset = text.length * fw;
             if (fn === 14) offset = text.length * fw / 2;
             ctx.fillRect(x3 - offset, y3, text.length * fw, size * 8);
+            
             ctx.fillStyle = color565toCSS(fg);
             ctx.font = `${size * 8}px monospace`;
             ctx.textBaseline = 'top';
@@ -904,8 +932,6 @@ function processCommand(fn, data) {
 }
 
 function drawError(message) {
-    const canvas = document.getElementById('display');
-    const ctx = canvas.getContext('2d');
     ctx.fillStyle = '#000';
     ctx.fillRect(0, 0, canvas.width, canvas.height);
     ctx.fillStyle = '#f00';
@@ -916,9 +942,7 @@ function drawError(message) {
     ctx.fillText('Try refreshing manually', canvas.width/2, canvas.height/2 + 20);
 }
 
-function drawPlaceholder() {
-    const canvas = document.getElementById('display');
-    const ctx = canvas.getContext('2d');
+function drawPlaceholder(message) {
     const gradient = ctx.createLinearGradient(0, 0, canvas.width, canvas.height);
     gradient.addColorStop(0, '#111');
     gradient.addColorStop(1, '#222');
@@ -931,13 +955,25 @@ function drawPlaceholder() {
     ctx.font = '16px monospace';
     ctx.fillText('BRUCE NAVIGATOR', canvas.width/2, canvas.height/2);
     ctx.font = '12px monospace';
-    ctx.fillText('No screen data available', canvas.width/2, canvas.height/2 + 25);
+    ctx.fillText(message, canvas.width/2, canvas.height/2 + 25);
     ctx.fillText('Navigate to refresh', canvas.width/2, canvas.height/2 + 45);
 }
 
 document.addEventListener('DOMContentLoaded', function() {
     updateScreen();
-    setTimeout(updateScreen, 2000);
+    loadThemeIcons();
+    updateStatus();
+    
+    setTimeout(() => {
+        sendCommand('nav menu');
+        setTimeout(() => {
+            sendCommand('nav esc');
+            setTimeout(() => {
+                updateScreen();
+                loadThemeIcons();
+            }, 500);
+        }, 300);
+    }, 1000);
 });
 
 document.querySelectorAll('.nav-btn').forEach(btn => {
@@ -948,17 +984,10 @@ document.querySelectorAll('.nav-btn').forEach(btn => {
 
 document.addEventListener('keydown', (e) => {
     const keyMap = {
-        'ArrowUp': 'nav up',
-        'ArrowDown': 'nav down',
-        'ArrowLeft': 'nav prev',
-        'ArrowRight': 'nav next',
-        'Enter': 'nav sel',
-        'Escape': 'nav esc',
-        'Backspace': 'nav esc',
-        'm': 'nav menu',
-        'M': 'nav menu',
-        'PageUp': 'nav prevpage',
-        'PageDown': 'nav nextpage'
+        'ArrowUp': 'nav up', 'ArrowDown': 'nav down',
+        'ArrowLeft': 'nav prev', 'ArrowRight': 'nav next',
+        'Enter': 'nav sel', 'Escape': 'nav esc',
+        'Backspace': 'nav esc', 'm': 'nav menu', 'M': 'nav menu'
     };
     if (keyMap[e.key]) {
         e.preventDefault();
@@ -968,19 +997,104 @@ document.addEventListener('keydown', (e) => {
         e.preventDefault();
         refreshScreen();
     }
-    if (e.key === 'a' || e.key === 'A') {
+    if (e.key === 'f' || e.key === 'F') {
         e.preventDefault();
-        toggleAutoRefresh();
+        forceRedraw();
+    }
+    if (e.key === 't' || e.key === 'T') {
+        e.preventDefault();
+        loadThemeIcons();
     }
 });
 </script>
 </body>
 </html>
-        )=====";
+)=====";
         
         request->send(200, "text/html", navigator_html);
     });
 #endif
+
+    server->on("/themeinfo", HTTP_GET, [](AsyncWebServerRequest *request) {
+        if (checkUserWebAuth(request)) {
+            JsonDocument doc;
+            doc["theme"] = bruceConfig.themePath;
+            doc["themeFS"] = bruceConfig.theme.fs;
+            
+            String json;
+            serializeJson(doc, json);
+            request->send(200, "application/json", json);
+        }
+    });
+
+    server->on("/menuicon", HTTP_GET, [](AsyncWebServerRequest *request) {
+        if (checkUserWebAuth(request) && request->hasArg("menu")) {
+            String menuName = request->arg("menu");
+            FS *fs = bruceConfig.themeFS();
+            
+            String imagePath;
+            if (menuName == "Bluetooth") imagePath = bruceConfig.getThemeItemImg(bruceConfig.theme.paths.ble);
+            else if (menuName == "WiFi") imagePath = bruceConfig.getThemeItemImg(bruceConfig.theme.paths.wifi);
+            else if (menuName == "Files") imagePath = bruceConfig.getThemeItemImg(bruceConfig.theme.paths.file);
+            
+            if (!imagePath.isEmpty() && fs->exists(imagePath)) {
+                request->send(*fs, imagePath, "image/png");
+            } else {
+                request->send(404, "text/plain", "Icon not found");
+            }
+        }
+    });
+
+    server->on("/statusdata", HTTP_GET, [](AsyncWebServerRequest *request) {
+        if (checkUserWebAuth(request)) {
+            JsonDocument doc;
+            
+            doc["battery"] = 100;
+            doc["charging"] = false;
+            
+            doc["wifi"] = WiFi.status() == WL_CONNECTED;
+            if (WiFi.getMode() == WIFI_MODE_AP || WiFi.getMode() == WIFI_MODE_APSTA) {
+                doc["wifiMode"] = "AP";
+                doc["ssid"] = WiFi.softAPSSID();
+            } else {
+                doc["wifiMode"] = "STA";
+                doc["ssid"] = WiFi.SSID();
+            }
+            
+            doc["ble"] = BLEConnected;
+            doc["time"] = "12:00";
+            
+            doc["width"] = tftWidth;
+            doc["height"] = tftHeight;
+            doc["logging"] = tft.getLogging();
+            
+            String json;
+            serializeJson(doc, json);
+            request->send(200, "application/json", json);
+        }
+    });
+
+    server->on("/forceredraw", HTTP_GET, [](AsyncWebServerRequest *request) {
+        if (checkUserWebAuth(request)) {
+            drawMainBorder(true);
+            drawStatusBar();
+            request->send(200, "text/plain", "Screen redrawn");
+        }
+    });
+
+    server->on("/screenstatus", HTTP_GET, [](AsyncWebServerRequest *request) {
+        if (checkUserWebAuth(request)) {
+            String status = "Screen logging: ";
+            status += tft.getLogging() ? "active" : "inactive";
+            status += "\nHeap: ";
+            status += String(esp_get_free_heap_size());
+            status += "\nWebUI active: ";
+            status += isWebUIActive ? "yes" : "no";
+            status += "\nForce logging: ";
+            status += forceScreenLogging ? "yes" : "no";
+            request->send(200, "text/plain", status);
+        }
+    });
 
     server->on("/systeminfo", HTTP_GET, [](AsyncWebServerRequest *request) {
         if (checkUserWebAuth(request)) {
@@ -1066,11 +1180,22 @@ document.addEventListener('keydown', (e) => {
         if (!checkUserWebAuth(request)) { return; }
         if (request->hasArg("cmnd")) {
             String cmnd = request->arg("cmnd");
+            
+            if (cmnd == "refresh screen" || cmnd == "redraw") {
+                drawMainBorder(true);
+                request->send(200, "text/plain", "Screen refreshed");
+                return;
+            }
+            
             if (cmnd.startsWith("nav")) {
                 if (cmnd.startsWith("nav menu")) {
                     returnToMenu = true;
                     AnyKeyPress = true;
                     SerialCmdPress = true;
+                    
+                    drawMainBorder(true);
+                    drawStatusBar();
+                    
                     request->send(200, "text/plain", "command " + cmnd + " success");
                     return;
                 }
@@ -1295,12 +1420,17 @@ void startWebUi(bool mode_ap) {
 
         new (server) AsyncWebServer(default_webserverporthttp);
 
+        forceScreenLogging = true;
+        
         configureWebServer();
 
         isWebUIActive = true;
     }
-    tft.setLogging();
+    
+    tft.setLogging(true);
+    
     drawWebUiScreen(mode_ap);
+    
 #ifdef HAS_SCREEN
     while (!check(EscPress)) {
         vTaskDelay(pdMS_TO_TICKS(70));
