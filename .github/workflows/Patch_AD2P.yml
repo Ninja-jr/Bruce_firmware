@@ -91,7 +91,7 @@ jobs:
         if: failure() && env.SHOULD_PATCH == 'true'
         id: check_a2dp
         run: |
-          HEADER=$(find .pio -name "BluetoothA2DPCommon.h" -type f 2>/dev/null | head -1)
+          HEADER=".pio/libdeps/${{ env.BOARD_ENV }}/ESP32-A2DP/src/BluetoothA2DPCommon.h"
           if [ -f "$HEADER" ]; then
             echo "header_path=$HEADER" >> $GITHUB_OUTPUT
             if grep -q "#error" "$HEADER"; then
