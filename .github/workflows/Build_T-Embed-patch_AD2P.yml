@@ -82,7 +82,7 @@ jobs:
         run: |
           pip install platformio
           sed -i "s/-DBRUCE_VERSION=/-DBRUCE_VERSION='\"${{ github.event.inputs.version_name }}\"' ; /g" ./platformio.ini
-          GIT_HASH=$(git describe --always --dirty)
+          GIT_HASH=$(git describe --always --dirty 2>/dev/null || echo "unknown")
           sed -i "s|-DGIT_COMMIT_HASH='\"Homebrew\"'|!echo '-DGIT_COMMIT_HASH=\\\\\\\\\"${GIT_HASH}\\\\\\\\\"'|g" ./platformio.ini
 
       - name: Compile for lilygo-t-embed-cc1101
@@ -90,27 +90,27 @@ jobs:
         run: |
           platformio run -e ${{ env.BOARD_ENV }}
 
-      - name: Debug A2DP Platform on Failure
+      - name: Check A2DP Error
         if: failure() && env.SHOULD_PATCH == 'true'
-        id: debug_a2dp
+        id: check_a2dp
         run: |
           HEADER=$(find .pio -name "BluetoothA2DPCommon.h" -type f 2>/dev/null | head -1)
           if [ -f "$HEADER" ]; then
-            ERROR_CONTEXT=$(grep -n "#error" "$HEADER" -B20 -A5)
-            echo "error_context<<EOF" >> $GITHUB_OUTPUT
-            echo "$ERROR_CONTEXT" >> $GITHUB_OUTPUT
-            echo "EOF" >> $GITHUB_OUTPUT
             echo "header_path=$HEADER" >> $GITHUB_OUTPUT
-            PLATFORM_LOGIC=$(sed -n '20,60p' "$HEADER")
-            echo "platform_logic<<EOF" >> $GITHUB_OUTPUT
-            echo "$PLATFORM_LOGIC" >> $GITHUB_OUTPUT
-            echo "EOF" >> $GITHUB_OUTPUT
+            if grep -q "#error" "$HEADER"; then
+              echo "has_error=true" >> $GITHUB_OUTPUT
+            else
+              echo "has_error=false" >> $GITHUB_OUTPUT
+            fi
+          else
+            echo "header_path=" >> $GITHUB_OUTPUT
+            echo "has_error=false" >> $GITHUB_OUTPUT
           fi
 
       - name: Create Patched A2DP Library
-        if: steps.debug_a2dp.outputs.header_path && env.SHOULD_PATCH == 'true'
+        if: steps.check_a2dp.outputs.header_path && steps.check_a2dp.outputs.has_error == 'true' && env.SHOULD_PATCH == 'true'
         run: |
-          ORIG_HEADER="${{ steps.debug_a2dp.outputs.header_path }}"
+          ORIG_HEADER="${{ steps.check_a2dp.outputs.header_path }}"
           ORIG_DIR=$(dirname "$ORIG_HEADER")
           PATCHED_DIR="lib/ESP32-A2DP-patched"
           mkdir -p "$PATCHED_DIR/src"
@@ -118,7 +118,7 @@ jobs:
           PATCHED_HEADER="$PATCHED_DIR/src/BluetoothA2DPCommon.h"
           if [ -f "$PATCHED_HEADER" ]; then
             cp "$PATCHED_HEADER" "$PATCHED_HEADER.bak"
-            sed -i '33s/#error.*$/\/\/ [PATCHED] #error "Platform check disabled"/' "$PATCHED_HEADER"
+            sed -i '33s/#error.*$/\/\/ [PATCHED] #error "Platform check disabled"/' "$PATCHED_HEADER" 2>/dev/null || true
             sed -i 's/#if defined(ARDUINO_ARCH_ESP32)/#if 1 \/\/ [PATCHED] Force platform/' "$PATCHED_HEADER" 2>/dev/null || true
             sed -i 's/#ifdef ARDUINO/#if 1 \/\/ [PATCHED] Force ARDUINO/' "$PATCHED_HEADER" 2>/dev/null || true
           fi
@@ -145,7 +145,7 @@ jobs:
 EOF
 
       - name: Update platformio.ini with Patched Library
-        if: steps.debug_a2dp.outputs.header_path && env.SHOULD_PATCH == 'true'
+        if: steps.check_a2dp.outputs.header_path && steps.check_a2dp.outputs.has_error == 'true' && env.SHOULD_PATCH == 'true'
         run: |
           cp platformio.ini platformio.ini.backup
           sed -i 's|pschatzmann/ESP32-A2DP.*|./lib/ESP32-A2DP-patched|g' platformio.ini
@@ -153,14 +153,13 @@ EOF
           sed -i 's|pschatzmann/esp32-a2dp.*|./lib/ESP32-A2DP-patched|g' platformio.ini
 
       - name: Commit and Push Patched Library
-        if: steps.debug_a2dp.outputs.header_path && env.SHOULD_PATCH == 'true'
+        if: steps.check_a2dp.outputs.header_path && steps.check_a2dp.outputs.has_error == 'true' && env.SHOULD_PATCH == 'true'
         env:
           GITHUB_TOKEN: ${{ secrets.SYNC_PAT }}
         run: |
           git config --global user.name "github-actions[bot]"
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
-          CURRENT_BRANCH="${{ github.head_ref || github.ref_name }}"
-          CURRENT_BRANCH=${CURRENT_BRANCH#refs/heads/}
+          CURRENT_BRANCH="${GITHUB_HEAD_REF:-${GITHUB_REF#refs/heads/}}"
           git checkout "$CURRENT_BRANCH"
           git add lib/ESP32-A2DP-patched/
           git add platformio.ini
@@ -177,7 +176,7 @@ EOF
           fi
 
       - name: Retry Build with Patched Library
-        if: steps.debug_a2dp.outputs.header_path && env.SHOULD_PATCH == 'true'
+        if: steps.check_a2dp.outputs.header_path && steps.check_a2dp.outputs.has_error == 'true' && env.SHOULD_PATCH == 'true'
         run: |
           platformio run -e ${{ env.BOARD_ENV }}
 
@@ -203,11 +202,11 @@ EOF
       - name: Display Build Info
         if: always()
         run: |
-          if [ -f "Bruce-*.bin" ]; then
+          if ls Bruce-*.bin 1> /dev/null 2>&1; then
             echo "Build successful!"
             echo "Environment: ${{ env.BOARD_ENV }}"
             echo "Version: ${{ github.event.inputs.version_name }}"
-            echo "Git Hash: $(git describe --always --dirty)"
+            echo "Git Hash: $(git describe --always --dirty 2>/dev/null || echo 'unknown')"
             ls -la Bruce-*.* 2>/dev/null || echo "No Bruce files"
           else
             echo "Build failed"
