@@ -76,7 +76,7 @@ void _setup_gpio() {
         PPM.getChargerConstantCurr();
         Serial.printf("getChargerConstantCurr: %d mA\n", (int)PPM.getChargerConstantCurr());
         PPM.enableMeasure(PowersBQ25896::CONTINUOUS);
-        PPM.disableOTG();
+        PPM.enableOTG(); // Fixes Dead Display on some devices!
         PPM.enableCharge();
     }
     if (bq.getDesignCap() != BATTERY_DESIGN_CAPACITY) { bq.setDesignCap(BATTERY_DESIGN_CAPACITY); }
@@ -193,7 +193,7 @@ void InputHandler(void) {
     if (esc == BTN_ACT) {
         AnyKeyPress = true;
         EscPress = true;
-        Serial.println("EscPressed");
+        // Serial.println("EscPressed");
         tm = millis();
     }
 }

@@ -22,6 +22,9 @@ StartupApp startupApp;
 MainMenu mainMenu;
 SPIClass sdcardSPI;
 #ifdef USE_HSPI_PORT
+#ifndef VSPI
+#define VSPI FSPI
+#endif
 SPIClass CC_NRF_SPI(VSPI);
 #else
 SPIClass CC_NRF_SPI(HSPI);
@@ -103,11 +106,10 @@ char timeStr[12];
 time_t localTime;
 struct tm *timeInfo;
 #if defined(HAS_RTC)
-#if defined(HAS_RTC_BM8563)
-cplus_RTC _rtc;
-#endif
 #if defined(HAS_RTC_PCF85063A)
 pcf85063_RTC _rtc;
+#else
+cplus_RTC _rtc;
 #endif
 RTC_TimeTypeDef _time;
 RTC_DateTypeDef _date;
@@ -121,8 +123,8 @@ std::vector<Option> options;
 // Protected global variables
 #if defined(HAS_SCREEN)
 tft_logger tft = tft_logger(); // Invoke custom library
-TFT_eSprite sprite = TFT_eSprite(&tft);
-TFT_eSprite draw = TFT_eSprite(&tft);
+tft_sprite sprite = tft_sprite(&tft);
+tft_sprite draw = tft_sprite(&tft);
 volatile int tftWidth = TFT_HEIGHT;
 #ifdef HAS_TOUCH
 volatile int tftHeight =

@@ -26,13 +26,12 @@
 extern io_expander ioExpander;
 
 #if defined(HAS_RTC)
-#if defined(HAS_RTC_BM8563)
-#include "../lib/RTC/cplus_RTC.h"
-extern cplus_RTC _rtc;
-#endif
 #if defined(HAS_RTC_PCF85063A)
 #include "../lib/RTC/pcf85063_RTC.h"
 extern pcf85063_RTC _rtc;
+#else
+#include "../lib/RTC/cplus_RTC.h"
+extern cplus_RTC _rtc;
 #endif
 extern RTC_TimeTypeDef _time;
 extern RTC_DateTypeDef _date;
@@ -40,10 +39,11 @@ extern RTC_DateTypeDef _date;
 
 // Declaração dos objetos TFT
 #if defined(HAS_SCREEN)
+#include <display/tft.h>
 #include <tftLogger.h>
 extern tft_logger tft;
-extern TFT_eSprite sprite;
-extern TFT_eSprite draw;
+extern tft_sprite sprite;
+extern tft_sprite draw;
 #else
 #include <tftLogger.h>
 extern tft_logger tft;
