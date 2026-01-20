@@ -87,19 +87,44 @@ jobs:
         run: |
           platformio run -e ${{ env.BOARD_ENV }}
 
+      - name: Debug A2DP Library Location
+        if: failure() && env.SHOULD_PATCH == 'true'
+        run: |
+          echo "=== DEBUG: Current directory ==="
+          pwd
+          echo ""
+          echo "=== DEBUG: Listing .pio ==="
+          ls -la .pio/ 2>/dev/null || echo "No .pio directory"
+          echo ""
+          echo "=== DEBUG: Listing .pio/libdeps ==="
+          ls -la .pio/libdeps/ 2>/dev/null || echo "No .pio/libdeps directory"
+          echo ""
+          echo "=== DEBUG: Looking for ESP32-A2DP ==="
+          find . -name "ESP32-A2DP" -type d 2>/dev/null
+          echo ""
+          echo "=== DEBUG: Looking for BluetoothA2DPCommon.h ==="
+          find . -name "BluetoothA2DPCommon.h" -type f 2>/dev/null
+
       - name: Check A2DP Error
         if: failure() && env.SHOULD_PATCH == 'true'
         id: check_a2dp
         run: |
-          HEADER=".pio/libdeps/${{ env.BOARD_ENV }}/ESP32-A2DP/src/BluetoothA2DPCommon.h"
+          # Try to find the header
+          HEADER=$(find . -name "BluetoothA2DPCommon.h" -type f 2>/dev/null | head -1)
+          
           if [ -f "$HEADER" ]; then
+            echo "Found header at: $HEADER"
             echo "header_path=$HEADER" >> $GITHUB_OUTPUT
             if grep -q "#error" "$HEADER"; then
               echo "has_error=true" >> $GITHUB_OUTPUT
+              echo "Header contains #error on line 33"
+              # Show the error line
+              sed -n '30,36p' "$HEADER"
             else
               echo "has_error=false" >> $GITHUB_OUTPUT
             fi
           else
+            echo "No header file found anywhere!"
             echo "header_path=" >> $GITHUB_OUTPUT
             echo "has_error=false" >> $GITHUB_OUTPUT
           fi
