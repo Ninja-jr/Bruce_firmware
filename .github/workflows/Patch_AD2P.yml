@@ -78,7 +78,6 @@ jobs:
       - name: Create Clean Build Environment
         run: |
           cp platformio.ini platformio.ini.original
-          
           sed -i '/-DCONFIG_BT_ENABLED=1/d' platformio.ini
           sed -i '/-DCONFIG_CLASSIC_BT_ENABLED=1/d' platformio.ini
           sed -i '/-DCONFIG_BT_A2DP_ENABLED=1/d' platformio.ini
@@ -108,13 +107,8 @@ jobs:
       - name: Debug A2DP Library Location
         if: failure() && env.SHOULD_PATCH == 'true'
         run: |
-          echo "=== DEBUG: Current directory ==="
           pwd
-          echo ""
-          echo "=== DEBUG: Looking for ESP32-A2DP ==="
           find . -name "ESP32-A2DP" -type d 2>/dev/null
-          echo ""
-          echo "=== DEBUG: Looking for BluetoothA2DPCommon.h ==="
           find . -name "BluetoothA2DPCommon.h" -type f 2>/dev/null | head -5
 
       - name: Check A2DP Error
@@ -139,10 +133,8 @@ jobs:
         run: |
           HEADER_PATH=$(cat header_path.txt 2>/dev/null || echo "")
           HAS_ERROR=$(cat has_error.txt 2>/dev/null || echo "false")
-          
           if [ -n "$HEADER_PATH" ] && [ "$HAS_ERROR" = "true" ]; then
             rm -rf "lib/ESP32-A2DP-patched" 2>/dev/null || true
-            echo "✅ Cleaned previous patch"
           fi
 
       - name: Create Patched A2DP Library
@@ -155,10 +147,7 @@ jobs:
             PATCHED_DIR="lib/ESP32-A2DP-patched"
             mkdir -p "$PATCHED_DIR"
             
-            echo "=== CLONING ESP32-A2DP ==="
             git clone --depth 1 https://github.com/pschatzmann/ESP32-A2DP.git "$PATCHED_DIR"
-            
-            echo "=== DOWNLOADING ESP-IDF v4.3 HEADERS ==="
             
             ESP_IDF_BASE="https://raw.githubusercontent.com/espressif/esp-idf/release/v4.3"
             
@@ -171,10 +160,7 @@ jobs:
                 return 0
               fi
               
-              echo "  Downloading: $header_name"
-              
               if [[ "$header_name" == "sdkconfig.h" ]]; then
-                echo "    ✗ sdkconfig.h is generated, creating stub"
                 echo '#pragma once' > "$output_path"
                 echo '#define CONFIG_BT_ENABLED 1' >> "$output_path"
                 echo '#define CONFIG_CLASSIC_BT_ENABLED 1' >> "$output_path"
@@ -211,12 +197,9 @@ jobs:
               for path in "${search_paths[@]}"; do
                 local url="$ESP_IDF_BASE/$path"
                 if curl -L -s -f -o "$output_path" "$url" 2>/dev/null; then
-                  echo "    ✓ From: $path"
                   return 0
                 fi
               done
-              
-              echo "    ✗ Not found, creating stub"
               
               case "$header_name" in
                 "esp_err.h")
@@ -239,7 +222,6 @@ jobs:
                   ;;
                 *)
                   echo '#pragma once' > "$output_path"
-                  echo "// Stub for $header_name" >> "$output_path"
                   ;;
               esac
               
@@ -291,45 +273,32 @@ jobs:
               download_header "$header" "$PATCHED_DIR/esp_idf_headers"
             done
             
-            echo "=== CREATING BLUETOOTH CONFIG FILE ==="
-            
-            cat > "$PATCHED_DIR/esp_idf_headers/whisperpair_bluetooth_config.h" << 'END'
-#pragma once
-
-#define CONFIG_BT_ENABLED 1
-#define CONFIG_CLASSIC_BT_ENABLED 1
-#define CONFIG_BT_A2DP_ENABLED 1
-#define CONFIG_BT_AVRC_ENABLED 1
-#define CONFIG_BT_SSP_ENABLED 1
-#define CONFIG_BT_BLE_ENABLED 0
-#define CONFIG_BT_BLUEDROID_ENABLED 1
-#define CONFIG_BT_STACK_NO_LOG 1
-
-#define configNUMBER_OF_CORES 2
-#define configMAX_TASK_NAME_LEN 16
-#define configTASK_NOTIFICATION_ARRAY_ENTRIES 1
-
-#define ARDUINO_ARCH_ESP32 1
-#define CONFIG_IDF_TARGET_ESP32 1
-#define IDF_VER "4.3.7"
-END
-            
-            echo "=== PATCHING A2DP LIBRARY ==="
+            echo '#pragma once' > "$PATCHED_DIR/esp_idf_headers/whisperpair_bluetooth_config.h"
+            echo '#define CONFIG_BT_ENABLED 1' >> "$PATCHED_DIR/esp_idf_headers/whisperpair_bluetooth_config.h"
+            echo '#define CONFIG_CLASSIC_BT_ENABLED 1' >> "$PATCHED_DIR/esp_idf_headers/whisperpair_bluetooth_config.h"
+            echo '#define CONFIG_BT_A2DP_ENABLED 1' >> "$PATCHED_DIR/esp_idf_headers/whisperpair_bluetooth_config.h"
+            echo '#define CONFIG_BT_AVRC_ENABLED 1' >> "$PATCHED_DIR/esp_idf_headers/whisperpair_bluetooth_config.h"
+            echo '#define CONFIG_BT_SSP_ENABLED 1' >> "$PATCHED_DIR/esp_idf_headers/whisperpair_bluetooth_config.h"
+            echo '#define CONFIG_BT_BLE_ENABLED 0' >> "$PATCHED_DIR/esp_idf_headers/whisperpair_bluetooth_config.h"
+            echo '#define CONFIG_BT_BLUEDROID_ENABLED 1' >> "$PATCHED_DIR/esp_idf_headers/whisperpair_bluetooth_config.h"
+            echo '#define CONFIG_BT_STACK_NO_LOG 1' >> "$PATCHED_DIR/esp_idf_headers/whisperpair_bluetooth_config.h"
+            echo '#define configNUMBER_OF_CORES 2' >> "$PATCHED_DIR/esp_idf_headers/whisperpair_bluetooth_config.h"
+            echo '#define configMAX_TASK_NAME_LEN 16' >> "$PATCHED_DIR/esp_idf_headers/whisperpair_bluetooth_config.h"
+            echo '#define configTASK_NOTIFICATION_ARRAY_ENTRIES 1' >> "$PATCHED_DIR/esp_idf_headers/whisperpair_bluetooth_config.h"
+            echo '#define ARDUINO_ARCH_ESP32 1' >> "$PATCHED_DIR/esp_idf_headers/whisperpair_bluetooth_config.h"
+            echo '#define CONFIG_IDF_TARGET_ESP32 1' >> "$PATCHED_DIR/esp_idf_headers/whisperpair_bluetooth_config.h"
+            echo '#define IDF_VER "4.3.7"' >> "$PATCHED_DIR/esp_idf_headers/whisperpair_bluetooth_config.h"
             
             PATCHED_HEADER="$PATCHED_DIR/BluetoothA2DPCommon.h"
             if [ -f "$PATCHED_HEADER" ]; then
               cp "$PATCHED_HEADER" "$PATCHED_HEADER.bak"
-              
-              sed -i 's/^\([[:space:]]*\)#error.*$/\1\/\/ [PATCHED] Platform check disabled/' "$PATCHED_HEADER"
-              
-              sed -i 's/#if defined(ARDUINO_ARCH_ESP32)/#if 1 \/\/ [PATCHED] Force ESP32/' "$PATCHED_HEADER"
-              sed -i 's/#ifdef ARDUINO/#if 1 \/\/ [PATCHED] Force ARDUINO/' "$PATCHED_HEADER"
-              sed -i 's/#ifndef ARDUINO/#if 0 \/\/ [PATCHED] Disable !ARDUINO/' "$PATCHED_HEADER"
-              sed -i 's/#if !defined(ARDUINO)/#if 0 \/\/ [PATCHED] Disable !ARDUINO/' "$PATCHED_HEADER"
-              
-              sed -i 's/#if defined(CONFIG_IDF_TARGET_ESP32)/#if 1 \/\/ [PATCHED] Force ESP32 target/' "$PATCHED_HEADER"
-              sed -i 's/#ifdef CONFIG_IDF_TARGET_ESP32/#if 1 \/\/ [PATCHED] Force ESP32 target/' "$PATCHED_HEADER"
-              
+              sed -i 's/^\([[:space:]]*\)#error.*$/\1\/\//' "$PATCHED_HEADER"
+              sed -i 's/#if defined(ARDUINO_ARCH_ESP32)/#if 1/' "$PATCHED_HEADER"
+              sed -i 's/#ifdef ARDUINO/#if 1/' "$PATCHED_HEADER"
+              sed -i 's/#ifndef ARDUINO/#if 0/' "$PATCHED_HEADER"
+              sed -i 's/#if !defined(ARDUINO)/#if 0/' "$PATCHED_HEADER"
+              sed -i 's/#if defined(CONFIG_IDF_TARGET_ESP32)/#if 1/' "$PATCHED_HEADER"
+              sed -i 's/#ifdef CONFIG_IDF_TARGET_ESP32/#if 1/' "$PATCHED_HEADER"
               sed -i '1i // [PATCHED] Using ESP-IDF v4.3 headers' "$PATCHED_HEADER"
               sed -i '2i #ifndef ARDUINO_ARCH_ESP32' "$PATCHED_HEADER"
               sed -i '3i #define ARDUINO_ARCH_ESP32' "$PATCHED_HEADER"
@@ -339,22 +308,16 @@ END
               sed -i '7i #endif' "$PATCHED_HEADER"
             fi
             
-            echo "=== UPDATING INCLUDE PATHS ==="
-            
             find "$PATCHED_DIR" \( -name "*.cpp" -o -name "*.c" -o -name "*.h" \) ! -path "*/esp_idf_headers/*" | while read file; do
               if grep -q "esp_" "$file" || grep -q "CONFIG_" "$file"; then
                 sed -i '1i #include "whisperpair_bluetooth_config.h"' "$file"
               fi
-              
               sed -i 's/#include[[:space:]]*["<]\(esp_[^">]*\)[">]/#include "esp_idf_headers\/\1"/g' "$file" 2>/dev/null || true
               sed -i 's/#include[[:space:]]*["<].*\/\(esp_[^">]*\)[">]/#include "esp_idf_headers\/\1"/g' "$file" 2>/dev/null || true
-              
               sed -i 's/#include[[:space:]]*["<].*freertos\/\([^">]*\)[">]/#include "esp_idf_headers\/\1"/g' "$file" 2>/dev/null || true
               sed -i 's/#include[[:space:]]*["<]freertos\/\([^">]*\)[">]/#include "esp_idf_headers\/\1"/g' "$file" 2>/dev/null || true
-              
               sed -i 's/#include[[:space:]]*["<]sdkconfig[">]/#include "whisperpair_bluetooth_config.h"/g' "$file" 2>/dev/null || true
-              
-              sed -i 's/^\([[:space:]]*\)#error.*$/\1\/\/ [PATCHED] Error check disabled/' "$file" 2>/dev/null || true
+              sed -i 's/^\([[:space:]]*\)#error.*$/\1\/\//' "$file" 2>/dev/null || true
             done
             
             find "$PATCHED_DIR/esp_idf_headers" -name "*.h" | while read header; do
@@ -376,9 +339,6 @@ END
             echo '    ]' >> "$PATCHED_DIR/library.json"
             echo '  }' >> "$PATCHED_DIR/library.json"
             echo '}' >> "$PATCHED_DIR/library.json"
-            
-            echo "✅ SMART PATCHER COMPLETE"
-            
           fi
 
       - name: Update platformio.ini with Patched Library
@@ -386,16 +346,11 @@ END
         run: |
           HEADER_PATH=$(cat header_path.txt 2>/dev/null || echo "")
           HAS_ERROR=$(cat has_error.txt 2>/dev/null || echo "false")
-          
           if [ -n "$HEADER_PATH" ] && [ "$HAS_ERROR" = "true" ]; then
             cp platformio.ini platformio.ini.backup
-            
             grep -v "ESP32-A2DP" platformio.ini > platformio.ini.tmp
             mv platformio.ini.tmp platformio.ini
-            
             sed -i '/^lib_deps =/a\    lib/ESP32-A2DP-patched' platformio.ini
-            
-            echo "Updated platformio.ini"
           fi
 
       - name: Verify platformio.ini Update
@@ -403,13 +358,8 @@ END
         run: |
           HEADER_PATH=$(cat header_path.txt 2>/dev/null || echo "")
           HAS_ERROR=$(cat has_error.txt 2>/dev/null || echo "false")
-          
           if [ -n "$HEADER_PATH" ] && [ "$HAS_ERROR" = "true" ]; then
-            echo "=== Verifying platformio.ini update ==="
-            echo ""
-            grep -n "lib/ESP32-A2DP-patched" platformio.ini || echo "Patched library reference not found"
-            echo ""
-            grep -n "ESP32-A2DP" platformio.ini || echo "No ESP32-A2DP references found"
+            grep -n "lib/ESP32-A2DP-patched" platformio.ini || true
           fi
 
       - name: Commit and Push Patched Library
@@ -419,7 +369,6 @@ END
         run: |
           HEADER_PATH=$(cat header_path.txt 2>/dev/null || echo "")
           HAS_ERROR=$(cat has_error.txt 2>/dev/null || echo "false")
-          
           if [ -n "$HEADER_PATH" ] && [ "$HAS_ERROR" = "true" ]; then
             git config --global user.name "github-actions[bot]"
             git config --global user.email "github-actions[bot]@users.noreply.github.com"
@@ -447,12 +396,10 @@ END
         run: |
           HEADER_PATH=$(cat header_path.txt 2>/dev/null || echo "")
           HAS_ERROR=$(cat has_error.txt 2>/dev/null || echo "false")
-          
           if [ -n "$HEADER_PATH" ] && [ "$HAS_ERROR" = "true" ]; then
             rm -rf .pio/libdeps/${{ env.BOARD_ENV }}/ESP32-A2DP* 2>/dev/null || true
             rm -rf .pio/libdeps/${{ env.BOARD_ENV }}/.piolibdeps* 2>/dev/null || true
             rm -f .pio/build/${{ env.BOARD_ENV }}/.pioenvs 2>/dev/null || true
-            echo "Cache cleared"
           fi
 
       - name: Retry Build with Patched Library
@@ -460,9 +407,7 @@ END
         run: |
           HEADER_PATH=$(cat header_path.txt 2>/dev/null || echo "")
           HAS_ERROR=$(cat has_error.txt 2>/dev/null || echo "false")
-          
           if [ -n "$HEADER_PATH" ] && [ "$HAS_ERROR" = "true" ]; then
-            echo "Starting retry build with patched library"
             platformio run -e ${{ env.BOARD_ENV }}
           fi
 
@@ -492,7 +437,7 @@ END
             echo "Build successful!"
             echo "Environment: ${{ env.BOARD_ENV }}"
             echo "Version: ${{ github.event.inputs.version_name }}"
-            ls -la Bruce-*.* 2>/dev/null || echo "No Bruce files"
+            ls -la Bruce-*.* 2>/dev/null || true
           else
             echo "Build failed"
             echo "A2DP patching attempted: ${{ env.SHOULD_PATCH }}"
