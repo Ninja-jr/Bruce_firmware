@@ -22,9 +22,6 @@ on:
           - 'true'
           - 'false'
 
-permissions:
-  contents: write
-
 jobs:
   compile_sketch:
     name: Build lilygo-t-embed-cc1101 with Auto-Patch
