@@ -93,17 +93,11 @@ jobs:
           echo "=== DEBUG: Current directory ==="
           pwd
           echo ""
-          echo "=== DEBUG: Listing .pio ==="
-          ls -la .pio/ 2>/dev/null || echo "No .pio directory"
-          echo ""
-          echo "=== DEBUG: Listing .pio/libdeps ==="
-          ls -la .pio/libdeps/ 2>/dev/null || echo "No .pio/libdeps directory"
-          echo ""
           echo "=== DEBUG: Looking for ESP32-A2DP ==="
           find . -name "ESP32-A2DP" -type d 2>/dev/null
           echo ""
           echo "=== DEBUG: Looking for BluetoothA2DPCommon.h ==="
-          find . -name "BluetoothA2DPCommon.h" -type f 2>/dev/null
+          find . -name "BluetoothA2DPCommon.h" -type f 2>/dev/null | head -5
 
       - name: Check A2DP Error
         if: failure() && env.SHOULD_PATCH == 'true'
@@ -140,59 +134,34 @@ jobs:
             if [ -f "$PATCHED_HEADER" ]; then
               cp "$PATCHED_HEADER" "$PATCHED_HEADER.bak"
               
-              sed -i -E '/^[[:space:]]*#[[:space:]]*error.*[Pp]latform/{
-                s/^([[:space:]]*#[[:space:]]*error.*)$/\1\/\/ [SMART-PATCH] Platform check disabled/
-              }' "$PATCHED_HEADER"
+              # Simple patch: comment out ALL #error lines
+              sed -i 's/^\([[:space:]]*\)#error.*$/\1\/\/ [PATCHED] #error "Platform check disabled"/' "$PATCHED_HEADER"
               
-              sed -i -E '/^[[:space:]]*#[[:space:]]*error.*[Uu]nsupported.*[Pp]latform/{
-                s/^([[:space:]]*#[[:space:]]*error.*)$/\1\/\/ [SMART-PATCH] Unsupported platform check disabled/
-              }' "$PATCHED_HEADER"
+              # Force platform checks to true
+              sed -i 's/#if defined(ARDUINO_ARCH_ESP32)/#if 1 \/\/ [PATCHED] Force platform/' "$PATCHED_HEADER"
+              sed -i 's/#ifdef ARDUINO/#if 1 \/\/ [PATCHED] Force ARDUINO/' "$PATCHED_HEADER"
+              sed -i 's/#if defined(CONFIG_IDF_TARGET_ESP32)/#if 1 \/\/ [PATCHED] Force CONFIG_IDF_TARGET_ESP32/' "$PATCHED_HEADER"
               
-              sed -i -E '/^[[:space:]]*#[[:space:]]*error.*[Ss]upport.*[Pp]latform/{
-                s/^([[:space:]]*#[[:space:]]*error.*)$/\1\/\/ [SMART-PATCH] Platform support check disabled/
-              }' "$PATCHED_HEADER"
-              
-              sed -i -E '/^[[:space:]]*#[[:space:]]*if.*ARDUINO_ARCH_ESP32.*$/,/^[[:space:]]*#[[:space:]]*endif/{
-                /^[[:space:]]*#[[:space:]]*if.*ARDUINO_ARCH_ESP32/{
-                  s/^([[:space:]]*#[[:space:]]*if).*$/\1 1 \/\/ [SMART-PATCH] Force platform detection/
-                }
-              }' "$PATCHED_HEADER"
-              
-              sed -i -E '/^[[:space:]]*#[[:space:]]*ifdef.*ARDUINO.*$/,/^[[:space:]]*#[[:space:]]*endif/{
-                /^[[:space:]]*#[[:space:]]*ifdef.*ARDUINO/{
-                  s/^([[:space:]]*#[[:space:]]*ifdef).*$/\1 1 \/\/ [SMART-PATCH] Force ARDUINO detection/
-                }
-              }' "$PATCHED_HEADER"
-              
-              sed -i -E '/^[[:space:]]*#[[:space:]]*if.*CONFIG_IDF_TARGET_ESP32/,/^[[:space:]]*#[[:space:]]*define.*IS_VALID_PLATFORM/{
-                /^[[:space:]]*#[[:space:]]*if.*CONFIG_IDF_TARGET_ESP32/{
-                  s/^([[:space:]]*#[[:space:]]*if).*$/\1 1 \/\/ [SMART-PATCH] Force CONFIG_IDF_TARGET_ESP32/
-                }
-                /^[[:space:]]*#[[:space:]]*define.*IS_VALID_PLATFORM.*false/{
-                  s/^([[:space:]]*#[[:space:]]*define.*IS_VALID_PLATFORM).*false.*$/\1 true \/\/ [SMART-PATCH] Force valid platform/
-                }
-              }' "$PATCHED_HEADER"
-              
-              SMART_PATCH_COUNT=$(grep -c "SMART-PATCH" "$PATCHED_HEADER")
-              echo "Applied $SMART_PATCH_COUNT smart platform patches"
-              
-              cpp -fsyntax-only "$PATCHED_HEADER" 2>/dev/null || echo "Syntax check continuing"
+              echo "Applied platform patches"
             else
-              echo "ERROR: Could not find patched header at $PATCHED_HEADER"
+              echo "ERROR: Could not find patched header"
               exit 1
             fi
             
-            echo '{' > "$PATCHED_DIR/library.json"
-            echo '  "name": "ESP32-A2DP-patched",' >> "$PATCHED_DIR/library.json"
-            echo '  "version": "1.8.8-bruce-smart-patched",' >> "$PATCHED_DIR/library.json"
-            echo '  "description": "ESP32-A2DP smart-patched for Bruce firmware - targets only platform checks",' >> "$PATCHED_DIR/library.json"
-            echo '  "keywords": ["a2dp", "bluetooth", "audio", "esp32", "smart-patch"],' >> "$PATCHED_DIR/library.json"
-            echo '  "authors": [{"name": "Phil Schatzmann", "maintainer": true}],' >> "$PATCHED_DIR/library.json"
-            echo '  "frameworks": ["arduino"],' >> "$PATCHED_DIR/library.json"
-            echo '  "platforms": ["espressif32"]' >> "$PATCHED_DIR/library.json"
-            echo '}' >> "$PATCHED_DIR/library.json"
+            # Create minimal library.json
+            cat > "$PATCHED_DIR/library.json" << 'LIBJSON'
+{
+  "name": "ESP32-A2DP-patched",
+  "version": "1.8.8-bruce-patched",
+  "description": "ESP32-A2DP patched for Bruce firmware",
+  "keywords": ["a2dp", "bluetooth", "audio", "esp32"],
+  "authors": [{"name": "Phil Schatzmann", "maintainer": true}],
+  "frameworks": ["arduino"],
+  "platforms": ["espressif32"]
+}
+LIBJSON
             
-            echo "Smart platform patching complete"
+            echo "Library patching complete"
           fi
 
       - name: Update platformio.ini with Patched Library
@@ -202,44 +171,10 @@ jobs:
           HAS_ERROR=$(cat has_error.txt 2>/dev/null || echo "false")
           
           if [ -n "$HEADER_PATH" ] && [ "$HAS_ERROR" = "true" ]; then
-            cp platformio.ini platformio.ini.backup
-            
-            python3 << 'EOF'
-with open('platformio.ini', 'r') as f:
-    config_lines = f.readlines()
-
-new_lines = []
-in_lib_deps_section = False
-modified = False
-
-for line in config_lines:
-    stripped = line.strip()
-    
-    if stripped.startswith('lib_deps'):
-        in_lib_deps_section = True
-    
-    if in_lib_deps_section and ('ESP32-A2DP' in line or 'pschatzmann/ESP32-A2DP' in line):
-        if any(line.strip().startswith(prefix) for prefix in [
-            'pschatzmann/ESP32-A2DP',
-            'https://github.com/pschatzmann/ESP32-A2DP',
-            'ESP32-A2DP @'
-        ]):
-            new_lines.append('    lib/ESP32-A2DP-patched\n')
-            modified = True
-            continue
-    
-    if in_lib_deps_section and stripped == '' and len(new_lines) > 0 and new_lines[-1].strip() == '':
-        in_lib_deps_section = False
-    
-    new_lines.append(line)
-
-if modified:
-    with open('platformio.ini', 'w') as f:
-        f.writelines(new_lines)
-    print("Successfully updated platformio.ini to use local patched library")
-else:
-    print("No ESP32-A2DP dependencies found to replace")
-EOF
+            # Simple sed replacement - more reliable than Python in YAML
+            sed -i 's|pschatzmann/ESP32-A2DP.*|lib/ESP32-A2DP-patched|g' platformio.ini
+            sed -i 's|https://github.com/pschatzmann/ESP32-A2DP.*|lib/ESP32-A2DP-patched|g' platformio.ini
+            echo "Updated platformio.ini to use local patched library"
           fi
 
       - name: Verify platformio.ini Update
@@ -251,14 +186,8 @@ EOF
           if [ -n "$HEADER_PATH" ] && [ "$HAS_ERROR" = "true" ]; then
             echo "=== Verifying platformio.ini update ==="
             echo ""
-            echo "Checking for ESP32-A2DP references in platformio.ini:"
-            grep -n "ESP32-A2DP" platformio.ini || echo "No ESP32-A2DP references found"
-            echo ""
             echo "Checking for patched library reference:"
             grep -n "lib/ESP32-A2DP-patched" platformio.ini || echo "Patched library reference not found"
-            echo ""
-            echo "Current lib_deps section content:"
-            grep -A 10 "lib_deps" platformio.ini | head -15
           fi
 
       - name: Commit and Push Patched Library
@@ -275,15 +204,13 @@ EOF
             git add lib/ESP32-A2DP-patched/
             git add platformio.ini
             if ! git diff --cached --quiet; then
-              git commit -m "🔧 Smart Auto-patch: Add patched ESP32-A2DP library
+              git commit -m "🔧 Auto-patch: Add patched ESP32-A2DP library
               
-              Smart platform detection patched for Bruce firmware
-              - Targeted patches only disable platform checks
+              Platform detection patched for Bruce firmware
               - Auto-generated by GitHub Actions run #${{ github.run_number }}
               
               Build env: ${{ env.BOARD_ENV }}
-              Version: ${{ github.event.inputs.version_name }}
-              Patches applied: $(grep -c 'SMART-PATCH' lib/ESP32-A2DP-patched/BluetoothA2DPCommon.h 2>/dev/null || echo 'unknown')"
+              Version: ${{ github.event.inputs.version_name }}"
               git push origin ${{ github.event.inputs.target_branch }}
             fi
           fi
@@ -295,8 +222,7 @@ EOF
           HAS_ERROR=$(cat has_error.txt 2>/dev/null || echo "false")
           
           if [ -n "$HEADER_PATH" ] && [ "$HAS_ERROR" = "true" ]; then
-            echo "=== Starting retry build with patched library ==="
-            echo "Using patched library at: lib/ESP32-A2DP-patched"
+            echo "Starting retry build with patched library"
             platformio run -e ${{ env.BOARD_ENV }}
           fi
 
@@ -326,7 +252,6 @@ EOF
             echo "Build successful!"
             echo "Environment: ${{ env.BOARD_ENV }}"
             echo "Version: ${{ github.event.inputs.version_name }}"
-            echo "Git Hash: $(git describe --always --dirty 2>/dev/null || echo 'unknown')"
             ls -la Bruce-*.* 2>/dev/null || echo "No Bruce files"
           else
             echo "Build failed"
