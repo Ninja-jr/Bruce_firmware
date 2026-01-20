@@ -119,17 +119,15 @@ jobs:
             sed -i 's/#if defined(ARDUINO_ARCH_ESP32)/#if 1 \/\/ [PATCHED] Force platform/' "$PATCHED_HEADER" 2>/dev/null || true
             sed -i 's/#ifdef ARDUINO/#if 1 \/\/ [PATCHED] Force ARDUINO/' "$PATCHED_HEADER" 2>/dev/null || true
           fi
-          cat > "$PATCHED_DIR/library.json" << EOF
+          cat > "$PATCHED_DIR/library.json" << 'EOF'
 {
   "name": "ESP32-A2DP-patched",
   "version": "1.8.8-bruce-patched",
   "description": "ESP32-A2DP patched for Bruce firmware",
   "keywords": ["a2dp", "bluetooth", "audio", "esp32"],
   "authors": [{"name": "Phil Schatzmann", "maintainer": true}],
-  "repository": {"type": "git", "url": "https://github.com/${{ github.repository }}"},
   "frameworks": ["arduino"],
-  "platforms": ["espressif32"],
-  "headers": ["BluetoothA2DPCommon.h", "BluetoothA2DPSource.h", "BluetoothA2DPSink.h"]
+  "platforms": ["espressif32"]
 }
 EOF
 
