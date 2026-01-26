@@ -2,6 +2,9 @@
 #include "core/led_control.h"
 #include "core/wifi/wifi_common.h"
 #include "display.h"
+#if !defined(LITE_VERSION) && !defined(DISABLE_INTERPRETER)
+#include "modules/bjs_interpreter/interpreter.h"
+#endif
 #include "modules/ble_api/ble_api.hpp"
 #include "modules/others/qrcode_menu.h"
 #include "modules/rf/rf_utils.h" // for initRfModule
@@ -690,7 +693,7 @@ void setRFModuleMenu() {
 **********************************************************************/
 void setRFFreqMenu() {
     float result = 433.92;
-    String freq_str = keyboard(String(bruceConfigPins.rfFreq), 10, "Default frequency:");
+    String freq_str = num_keyboard(String(bruceConfigPins.rfFreq), 10, "Default frequency:");
     if (freq_str.length() > 1) {
         result = freq_str.toFloat();          // returns 0 if not valid
         if (result >= 280 && result <= 928) { // TODO: check valid freq according to current module?
@@ -950,33 +953,13 @@ void runClockLoop() {
             tft.setCursor(64, tftHeight / 3 + 5);
             uint8_t f_size = 4;
             for (uint8_t i = 4; i > 0; i--) {
-                if (i * LW * 8 < (tftWidth - BORDER_PAD_X * 2)) {
+                if (i * LW * strlen(timeStr) < (tftWidth - BORDER_PAD_X * 2)) {
                     f_size = i;
                     break;
                 }
             }
             tft.setTextSize(f_size);
-#if defined(HAS_RTC)
-#if defined(HAS_RTC_BM8563)
-            _rtc.GetBm8563Time();
-#endif
-#if defined(HAS_RTC_PCF85063A)
-            _rtc.GetPcf85063Time();
-#endif
-            _rtc.GetTime(&_time);
-            char timeString[9]; // Buffer para armazenar a string formatada "HH:MM:SS"
-            snprintf(
-                timeString,
-                sizeof(timeString),
-                "%02d:%02d:%02d",
-                _time.Hours % 100,
-                _time.Minutes % 100,
-                _time.Seconds % 100
-            );
-            tft.drawCentreString(timeString, tftWidth / 2, tftHeight / 2 - 13, 1);
-#else
             tft.drawCentreString(timeStr, tftWidth / 2, tftHeight / 2 - 13, 1);
-#endif
             tmp = millis();
         }
 
@@ -1039,7 +1022,8 @@ void setIrTxRepeats() {
         {"10 (+ 1 initial)", [&]() { chRpts = 10; }},
         {"Custom",           [&]() {
              // up to 99 repeats
-             String rpt = keyboard(String(bruceConfigPins.irTxRepeats), 2, "Nbr of Repeats (+ 1 initial)");
+             String rpt =
+                 num_keyboard(String(bruceConfigPins.irTxRepeats), 2, "Nbr of Repeats (+ 1 initial)");
              chRpts = static_cast<uint8_t>(rpt.toInt());
          }                       },
     };
@@ -1178,11 +1162,15 @@ void setStartupApp() {
         index++;
         if (bruceConfig.startupApp == appName) idx = index;
 
-        options.push_back(
-            {appName.c_str(),
-             [=]() { bruceConfig.setStartupApp(appName); },
-             bruceConfig.startupApp == appName}
-        );
+        options.push_back({appName.c_str(), [=]() {
+                               bruceConfig.setStartupApp(appName);
+#if !defined(LITE_VERSION) && !defined(DISABLE_INTERPRETER)
+                               if (appName == "JS Interpreter") {
+                                   options = getScriptsOptionsList(true);
+                                   loopOptions(options, MENU_TYPE_SUBMENU, "Startup Script");
+                               }
+#endif
+                           }});
     }
 
     loopOptions(options, idx);
@@ -1266,7 +1254,7 @@ void setWifiApPasswordMenu() {
          isDefault                                                                             },
         {"Custom",
          [=]() {
-             String newPassword = keyboard(bruceConfig.wifiAp.pwd, 32, "WiFi AP Password:");
+             String newPassword = keyboard(bruceConfig.wifiAp.pwd, 32, "WiFi AP Password:", true);
              if (!newPassword.isEmpty()) bruceConfig.setWifiApCreds(bruceConfig.wifiAp.ssid, newPassword);
              else displayError("Password cannot be empty", true);
          },                                                                          !isDefault},
@@ -1323,7 +1311,6 @@ void setBadUSBBLEMenu() {
 **  Main Menu for setting Bad USB/BLE Keyboard Layout
 **********************************************************************/
 void setBadUSBBLEKeyboardLayoutMenu() {
-
     uint8_t opt = bruceConfig.badUSBBLEKeyboardLayout;
 
     options.clear();
@@ -1355,7 +1342,7 @@ void setBadUSBBLEKeyboardLayoutMenu() {
 **  Main Menu for setting Bad USB/BLE Keyboard Key Delay
 **********************************************************************/
 void setBadUSBBLEKeyDelayMenu() {
-    String delayStr = keyboard(String(bruceConfig.badUSBBLEKeyDelay), 3, "Key Delay (ms):");
+    String delayStr = num_keyboard(String(bruceConfig.badUSBBLEKeyDelay), 3, "Key Delay (ms):");
     uint16_t delayVal = static_cast<uint16_t>(delayStr.toInt());
     if (delayVal >= 25 && delayVal <= 500) {
         bruceConfig.setBadUSBBLEKeyDelay(delayVal);
@@ -1369,7 +1356,6 @@ void setBadUSBBLEKeyDelayMenu() {
 **  Handles Menu to configure WiFi MAC Address
 **********************************************************************/
 void setMacAddressMenu() {
-
     String currentMAC = bruceConfig.wifiMAC;
     if (currentMAC == "") currentMAC = WiFi.macAddress();
 
