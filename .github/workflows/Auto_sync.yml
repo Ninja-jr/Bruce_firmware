@@ -43,7 +43,6 @@ jobs:
             git merge --no-edit --no-ff upstream/"$BRANCH_NAME" -m "chore: sync with upstream $(date +'%Y-%m-%d') [skip ci]" || true
             if [ "$BRANCH_NAME" = "dev" ]; then
               git checkout "$BRANCH_NAME" -- "src/modules/rf/rf_jammer.cpp" 2>/dev/null || true
-              git checkout "$BRANCH_NAME" -- "src/modules/NRF24/nrf_jammer.cpp" 2>/dev/null || true
             fi
             git checkout "$BRANCH_NAME" -- .github/workflows/ 2>/dev/null || true
             if ! git diff --quiet origin/"$BRANCH_NAME" "$BRANCH_NAME"; then
