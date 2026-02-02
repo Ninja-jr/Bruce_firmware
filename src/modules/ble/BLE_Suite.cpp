@@ -2502,7 +2502,8 @@ bool loadScriptFromSD(String filename) {
     
     File file = SD.open(filename);
     if(!file) {
-        showErrorMessage("Cannot open file: " + filename);
+        String errorMsg = "Cannot open file: " + filename;
+        showErrorMessage(errorMsg.c_str());
         return false;
     }
     
