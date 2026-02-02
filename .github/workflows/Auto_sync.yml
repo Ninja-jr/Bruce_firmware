@@ -60,25 +60,26 @@ jobs:
           sync_branch "main"
 
       - name: Create releases for new tags
-        run: |
-          if ! command -v gh &> /dev/null; then
-            type -p curl >/dev/null || sudo apt install curl -y
-            curl -fsSL https://cli.github.com/packages/githubcli-archive-keyring.gpg | sudo dd of=/usr/share/keyrings/githubcli-archive-keyring.gpg
-            sudo chmod go+r /usr/share/keyrings/githubcli-archive-keyring.gpg
-            echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/githubcli-archive-keyring.gpg] https://cli.github.com/packages stable main" | sudo tee /etc/apt/sources.list.d/github-cli.list > /dev/null
-            sudo apt update
-            sudo apt install gh -y
-          fi
-          echo "${{ secrets.SYNC_PAT }}" | gh auth login --with-token
-          git fetch upstream --tags
-          UPSTREAM_TAGS=$(git ls-remote --tags upstream | grep -v '{}' | cut -f2 | sed 's|refs/tags/||')
-          OUR_TAGS=$(git ls-remote --tags origin | grep -v '{}' | cut -f2 | sed 's|refs/tags/||')
-          NEW_TAGS=$(comm -13 <(echo "$OUR_TAGS" | sort) <(echo "$UPSTREAM_TAGS" | sort))
-          for TAG in $NEW_TAGS; do
-            echo "Creating release for new tag: $TAG"
-            git fetch upstream $TAG
-            TAG_MESSAGE=$(git tag -l --format='%(contents)' $TAG 2>/dev/null || echo "Release $TAG")
-            gh release create $TAG --title "$TAG" --notes "$TAG_MESSAGE" --target main || echo "Failed to create release for $TAG"
-          done
-        env:
-          GH_TOKEN: ${{ secrets.SYNC_PAT }}
+  env:
+    GITHUB_TOKEN: ${{ secrets.SYNC_PAT }}
+  run: |
+    if ! command -v gh &> /dev/null; then
+      type -p curl >/dev/null || sudo apt install curl -y
+      curl -fsSL https://cli.github.com/packages/githubcli-archive-keyring.gpg | sudo dd of=/usr/share/keyrings/githubcli-archive-keyring.gpg
+      sudo chmod go+r /usr/share/keyrings/githubcli-archive-keyring.gpg
+      echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/githubcli-archive-keyring.gpg] https://cli.github.com/packages stable main" | sudo tee /etc/apt/sources.list.d/github-cli.list > /dev/null
+      sudo apt update
+      sudo apt install gh -y
+    fi
+    
+    git fetch upstream --tags
+    UPSTREAM_TAGS=$(git ls-remote --tags upstream | grep -v '{}' | cut -f2 | sed 's|refs/tags/||')
+    OUR_TAGS=$(git ls-remote --tags origin | grep -v '{}' | cut -f2 | sed 's|refs/tags/||')
+    NEW_TAGS=$(comm -13 <(echo "$OUR_TAGS" | sort) <(echo "$UPSTREAM_TAGS" | sort))
+    
+    for TAG in $NEW_TAGS; do
+      echo "Creating release for new tag: $TAG"
+      git fetch upstream $TAG
+      TAG_MESSAGE=$(git tag -l --format='%(contents)' $TAG 2>/dev/null || echo "Release $TAG")
+      gh release create $TAG --title "$TAG" --notes "$TAG_MESSAGE" --target main || echo "Failed to create release for $TAG"
+    done
