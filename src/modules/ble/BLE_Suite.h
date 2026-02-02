@@ -3,6 +3,7 @@
 
 #include <NimBLEDevice.h>
 #include "fastpair_crypto.h"
+#include "HFP_Exploit.h"
 #include <WString.h>
 #include <vector>
 #include <freertos/FreeRTOS.h>
@@ -109,6 +110,71 @@ struct DuckyCommand {
     String command;
     String parameter;
     int delay_ms;
+};
+
+struct ScannerData {
+    std::vector<String> deviceNames;
+    std::vector<String> deviceAddresses;
+    std::vector<int> deviceRssi;
+    std::vector<bool> deviceFastPair;
+    std::vector<bool> deviceHasHFP;
+    std::vector<uint8_t> deviceTypes;
+    SemaphoreHandle_t mutex;
+    int foundCount;
+
+    ScannerData() {
+        mutex = xSemaphoreCreateMutex();
+        foundCount = 0;
+    }
+
+    ~ScannerData() {
+        if(mutex) vSemaphoreDelete(mutex);
+    }
+
+    void addDevice(const String& name, const String& address, int rssi, bool fastPair, bool hasHFP, uint8_t type) {
+        if(xSemaphoreTake(mutex, portMAX_DELAY)) {
+            bool isDuplicate = false;
+            for(size_t i = 0; i < deviceAddresses.size(); i++) {
+                if(deviceAddresses[i] == address) {
+                    isDuplicate = true;
+                    deviceRssi[i] = rssi;
+                    break;
+                }
+            }
+            if(!isDuplicate) {
+                deviceNames.push_back(name);
+                deviceAddresses.push_back(address);
+                deviceRssi.push_back(rssi);
+                deviceFastPair.push_back(fastPair);
+                deviceHasHFP.push_back(hasHFP);
+                deviceTypes.push_back(type);
+                foundCount++;
+            }
+            xSemaphoreGive(mutex);
+        }
+    }
+
+    void clear() {
+        if(xSemaphoreTake(mutex, portMAX_DELAY)) {
+            deviceNames.clear();
+            deviceAddresses.clear();
+            deviceRssi.clear();
+            deviceFastPair.clear();
+            deviceHasHFP.clear();
+            deviceTypes.clear();
+            foundCount = 0;
+            xSemaphoreGive(mutex);
+        }
+    }
+
+    size_t size() {
+        size_t result = 0;
+        if(xSemaphoreTake(mutex, portMAX_DELAY)) {
+            result = deviceAddresses.size();
+            xSemaphoreGive(mutex);
+        }
+        return result;
+    }
 };
 
 class BLEAttackManager {
@@ -322,5 +388,9 @@ void showErrorMessage(const char* message);
 void showSuccessMessage(const char* message);
 void showDeviceInfoScreen(const char* title, const std::vector<String>& lines, uint16_t bgColor, uint16_t textColor);
 bool isBLEInitialized();
+void runHFPVulnerabilityTest(NimBLEAddress target);
+void runHFPAttackChain(NimBLEAddress target);
+void runHFPHIDPivotAttack(NimBLEAddress target);
+void runSmartHFPPivot(NimBLEAddress target, String deviceName, int rssi);
 
 #endif
