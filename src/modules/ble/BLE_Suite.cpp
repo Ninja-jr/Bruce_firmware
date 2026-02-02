@@ -175,10 +175,13 @@ NimBLEClient* attemptConnectionWithStrategies(NimBLEAddress target, String& conn
     if(hasHFP) {
         showAttackProgress("Trying HFP exploit connection...", TFT_CYAN);
         HFPExploitEngine hfp;
-        NimBLEClient* hfpClient = hfp.establishHFPConnection(target);
-        if(hfpClient) {
+        bool hfpConnected = hfp.establishHFPConnection(target);
+        if(hfpConnected) {
             connectionMethod = "HFP Exploit connection";
-            return hfpClient;
+            NimBLEClient* hfpClient = NimBLEDevice::getClientByAddress(target);
+            if(hfpClient) {
+                return hfpClient;
+            }
         }
     }
     
@@ -2716,8 +2719,8 @@ void showAttackMenuWithTarget(NimBLEAddress target) {
 
         tft.setTextColor(TFT_WHITE, bruceConfig.bgColor);
         tft.setTextSize(2);
-        tft.setCursor((tftWidth - strlen("WHISPERPAIR") * 12) / 2, 15);
-        tft.print("WHISPERPAIR");
+        tft.setCursor((tftWidth - strlen("BLE SUITE") * 12) / 2, 15);
+        tft.print("BLE SUITE");
         tft.setTextSize(1);
 
         tft.setTextColor(TFT_YELLOW, bruceConfig.bgColor);
@@ -3476,19 +3479,15 @@ void runAudioControlTest(NimBLEAddress target) {
         bool inputProcessed = false;
         while(!inputProcessed) {
             if(check(EscPress)) {
-                delay(200);
                 exitSubmenu = true;
                 inputProcessed = true;
             } else if(check(PrevPress)) {
-                delay(150);
                 selectedTest = (selectedTest > 0) ? selectedTest - 1 : AUDIO_TESTS - 1;
                 inputProcessed = true;
             } else if(check(NextPress)) {
-                delay(150);
                 selectedTest = (selectedTest + 1) % AUDIO_TESTS;
                 inputProcessed = true;
             } else if(check(SelPress)) {
-                delay(200);
                 executeAudioTest(selectedTest, target);
                 exitSubmenu = true;
                 inputProcessed = true;
@@ -3881,8 +3880,8 @@ void showAttackProgress(const char* message, uint16_t color) {
 
     tft.setTextColor(TFT_WHITE, bruceConfig.bgColor);
     tft.setTextSize(2);
-    tft.setCursor((tftWidth - strlen("WHISPERPAIR") * 12) / 2, 15);
-    tft.print("WHISPERPAIR");
+    tft.setCursor((tftWidth - strlen("BLE SUITE") * 12) / 2, 15);
+    tft.print("BLE SUITE");
     tft.setTextSize(1);
 
     tft.setTextColor(color, bruceConfig.bgColor);
