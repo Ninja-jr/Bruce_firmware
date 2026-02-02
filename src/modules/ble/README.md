@@ -1,11 +1,104 @@
-ABOUT BLE SUITE:
+About BLE Suite Module
+
+⚠️ IMPORTANT DISCLAIMER
+
+Attack success depends entirely on target device configuration and patch level.
+
+This tool implements known attack vectors and proof-of-concept exploits for educational and authorized testing purposes. Results will vary:
+
+· Older/Unpatched Devices - Higher success rate for buffer overflows, FastPair exploits
+· Modern/Patched Devices - May resist many attacks due to security updates
+· Enterprise/Managed Devices - Often have additional security hardening
+· Manufacturer Variations - Different implementations of BLE standards affect vulnerability
+
+No exploit is guaranteed to work. The suite attempts multiple approaches, but:
+
+· Many CVEs have been patched in recent firmware updates
+· Device manufacturers implement BLE security differently
+· Some attacks only work on specific OS versions/configurations
+
+Use this tool to understand attack surfaces, not as a "hack everything" solution.
+
+---
+
+About BLE Suite
 
 The system is basically a Swiss Army knife for BLE security testing - recon, exploitation, and post-exploitation all in one. It's designed to be both automated (for quick testing) and manual (for targeted attacks).
 
-Core Managers
+Part of the Bruce firmware for ESP32 devices. This module provides comprehensive Bluetooth Low Energy security testing capabilities with hardware integration and multi-stage attack chains.
 
-· BLEAttackManager - Handles BLE setup/cleanup, device connections, and profiling
-· ScannerData - Stores found devices during scans, handles deduplication
+---
+
+Realistic Expectations
+
+Success rates vary by:
+
+· Device Age - Older devices ≈ higher vulnerability
+· Manufacturer - Some have better/worse BLE implementations
+· OS Version - Major security patches in recent updates
+· Configuration - Enterprise vs consumer settings
+· Usage State - Already-paired vs unpaired devices
+
+Typical scenarios:
+
+· ✅ Testing lab devices - Good for understanding vulnerabilities
+· ✅ Legacy IoT devices - Often vulnerable to basic attacks
+· ⚠️ Modern smartphones - Many protections in place
+· ❌ Enterprise laptops - Usually well-hardened
+
+---
+
+Hardware Integration
+
+NRF24 Module Support:
+
+· Jam & Connect Attack - Uses modules/NRF24/nrf_jammer_api.cpp for BLE frequency jamming
+· Three jamming modes:
+  · Advertising channel jamming
+  · Hopping advertisement jamming
+  · Full BLE channel hopping
+· Requires: NRF24L01+ module connected to ESP32
+· Purpose: Disrupts target BLE while attempting connection, increasing exploit success rate
+
+FastPair Crypto Engine:
+
+· Crypto Operations - Uses fastpair_crypto.cpp for Google FastPair cryptographic attacks
+· Handshake Operations:
+  · Key pair generation
+  · ECDH shared secret computation
+  · Nonce generation
+  · Protocol message encryption/decryption
+· Purpose: Enables realistic FastPair handshake simulation for protocol-level attacks
+
+---
+
+Module Dependencies
+
+Internal Bruce Modules:
+
+· modules/NRF24/nrf_jammer_api - For BLE jamming capabilities
+· fastpair_crypto - For cryptographic operations in FastPair attacks
+· core/display.h - Bruce's display system
+· core/mykeyboard.h - Bruce's menu patterns
+· core/utils.h - Utility functions
+· globals.h - Configuration system
+
+External Libraries:
+
+· NimBLE-Arduino - BLE stack implementation
+· TFT_eSPI - Display rendering
+· SD - Filesystem for script storage
+
+---
+
+Core Components
+
+BLEAttackManager - Handles BLE setup/cleanup, device connections, and profiling
+ScannerData - Stores found devices during scans, handles deduplication
+
+---
+
+Attack Capabilities
 
 Connection Attacks
 
@@ -57,12 +150,16 @@ Recon & Scanning
 · Device profiling - Service enumeration and characteristic analysis
 · Live BLE scanning - Active/passive scanning with filtering
 
+---
+
 UI & Menu System
 
 · Interactive menus - Scrollable target selection
 · Attack progress display - Real-time status updates
 · Script selection system - Built-in examples + SD card loading
 · Confirmation prompts - Safety checks before attacks
+
+---
 
 Key Features
 
@@ -71,6 +168,77 @@ Key Features
 · SD card support - Load DuckyScripts from files
 · Exploit chaining - Try multiple attack methods automatically
 · Result reporting - Success/failure feedback with details
+· Hardware Integration - NRF24 jamming + BLE exploit coordination
+· Multi-Stage Attacks - Jamming → Connection → Exploitation workflow
+
+---
+
+Advanced Attack Chains
+
+Jam & Connect Exploit:
+
+1. Jamming Phase - Activates NRF24 to jam BLE frequencies
+2. Connection Phase - Attempts aggressive connection during jamming window
+3. Exploitation Phase - Executes selected exploit on connected target
+4. Cleanup - Stops jamming, closes connection
+
+FastPair Crypto Attack:
+
+1. Handshake - Performs real cryptographic handshake using fastpair_crypto.cpp
+2. State Analysis - Determines device's security posture
+3. Exploit Selection - Chooses appropriate attack (buffer overflow, state confusion, crypto overflow)
+4. Execution - Sends crafted packets targeting specific vulnerabilities
+
+HID Injection Pipeline:
+
+1. OS Detection - Analyzes device name/RSSI to guess operating system
+2. Connection Bypass - Uses OS-specific spoofing/authentication bypass
+3. Service Discovery - Locates HID characteristics
+4. Script Execution - Injects DuckyScript payload via identified channels
+
+---
+
+Attack Methodology
+
+The suite implements adaptive attack strategies that respond to target behavior:
+
+1. Reconnaissance Phase
+
+· Active/passive scanning with device fingerprinting
+· RSSI-based proximity estimation
+· Service/characteristic enumeration
+
+2. Connection Establishment
+
+Multiple fallback strategies:
+
+· Normal BLE connection
+· Aggressive timing parameters
+· Exploit-based connection (disabled security)
+· Jamming-assisted connection (with NRF24)
+
+3. Vulnerability Assessment
+
+· FastPair buffer overflow testing
+· HID service write access verification
+· Authentication bypass attempts
+· PIN strength testing
+
+4. Exploit Execution
+
+· Protocol-specific payload delivery
+· State confusion attacks
+· Cryptographic manipulation
+· Persistent injection (DuckyScript)
+
+5. Cleanup & Reporting
+
+· Graceful disconnection
+· BLE stack reinitialization
+· Success/failure logging
+· Detailed result display
+
+---
 
 Built-in Payloads
 
@@ -80,6 +248,7 @@ Built-in Payloads
 · Rickroll prank
 · Custom script support
 
+---
 
 Main Menu Items (21 Attacks)
 
@@ -203,12 +372,16 @@ Main Menu Items (21 Attacks)
 · Basic HID service detection
 · Checks if keystroke injection is possible
 
+---
+
 Submenu Systems
 
 · Script Selection - Pick from examples or load from SD
 · Audio Tests - Individual audio service testing
 · Advanced Attacks - Protocol-specific exploit selection
 · Target Selection - Scrollable device picker with RSSI/sorting
+
+---
 
 Workflow
 
@@ -219,4 +392,39 @@ Workflow
 5. Execute → Run attack with progress display
 6. Report → View success/failure results
 
-Each menu item targets specific BLE vulnerabilities or attack vectors, with increasing complexity from basic (keystroke injection) to advanced (protocol exploitation).
+---
+
+Public Interfaces
+
+· BleSuiteMenu() - Main entry point
+· showAttackMenuWithTarget() - Direct attack menu
+· Scanner data accessible via scannerData global
+
+---
+
+Tested Configurations (Examples)
+
+Note: Your mileage WILL vary. These are examples, not guarantees.
+
+Vulnerable to FastPair attacks:
+
+· Some older Android phones (pre-2020)
+· Certain Bluetooth speakers/headsets
+· Early IoT devices with FastPair support
+
+Susceptible to HID injection:
+
+· Unpatched Windows 10 machines
+· Some Linux distributions with default settings
+· Older smart TVs/streaming devices
+
+Resistant to most attacks:
+
+· iOS devices after version 14+
+· Modern Android (12+ with security updates)
+· Enterprise Windows 11 systems
+· Recent macOS versions
+
+---
+
+Each menu item targets specific BLE vulnerabilities or attack vectors, with increasing complexity from basic (keystroke injection) to advanced (protocol exploitation). The system adapts to target responses and employs multiple strategies for maximum effectiveness in authorized testing scenarios.
