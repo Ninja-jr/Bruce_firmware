@@ -18,6 +18,9 @@ String globalScript = "";
 
 static ScannerData scannerData;
 
+NimBLEClient* attemptConnectionWithStrategies(NimBLEAddress target, String& connectionMethod);
+void runUniversalAttack(NimBLEAddress target);
+
 bool isBLEInitialized() {
     return NimBLEDevice::getAdvertising() != nullptr || NimBLEDevice::getScan() != nullptr || NimBLEDevice::getServer() != nullptr;
 }
@@ -175,12 +178,15 @@ NimBLEClient* attemptConnectionWithStrategies(NimBLEAddress target, String& conn
     if(hasHFP) {
         showAttackProgress("Trying HFP exploit connection...", TFT_CYAN);
         HFPExploitEngine hfp;
-        bool hfpConnected = hfp.establishHFPConnection(target);
-        if(hfpConnected) {
-            connectionMethod = "HFP Exploit connection";
-            NimBLEClient* hfpClient = NimBLEDevice::getClientByAddress(target);
-            if(hfpClient) {
-                return hfpClient;
+        if(hfp.establishHFPConnection(target)) {
+            NimBLEClient* pClient = NimBLEDevice::createClient();
+            if(pClient) {
+                pClient->setConnectTimeout(8);
+                if(pClient->connect(target, false)) {
+                    connectionMethod = "HFP Exploit connection";
+                    return pClient;
+                }
+                NimBLEDevice::deleteClient(pClient);
             }
         }
     }
@@ -2324,7 +2330,7 @@ bool DoSAttackServiceClass::connectionFlood(NimBLEAddress target) {
         NimBLEDevice::deinit(true);
         delay(100);
         std::string floodName = "Bruce-Flooder";
-        NimBLEDevice::init(floodName);
+    NimBLEDevice::init(floodName);
         NimBLEDevice::setPower(ESP_PWR_LVL_P9);
 
         NimBLEClient* pClient = NimBLEDevice::createClient();
@@ -4040,11 +4046,11 @@ String selectTargetFromScan(const char* title) {
     tft.setCursor(20, 100);
     tft.print("Scanning for devices...");
 
-    const int ACTIVE_SCAN_TIME = 10;
-    const int PASSIVE_SCAN_TIME = 10;
+    const int ACTIVE_SCAN_TIME = 15;
+    const int PASSIVE_SCAN_TIME = 15;
 
     tft.setCursor(20, 120);
-    tft.print("Active scan (10s)...");
+    tft.print("Active scan (15s)...");
 
 #if __has_include(<NimBLEExtAdvertising.h>)
     #define NIMBLE_V2_PLUS 1
@@ -4057,7 +4063,7 @@ String selectTargetFromScan(const char* title) {
 #endif
 
     tft.setCursor(20, 140);
-    tft.print("Passive scan (10s)...");
+    tft.print("Passive scan (15s)...");
     pBLEScan->setActiveScan(false);
 
 #ifdef NIMBLE_V2_PLUS
