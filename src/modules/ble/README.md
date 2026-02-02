@@ -1,4 +1,4 @@
-About BLE Suite Module
+BLE Security Suite Module
 
 ⚠️ IMPORTANT DISCLAIMER
 
@@ -78,6 +78,7 @@ Internal Bruce Modules:
 
 · modules/NRF24/nrf_jammer_api - For BLE jamming capabilities
 · fastpair_crypto - For cryptographic operations in FastPair attacks
+· HFP_Exploit - For Hands-free Profile vulnerability testing
 · core/display.h - Bruce's display system
 · core/mykeyboard.h - Bruce's menu patterns
 · core/utils.h - Utility functions
@@ -94,7 +95,8 @@ External Libraries:
 Core Components
 
 BLEAttackManager - Handles BLE setup/cleanup, device connections, and profiling
-ScannerData - Stores found devices during scans, handles deduplication
+ScannerData - Stores found devices during scans, handles deduplication with HFP detection
+HFPExploitEngine - Tests and exploits Hands-free Profile vulnerabilities including CVE-2025-36911
 
 ---
 
@@ -116,6 +118,14 @@ Specific Exploits
   · Protocol state confusion
   · Crypto overflow attacks
   · Handshake manipulation
+
+HFP (Hands-free Profile) Attacks
+
+· HFPExploitEngine - Tests and exploits CVE-2025-36911 vulnerabilities:
+  · HFP service detection (UUIDs 0x111E, 0x111F)
+  · Unauthorized pairing attempts
+  · Microphone access vulnerability testing
+  · Automatic pivot to HID attacks
 
 HID Attacks
 
@@ -149,6 +159,7 @@ Recon & Scanning
 · VulnerabilityScanner - Comprehensive device vulnerability testing
 · Device profiling - Service enumeration and characteristic analysis
 · Live BLE scanning - Active/passive scanning with filtering
+· HFP service detection - Identifies devices with Hands-free Profile
 
 ---
 
@@ -158,6 +169,7 @@ UI & Menu System
 · Attack progress display - Real-time status updates
 · Script selection system - Built-in examples + SD card loading
 · Confirmation prompts - Safety checks before attacks
+· Smart suggestions - Recommends HFP pivot when device has HFP service
 
 ---
 
@@ -170,6 +182,9 @@ Key Features
 · Result reporting - Success/failure feedback with details
 · Hardware Integration - NRF24 jamming + BLE exploit coordination
 · Multi-Stage Attacks - Jamming → Connection → Exploitation workflow
+· HFP vulnerability testing - CVE-2025-36911 detection and exploitation
+· Smart attack chaining - Auto-suggests HFP pivot for HFP-enabled devices
+· Integrated attack pipelines - HFP → HID → DuckyScript automatic chains
 
 ---
 
@@ -189,12 +204,20 @@ FastPair Crypto Attack:
 3. Exploit Selection - Chooses appropriate attack (buffer overflow, state confusion, crypto overflow)
 4. Execution - Sends crafted packets targeting specific vulnerabilities
 
-HID Injection Pipeline:
+HFP → HID Pivot Attack:
 
-1. OS Detection - Analyzes device name/RSSI to guess operating system
-2. Connection Bypass - Uses OS-specific spoofing/authentication bypass
-3. Service Discovery - Locates HID characteristics
-4. Script Execution - Injects DuckyScript payload via identified channels
+1. HFP Vulnerability Test - Checks for CVE-2025-36911
+2. HFP Connection - Establishes Hands-free Profile connection via exploit
+3. HID Discovery - Locates HID services from privileged position
+4. DuckyScript Injection - Executes payload via HID channel
+5. OS-Specific Payloads - Auto-selects Windows/Apple/Android scripts
+
+Smart HID Injection:
+
+1. Device Analysis - Checks for HFP service availability
+2. User Prompt - Suggests HFP pivot if device has HFP
+3. Attack Selection - User chooses direct HID or HFP-pivot approach
+4. Execution - Runs chosen attack chain with appropriate payload
 
 ---
 
@@ -207,6 +230,7 @@ The suite implements adaptive attack strategies that respond to target behavior:
 · Active/passive scanning with device fingerprinting
 · RSSI-based proximity estimation
 · Service/characteristic enumeration
+· HFP service detection - Identifies microphone-capable devices
 
 2. Connection Establishment
 
@@ -216,6 +240,7 @@ Multiple fallback strategies:
 · Aggressive timing parameters
 · Exploit-based connection (disabled security)
 · Jamming-assisted connection (with NRF24)
+· HFP vulnerability exploitation - CVE-2025-36911 bypass
 
 3. Vulnerability Assessment
 
@@ -223,6 +248,7 @@ Multiple fallback strategies:
 · HID service write access verification
 · Authentication bypass attempts
 · PIN strength testing
+· HFP vulnerability testing - CVE-2025-36911 check
 
 4. Exploit Execution
 
@@ -230,6 +256,7 @@ Multiple fallback strategies:
 · State confusion attacks
 · Cryptographic manipulation
 · Persistent injection (DuckyScript)
+· HFP pivot attacks - Privileged escalation via audio profile
 
 5. Cleanup & Reporting
 
@@ -247,10 +274,11 @@ Built-in Payloads
 · Reverse shell execution
 · Rickroll prank
 · Custom script support
+· OS-specific payloads - Auto-selected based on device detection
 
 ---
 
-Main Menu Items (21 Attacks)
+Main Menu Items (24 Attacks)
 
 1. FastPair Buffer Overflow
 
@@ -279,6 +307,7 @@ Main Menu Items (21 Attacks)
 
 · Basic keyboard keystroke injection
 · Enter key, Windows key, etc.
+· Enhanced: Suggests HFP pivot for HFP-enabled devices
 
 6. Ducky Script Injection
 
@@ -290,6 +319,7 @@ Main Menu Items (21 Attacks)
   · Reverse Shell
   · Rickroll
   · Load from SD Card
+· Enhanced: Smart HFP pivot suggestions
 
 7. PIN Brute Force
 
@@ -316,6 +346,7 @@ Main Menu Items (21 Attacks)
 · Comprehensive service enumeration
 · Lists all services and characteristics
 · Shows which are writable
+· New: Includes HFP service detection
 
 12. Test Write Access
 
@@ -350,16 +381,19 @@ Main Menu Items (21 Attacks)
 · Comprehensive security assessment
 · Tests multiple vulnerability categories
 · Generates risk report
+· New: Includes HFP vulnerability testing
 
 18. Force HID Injection
 
 · Aggressive HID connection + DuckyScript
 · Bypasses pairing requirements
+· Enhanced: Can use HFP as entry vector
 
 19. HID Connection Exploit
 
 · Tests OS-specific HID connection methods
 · Shows which bypasses work
+· Enhanced: HFP bypass integration
 
 20. Advanced Ducky Injection
 
@@ -372,6 +406,57 @@ Main Menu Items (21 Attacks)
 · Basic HID service detection
 · Checks if keystroke injection is possible
 
+22. HFP Vulnerability Test
+
+· Tests for CVE-2025-36911 vulnerability
+· Checks HFP service accessibility
+· Reports potential microphone access risks
+
+23. HFP Attack Chain
+
+· Full HFP exploitation pipeline
+· Tests vulnerability → establishes connection
+· Demonstrates HFP access capability
+
+24. HFP → HID Pivot Attack
+
+· Complete attack chain:
+  1. Tests CVE-2025-36911
+  2. Establishes HFP connection via exploit
+  3. Automatically pivots to HID services
+  4. Executes DuckyScript payload
+  5. Uses OS-specific scripts (Windows CMD, Apple Calculator, etc.)
+· One-click multi-stage attack
+
+---
+
+Smart Integration Features
+
+Auto-Suggestion System
+
+When selecting HID/Ducky attacks on HFP-enabled devices:
+
+· Detects HFP service in scanned devices
+· Prompts user with HFP pivot suggestion
+· Smart defaults - Recommends best approach based on device
+· Seamless integration - Works with existing attack functions
+
+Enhanced Existing Attacks
+
+The following attacks now include HFP pivot suggestions:
+
+· HID Keystroke Injection - Suggests HFP pivot when available
+· Ducky Script Injection - Offers HFP → DuckyScript chain
+· Force HID Injection - Can use HFP as entry vector
+· HID Connection Exploit - Enhanced with HFP bypass options
+
+Context-Aware Payloads
+
+· Windows devices - Auto-selects CMD/PS scripts
+· Apple devices - Uses GUI/Calculator payloads
+· Android/Linux - Generic terminal commands
+· HFP-enabled - Prioritizes stealthy audio-based entry
+
 ---
 
 Submenu Systems
@@ -380,16 +465,17 @@ Submenu Systems
 · Audio Tests - Individual audio service testing
 · Advanced Attacks - Protocol-specific exploit selection
 · Target Selection - Scrollable device picker with RSSI/sorting
+· HFP Integration - Smart suggestions for HFP-enabled targets
 
 ---
 
 Workflow
 
-1. Scan → Find BLE devices
-2. Select → Choose target from list
-3. Profile → Optional reconnaissance
-4. Attack → Pick appropriate exploit
-5. Execute → Run attack with progress display
+1. Scan → Find BLE devices (now detects HFP services)
+2. Select → Choose target from list (HFP devices marked)
+3. Profile → Optional reconnaissance (includes HFP detection)
+4. Attack → Pick appropriate exploit (HFP attacks suggested when relevant)
+5. Execute → Run attack with progress display (smart chains for HFP)
 6. Report → View success/failure results
 
 ---
@@ -398,7 +484,9 @@ Public Interfaces
 
 · BleSuiteMenu() - Main entry point
 · showAttackMenuWithTarget() - Direct attack menu
-· Scanner data accessible via scannerData global
+· runHFPHIDPivotAttack() - Complete HFP → HID chain
+· runSmartHFPPivot() - Context-aware attack selection
+· Scanner data accessible via scannerData global (includes HFP detection)
 
 ---
 
@@ -418,13 +506,46 @@ Susceptible to HID injection:
 · Some Linux distributions with default settings
 · Older smart TVs/streaming devices
 
+Potential HFP vulnerabilities (CVE-2025-36911):
+
+· Bluetooth headsets with microphone support
+· Car audio systems with hands-free calling
+· Conference room speakers with voice capability
+· Note: Requires specific firmware versions
+
 Resistant to most attacks:
 
 · iOS devices after version 14+
 · Modern Android (12+ with security updates)
 · Enterprise Windows 11 systems
 · Recent macOS versions
+· HFP-patched devices - Updated against CVE-2025-36911
 
 ---
 
-Each menu item targets specific BLE vulnerabilities or attack vectors, with increasing complexity from basic (keystroke injection) to advanced (protocol exploitation). The system adapts to target responses and employs multiple strategies for maximum effectiveness in authorized testing scenarios.
+Recent Additions (v2.0+)
+
+HFP Exploitation Module
+
+· CVE-2025-36911 testing - Latest Bluetooth vulnerability
+· Hands-free Profile detection - Identifies microphone-capable devices
+· Smart pivot system - Auto-suggests HFP → HID attack chains
+· Integrated with existing attacks - Enhances HID/DuckyScript success rates
+
+Enhanced User Experience
+
+· Context-aware suggestions - Recommends best attack approach
+· Seamless integration - HFP detection in scanning phase
+· One-click attack chains - HFP → HID → DuckyScript automation
+· Improved device profiling - HFP service identification
+
+Technical Improvements
+
+· Modular architecture - Separate HFP_Exploit module
+· Clean integration - Minimal changes to existing code
+· Backward compatibility - All existing features preserved
+· Professional tooling - Multi-stage attack pipelines
+
+---
+
+Each menu item targets specific BLE vulnerabilities or attack vectors, with increasing complexity from basic (keystroke injection) to advanced (HFP protocol exploitation). The system adapts to target responses, employs multiple strategies, and now includes smart suggestions for HFP-enabled devices to maximize effectiveness in authorized testing scenarios.
