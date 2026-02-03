@@ -8,7 +8,6 @@
 #include <vector>
 #include <freertos/FreeRTOS.h>
 #include <freertos/semphr.h>
-#include <functional>
 
 #ifndef TFT_WHITE
 #define TFT_WHITE 0xFFFF
@@ -176,51 +175,6 @@ struct ScannerData {
         }
         return result;
     }
-};
-
-class AutoCleanup {
-private:
-    std::function<void()> cleanupFunc;
-    bool enabled;
-    
-public:
-    AutoCleanup(std::function<void()> func, bool enable = true) 
-        : cleanupFunc(func), enabled(enable) {}
-    
-    ~AutoCleanup() { 
-        if(enabled && cleanupFunc) {
-            cleanupFunc(); 
-        }
-    }
-    
-    void disable() { enabled = false; }
-    void enable() { enabled = true; }
-    
-    AutoCleanup(const AutoCleanup&) = delete;
-    AutoCleanup& operator=(const AutoCleanup&) = delete;
-    
-    AutoCleanup(AutoCleanup&& other) noexcept 
-        : cleanupFunc(std::move(other.cleanupFunc)), enabled(other.enabled) {
-        other.cleanupFunc = nullptr;
-        other.enabled = false;
-    }
-};
-
-class BLEStateManager {
-private:
-    static bool bleInitialized;
-    static std::vector<NimBLEClient*> activeClients;
-    static String currentDeviceName;
-    
-public:
-    static bool initBLE(const String& name, int powerLevel = ESP_PWR_LVL_P9);
-    static void deinitBLE(bool immediate = false);
-    static void registerClient(NimBLEClient* client);
-    static void unregisterClient(NimBLEClient* client);
-    static void cleanupAllClients();
-    static bool isBLEActive();
-    static String getCurrentDeviceName();
-    static size_t getActiveClientCount();
 };
 
 class BLEAttackManager {
@@ -392,46 +346,6 @@ public:
     bool connectionFlood(NimBLEAddress target);
     bool advertisingSpam(NimBLEAddress target);
 };
-
-#ifdef DEBUG_MEMORY
-class HeapMonitor {
-private:
-    struct HeapSnapshot {
-        size_t freeHeap;
-        size_t maxFreeBlock;
-        unsigned long timestamp;
-        String label;
-    };
-    
-    static std::vector<HeapSnapshot> snapshots;
-    static size_t initialHeap;
-    
-public:
-    static void takeSnapshot(const String& label);
-    static void printReport();
-    static size_t getCurrentFree();
-    static size_t getLargestFree();
-};
-#endif
-
-#ifdef DEBUG_MEMORY
-#define MEM_SNAPSHOT(label) HeapMonitor::takeSnapshot(label)
-#define MEM_REPORT() HeapMonitor::printReport()
-#define MEM_CHECK() { \
-    size_t current = heap_caps_get_free_size(MALLOC_CAP_DEFAULT); \
-    static size_t lastCheck = 0; \
-    if(lastCheck > 0 && current < lastCheck - 512) { \
-        Serial.printf("[MEM] Warning: Lost %d bytes\n", lastCheck - current); \
-    } \
-    lastCheck = current; \
-}
-#else
-#define MEM_SNAPSHOT(label)
-#define MEM_REPORT()
-#define MEM_CHECK()
-#endif
-
-void cleanupBLEStack();
 
 NimBLEClient* attemptConnectionWithStrategies(NimBLEAddress target, String& connectionMethod);
 void BleSuiteMenu();
