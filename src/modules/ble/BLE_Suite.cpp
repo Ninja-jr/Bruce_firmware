@@ -2191,7 +2191,7 @@ bool MultiConnectionAttack::connectionFlood(std::vector<NimBLEAddress> targets, 
         }
     }
 
-    cleanup();
+    this->cleanup();
     cleanup.disable();
     if(anySuccess) showAttackResult(true, "Connection flood completed");
     else showAttackResult(false, "Flood attack failed");
