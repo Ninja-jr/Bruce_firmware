@@ -2122,7 +2122,7 @@ bool MultiConnectionAttack::connectionFlood(std::vector<NimBLEAddress> targets, 
         }
     }
 
-    cleanupAllClients();
+    BLEStateManager::cleanupAllClients();
     cleanup.disable();
     if(anySuccess) showAttackResult(true, "Connection flood completed");
     else showAttackResult(false, "Flood attack failed");
