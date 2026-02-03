@@ -80,7 +80,7 @@ void BLEStateManager::cleanupAllClients() {
 }
 
 bool BLEStateManager::isBLEActive() {
-    return bleInitialized && NimBLEDevice::getInitialized();
+    return bleInitialized;
 }
 
 String BLEStateManager::getCurrentDeviceName() {
@@ -2191,7 +2191,7 @@ bool MultiConnectionAttack::connectionFlood(std::vector<NimBLEAddress> targets, 
         }
     }
 
-    cleanupAllClients();
+    cleanup();
     cleanup.disable();
     if(anySuccess) showAttackResult(true, "Connection flood completed");
     else showAttackResult(false, "Flood attack failed");
