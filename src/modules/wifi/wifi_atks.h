@@ -5,8 +5,8 @@
 
 extern wifi_ap_record_t ap_record;
 
-// Broadcast MAC for flood attacks
-extern const uint8_t broadcast_mac[6];
+// Default target MAC (broadcast)
+static const uint8_t _default_target[6] = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF};
 
 // Default Deauth Frame
 const uint8_t deauth_frame_default[] = {0xc0, 0x00, 0x3a, 0x01, 0xff, 0xff, 0xff, 0xff, 0xff,
@@ -28,23 +28,16 @@ void send_raw_frame(const uint8_t *frame_buffer, int size);
 /**
  * @brief Prepare deauthentication frame with forged source AP from given ap_record
  *
- * This prepares a deauthentication frame acting as frame from given AP
+ * This will send deauthentication frame acting as frame from given AP, and destination will be broadcast
+ * MAC address - \c ff:ff:ff:ff:ff:ff
  *
  * @param ap_record AP record with valid AP information
- * @param chan Channel of the targeted AP
- * @param target MAC address of target (use broadcast_mac for broadcast)
+ * @param chan Channel of the targetted AP
+ * @param target Target MAC address (defaults to broadcast)
  */
-void wsl_bypasser_send_raw_frame(const wifi_ap_record_t *ap_record, uint8_t chan, const uint8_t target[6]);
-
-/**
- * @brief Set up WiFi for attack mode
- */
-bool wifi_atk_setWifi();
-
-/**
- * @brief Clean up WiFi after attack mode
- */
-bool wifi_atk_unsetWifi();
+void wsl_bypasser_send_raw_frame(
+    const wifi_ap_record_t *ap_record, uint8_t chan, const uint8_t target[6] = _default_target
+);
 
 void wifi_atk_info(String tssid, String mac, uint8_t channel);
 
