@@ -63,7 +63,7 @@ int getAPChannel(const uint8_t* target_bssid) {
     // Search through scanned APs to find the target
     for (int i = 0; i < scannedAPs; i++) {
         if (macCompare(APs[i].bssid, target_bssid)) {
-            found_channel = APs[i].channel;
+            found_channel = APs[i].primary;
             break;
         }
     }
