@@ -38,17 +38,6 @@ extern "C" int ieee80211_raw_frame_sanity_check(int32_t arg, int32_t arg2, int32
     else return 0;
 }
 
-// Complete deauth frame template
-const uint8_t deauth_frame_default[26] = {
-    0xC0, 0x00,                         // Type: Deauthentication, Flags
-    0x3A, 0x01,                         // Duration: 311 microseconds
-    0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, // Destination: broadcast (will be overwritten)
-    0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // Source (will be overwritten)
-    0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // BSSID (will be overwritten)
-    0x00, 0x00,                         // Sequence control (will be set)
-    0x07, 0x00                          // Reason code: Class 3 frame received from nonassociated STA
-};
-
 uint8_t deauth_frame[sizeof(deauth_frame_default)]; // 26 = [sizeof(deauth_frame_default[])]
 
 wifi_ap_record_t ap_record;
