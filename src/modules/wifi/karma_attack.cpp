@@ -50,6 +50,56 @@
 const uint8_t priorityChannels[] = {1, 6, 11, 3, 8};
 #define NUM_PRIORITY_CHANNELS 5
 
+// Attack tiers for different strategies
+enum AttackTier {
+    TIER_NONE = 0,
+    TIER_CLONE = 1,     // Clone popular networks (long duration)
+    TIER_HIGH = 2,      // High-value targets (medium duration)
+    TIER_MEDIUM = 3,    // Medium targets (short duration)
+    TIER_FAST = 4       // Fast cycling for demos (very short)
+};
+
+// Portal template structure
+struct PortalTemplate {
+    String name;
+    String filename;  // Empty for default templates
+    bool isDefault;
+    bool verifyPassword;
+};
+
+// Enhanced PendingPortal structure
+struct PendingPortal {
+    String ssid;
+    uint8_t channel;
+    String targetMAC;
+    unsigned long timestamp;
+    bool launched;
+    String templateName;
+    String templateFile;
+    bool isDefaultTemplate;
+    bool verifyPassword;
+    uint8_t priority;      // 0-100 priority score
+    AttackTier tier;       // Attack tier
+    uint16_t duration;     // Portal duration in ms
+    bool isCloneAttack;    // Is this a clone attack?
+    uint16_t probeCount;   // How many times this SSID was probed
+};
+
+// Attack configuration
+struct AttackConfig {
+    AttackTier defaultTier = TIER_HIGH;
+    uint32_t cloneDuration = 120000;    // 2 minutes for clone attacks
+    uint16_t highTierDuration = 45000;  // 45 seconds for high priority
+    uint16_t mediumTierDuration = 30000;// 30 seconds for medium
+    uint16_t fastTierDuration = 15000;  // 15 seconds for fast mode
+    uint8_t priorityThreshold = 60;     // Minimum priority to attack (0-100)
+    uint8_t cloneThreshold = 5;         // Minimum probes to trigger clone attack
+    uint8_t maxCloneNetworks = 2;       // Max clone networks to attack
+    bool enableCloneMode = true;        // Enable clone network detection
+    bool enableTieredAttack = true;     // Enable tiered attack strategy
+    bool prioritizeByRSSI = true;       // Prioritize by signal strength
+};
+
 //===== Run-Time variables =====//
 unsigned long last_time = 0;
 unsigned long last_ChannelChange = 0;
@@ -102,7 +152,7 @@ std::vector<PendingPortal> activePortals;
 
 //===== FUNCTIONS =====//
 
-String generateUniqueFilename(FS &fs, bool compressed = false) {
+String generateUniqueFilename(FS &fs, bool compressed) {
     String basePath = "/ProbeData/";
     String baseName = compressed ? "karma_compressed_" : "probe_capture_";
     String extension = compressed ? ".bin" : ".txt";
@@ -374,7 +424,7 @@ AttackTier determineAttackTier(uint8_t priority) {
 // Get portal duration based on tier
 uint16_t getPortalDuration(AttackTier tier) {
     switch(tier) {
-        case TIER_CLONE: return attackConfig.cloneDuration;
+        case TIER_CLONE: return (uint16_t)attackConfig.cloneDuration;
         case TIER_HIGH: return attackConfig.highTierDuration;
         case TIER_MEDIUM: return attackConfig.mediumTierDuration;
         case TIER_FAST: return attackConfig.fastTierDuration;
@@ -581,7 +631,7 @@ void checkCloneAttackOpportunities() {
                 portal.verifyPassword = selectedTemplate.verifyPassword;
                 portal.priority = 100; // Max priority for clone attacks
                 portal.tier = TIER_CLONE;
-                portal.duration = attackConfig.cloneDuration;
+                portal.duration = (uint16_t)attackConfig.cloneDuration;
                 portal.isCloneAttack = true;
                 portal.probeCount = ssidPair.second;
 
@@ -866,7 +916,7 @@ void checkPendingPortals() {
 }
 
 // Launch Evil Portal for manual mode (shows menu)
-void launchManualEvilPortal(const String &ssid, uint8_t channel, bool verifyPwd = false) {
+void launchManualEvilPortal(const String &ssid, uint8_t channel, bool verifyPwd) {
     Serial.printf("[MANUAL] Launching Evil Portal for %s (ch%d)\n", ssid.c_str(), channel);
 
     isPortalActive = true;
@@ -1140,10 +1190,10 @@ void karma_setup() {
         Fs = &SD;
         FileSys = "SD";
         is_LittleFS = false;
-        filen = generateUniqueFilename(SD);
+        filen = generateUniqueFilename(SD, false);
     } else {
         Fs = &LittleFS;
-        filen = generateUniqueFilename(LittleFS);
+        filen = generateUniqueFilename(LittleFS, false);
     }
 
     if (!Fs->exists("/ProbeData")) Fs->mkdir("/ProbeData");
