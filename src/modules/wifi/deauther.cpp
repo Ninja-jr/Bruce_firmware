@@ -59,10 +59,9 @@ int getAPChannel(const uint8_t* target_bssid) {
     int numNetworks = WiFi.scanNetworks(false, false);
     
     for (int i = 0; i < numNetworks; i++) {
-        uint8_t bssid[6];
-        WiFi.BSSID(i).getBytes(bssid, 6);
+        uint8_t* bssid_ptr = WiFi.BSSID(i);
         
-        if (macCompare(bssid, target_bssid)) {
+        if (macCompare(bssid_ptr, target_bssid)) {
             found_channel = WiFi.channel(i);
             break;
         }
