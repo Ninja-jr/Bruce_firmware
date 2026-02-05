@@ -85,7 +85,7 @@ struct KarmaConfig {
 // Attack configuration
 struct AttackConfig {
     AttackTier defaultTier = TIER_HIGH;
-    uint16_t cloneDuration = 120000;    // 2 minutes for clone attacks
+    uint32_t cloneDuration = 120000;    // 2 minutes for clone attacks (fixed to uint32_t)
     uint16_t highTierDuration = 45000;  // 45 seconds for high priority
     uint16_t mediumTierDuration = 30000;// 30 seconds for medium
     uint16_t fastTierDuration = 15000;  // 15 seconds for fast mode
@@ -109,7 +109,7 @@ String extractMAC(const wifi_promiscuous_pkt_t *packet);
 uint8_t extractEncryptionHint(const wifi_promiscuous_pkt_t *packet);
 
 // Data management functions
-void saveProbesToFile(fs::FS &fs, bool compressed = false);
+void saveProbesToFile(fs::FS &fs, bool compressed);
 void clearProbes();
 
 // Data retrieval functions
@@ -131,7 +131,7 @@ void executeTieredAttackStrategy();
 void loadPortalTemplates();
 bool selectPortalTemplate();
 void launchTieredEvilPortal(PendingPortal &portal);
-void launchManualEvilPortal(const String &ssid, uint8_t channel, bool verifyPwd = false);
+void launchManualEvilPortal(const String &ssid, uint8_t channel, bool verifyPwd);
 
 // Network functions
 void sendProbeResponse(const String &ssid, const String &mac, uint8_t channel);
@@ -144,7 +144,7 @@ uint8_t getBestChannel();
 void probe_sniffer(void *buf, wifi_promiscuous_pkt_type_t type);
 
 // Utility functions
-String generateUniqueFilename(fs::FS &fs, bool compressed = false);
+String generateUniqueFilename(fs::FS &fs, bool compressed);
 void initMACCache();
 bool isMACInCache(const String &mac);
 void addMACToCache(const String &mac);
