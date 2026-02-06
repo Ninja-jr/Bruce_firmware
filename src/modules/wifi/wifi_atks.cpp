@@ -132,7 +132,7 @@ void wifi_complete_cleanup() {
 
 void checkHeap(const char* tag) {
     uint32_t currentHeap = ESP.getFreeHeap();
-    Serial.printf("[HEAP] %s - Free: %d, Frag: %d%%\n", tag, currentHeap, ESP.getHeapFragmentation());
+    Serial.printf("[HEAP] %s - Free: %d\n", tag, currentHeap);
 }
 
 void resetGlobalState() {
@@ -220,7 +220,7 @@ void wifi_atk_info(String tssid, String mac, uint8_t channel) {
 ***************************************************************************************/
 bool wifi_atk_setWifi() {
     checkHeap("Wifi atk start");
-    
+
     wifi_complete_cleanup();
     delay(100);
 
@@ -266,12 +266,12 @@ bool wifi_atk_unsetWifi() {
 ***************************************************************************************/
 void wifi_atk_menu() {
     resetGlobalState();
-    
+
     if (WiFi.getMode() == WIFI_MODE_NULL) {
         wifi_complete_cleanup();
         delay(500);
     }
-    
+
     checkHeap("Wifi menu start");
 
     bool scanAtks = false;
