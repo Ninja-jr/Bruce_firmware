@@ -5,6 +5,14 @@
 #include <vector>
 
 class SSIDDatabase {
+private:
+    static std::vector<String> ssidCache;
+    static bool cacheLoaded;
+    static String currentFilename;
+    static bool useLittleFS;
+    
+    static bool loadFromFile();
+    
 public:
     static size_t getCount();
     static String getSSID(size_t index);
@@ -16,6 +24,12 @@ public:
     static size_t getAverageLength();
     static size_t getMaxLength();
     static size_t getMinLength();
+    
+    static bool setSourceFile(const String &filename, bool useLittleFS = false);
+    static bool reload();
+    static void clearCache();
+    static bool isLoaded();
+    static String getSourceFile();
 };
 
 #endif // SSID_DATABASE_H
