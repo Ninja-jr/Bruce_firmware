@@ -586,6 +586,10 @@ void loadPortalTemplates() {
     portalTemplates.push_back({"Router Update", "", true, true});
 
     if (LittleFS.begin()) {
+        if (!LittleFS.exists("/PortalTemplates")) {
+            LittleFS.mkdir("/PortalTemplates");
+        }
+        
         if (LittleFS.exists("/PortalTemplates")) {
             File root = LittleFS.open("/PortalTemplates");
             File file = root.openNextFile();
@@ -614,6 +618,10 @@ void loadPortalTemplates() {
     }
 
     if (SD.begin()) {
+        if (!SD.exists("/PortalTemplates")) {
+            SD.mkdir("/PortalTemplates");
+        }
+        
         if (SD.exists("/PortalTemplates")) {
             File root = SD.open("/PortalTemplates");
             File file = root.openNextFile();
@@ -670,18 +678,91 @@ bool selectPortalTemplate() {
         }});
     }
 
-    templateOptions.push_back({"Skip (No Portal)", [=]() {
+    templateOptions.push_back({"Load Custom File", [=]() {
+        std::vector<Option> loadOptions;
+        
+        loadOptions.push_back({"Load from SD", [=]() {
+            if (setupSdCard()) {
+                String templateFile = loopSD(SD, true, "HTML");
+                if (templateFile.length() > 0) {
+                    PortalTemplate customTmpl;
+                    customTmpl.name = "[Custom] " + templateFile;
+                    customTmpl.filename = templateFile;
+                    customTmpl.isDefault = false;
+                    customTmpl.verifyPassword = false;
+                    
+                    File file = SD.open(templateFile, FILE_READ);
+                    if (file) {
+                        String firstLine = file.readStringUntil('\n');
+                        file.close();
+                        if (firstLine.indexOf("verify=\"true\"") != -1) {
+                            customTmpl.verifyPassword = true;
+                            customTmpl.name += " (verify)";
+                        }
+                    }
+                    
+                    selectedTemplate = customTmpl;
+                    templateSelected = true;
+                    portalTemplates.push_back(customTmpl);
+                    
+                    drawMainBorderWithTitle("KARMA SETUP");
+                    displayTextLine("Selected: " + customTmpl.name);
+                    delay(1000);
+                }
+            } else {
+                displayTextLine("SD Card not found!");
+                delay(1000);
+            }
+        }});
+        
+        loadOptions.push_back({"Load from LittleFS", [=]() {
+            if (LittleFS.begin()) {
+                String templateFile = loopSD(LittleFS, true, "HTML");
+                if (templateFile.length() > 0) {
+                    PortalTemplate customTmpl;
+                    customTmpl.name = "[Custom] " + templateFile;
+                    customTmpl.filename = templateFile;
+                    customTmpl.isDefault = false;
+                    customTmpl.verifyPassword = false;
+                    
+                    File file = LittleFS.open(templateFile, FILE_READ);
+                    if (file) {
+                        String firstLine = file.readStringUntil('\n');
+                        file.close();
+                        if (firstLine.indexOf("verify=\"true\"") != -1) {
+                            customTmpl.verifyPassword = true;
+                            customTmpl.name += " (verify)";
+                        }
+                    }
+                    
+                    selectedTemplate = customTmpl;
+                    templateSelected = true;
+                    portalTemplates.push_back(customTmpl);
+                    
+                    drawMainBorderWithTitle("KARMA SETUP");
+                    displayTextLine("Selected: " + customTmpl.name);
+                    delay(1000);
+                }
+                LittleFS.end();
+            } else {
+                displayTextLine("LittleFS error!");
+                delay(1000);
+            }
+        }});
+        
+        loadOptions.push_back({"Back", [=]() {
+            returnToMenu = false;
+        }});
+        
+        loopOptions(loadOptions);
+    }});
+
+    templateOptions.push_back({"Disable Auto-Portal", [=]() {
         karmaConfig.enableAutoPortal = false;
         templateSelected = false;
         drawMainBorderWithTitle("KARMA SETUP");
         displayTextLine("Auto-portal disabled");
         delay(1000);
-    }});
-
-    templateOptions.push_back({"Reload Templates", [=]() {
-        loadPortalTemplates();
-        returnToMenu = false;
-        selectPortalTemplate();
     }});
 
     loopOptions(templateOptions);
@@ -1127,15 +1208,40 @@ void karma_setup() {
     Serial.println("Enhanced karma attack started!");
     vTaskDelay(1000 / portTICK_RATE_MS);
 
-    if (is_LittleFS && !checkLittleFsSize()) goto Exit;
+    if (is_LittleFS && !checkLittleFsSize()) {
+        esp_wifi_set_promiscuous(false);
+        esp_wifi_set_promiscuous_rx_cb(nullptr);
+        esp_wifi_stop();
+        esp_wifi_deinit();
+        if (macRingBuffer) {
+            vRingbufferDelete(macRingBuffer);
+            macRingBuffer = NULL;
+        }
+        displayError("LittleFS Full", true);
+        tft.fillScreen(bruceConfig.bgColor);
+        return;
+    }
 
     for (;;) {
         if (returnToMenu) {
+            esp_wifi_set_promiscuous(false);
+            esp_wifi_set_promiscuous_rx_cb(nullptr);
+            esp_wifi_stop();
+            esp_wifi_deinit();
+            vTaskDelay(100 / portTICK_PERIOD_MS);
+            
+            if (macRingBuffer) {
+                vRingbufferDelete(macRingBuffer);
+                macRingBuffer = NULL;
+            }
+            
             if (!checkLittleFsSize()) {
                 Serial.println("Not enough space on LittleFS");
                 displayError("LittleFS Full", true);
             }
-            break;
+            
+            tft.fillScreen(bruceConfig.bgColor);
+            return;
         }
 
         unsigned long currentTime = millis();
@@ -1187,7 +1293,7 @@ void karma_setup() {
             LongPress = false;
             if (millis() - _tmp > 700) {
                 returnToMenu = true;
-                break;
+                continue;
             }
 #endif
             check(PrevPress);
@@ -1206,7 +1312,7 @@ void karma_setup() {
 #if defined(HAS_KEYBOARD) || defined(T_EMBED)
         if (check(EscPress)) {
             returnToMenu = true;
-            break;
+            continue;
         }
 #endif
 
@@ -1262,16 +1368,85 @@ void karma_setup() {
                              }});
                          }
 
+                         templateOptions.push_back({"Load Custom File", [=]() {
+                             std::vector<Option> loadOptions;
+                             
+                             loadOptions.push_back({"Load from SD", [=]() {
+                                 if (setupSdCard()) {
+                                     String templateFile = loopSD(SD, true, "HTML");
+                                     if (templateFile.length() > 0) {
+                                         PortalTemplate customTmpl;
+                                         customTmpl.name = "[Custom] " + templateFile;
+                                         customTmpl.filename = templateFile;
+                                         customTmpl.isDefault = false;
+                                         customTmpl.verifyPassword = false;
+                                         
+                                         File file = SD.open(templateFile, FILE_READ);
+                                         if (file) {
+                                             String firstLine = file.readStringUntil('\n');
+                                             file.close();
+                                             if (firstLine.indexOf("verify=\"true\"") != -1) {
+                                                 customTmpl.verifyPassword = true;
+                                                 customTmpl.name += " (verify)";
+                                             }
+                                         }
+                                         
+                                         selectedTemplate = customTmpl;
+                                         templateSelected = true;
+                                         portalTemplates.push_back(customTmpl);
+                                         karmaConfig.enableAutoPortal = true;
+                                         displayTextLine("Selected: " + customTmpl.name);
+                                         delay(1000);
+                                     }
+                                 } else {
+                                     displayTextLine("SD Card not found!");
+                                     delay(1000);
+                                 }
+                             }});
+                             
+                             loadOptions.push_back({"Load from LittleFS", [=]() {
+                                 if (LittleFS.begin()) {
+                                     String templateFile = loopSD(LittleFS, true, "HTML");
+                                     if (templateFile.length() > 0) {
+                                         PortalTemplate customTmpl;
+                                         customTmpl.name = "[Custom] " + templateFile;
+                                         customTmpl.filename = templateFile;
+                                         customTmpl.isDefault = false;
+                                         customTmpl.verifyPassword = false;
+                                         
+                                         File file = LittleFS.open(templateFile, FILE_READ);
+                                         if (file) {
+                                             String firstLine = file.readStringUntil('\n');
+                                             file.close();
+                                             if (firstLine.indexOf("verify=\"true\"") != -1) {
+                                                 customTmpl.verifyPassword = true;
+                                                 customTmpl.name += " (verify)";
+                                             }
+                                         }
+                                         
+                                         selectedTemplate = customTmpl;
+                                         templateSelected = true;
+                                         portalTemplates.push_back(customTmpl);
+                                         karmaConfig.enableAutoPortal = true;
+                                         displayTextLine("Selected: " + customTmpl.name);
+                                         delay(1000);
+                                     }
+                                     LittleFS.end();
+                                 } else {
+                                     displayTextLine("LittleFS error!");
+                                     delay(1000);
+                                 }
+                             }});
+                             
+                             loadOptions.push_back({"Back", [=]() {}});
+                             
+                             loopOptions(loadOptions);
+                         }});
+
                          templateOptions.push_back({"Disable Auto-Portal", [=]() {
                              karmaConfig.enableAutoPortal = false;
                              templateSelected = false;
                              displayTextLine("Auto-portal disabled");
-                             delay(1000);
-                         }});
-
-                         templateOptions.push_back({"Reload Templates", [=]() {
-                             loadPortalTemplates();
-                             displayTextLine("Templates reloaded");
                              delay(1000);
                          }});
 
@@ -1449,7 +1624,9 @@ void karma_setup() {
                 loopOptions(options);
             }
 
-            if (returnToMenu) goto Exit;
+            if (returnToMenu) {
+                continue;
+            }
             redraw = false;
             redrawNeeded = false;
             tft.drawPixel(0, 0, 0);
@@ -1483,17 +1660,18 @@ void karma_setup() {
         vTaskDelay(50 / portTICK_PERIOD_MS);
     }
 
-Exit:
     esp_wifi_set_promiscuous(false);
+    esp_wifi_set_promiscuous_rx_cb(nullptr);
     esp_wifi_stop();
-    esp_wifi_set_promiscuous_rx_cb(NULL);
     esp_wifi_deinit();
-    vTaskDelay(1 / portTICK_RATE_MS);
+    vTaskDelay(100 / portTICK_PERIOD_MS);
 
     if (macRingBuffer) {
         vRingbufferDelete(macRingBuffer);
         macRingBuffer = NULL;
     }
+    
+    tft.fillScreen(bruceConfig.bgColor);
 }
 
 void saveProbesToFile(FS &fs, bool compressed) {
