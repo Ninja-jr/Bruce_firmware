@@ -512,7 +512,7 @@ void capture_handshake(String tssid, String mac, uint8_t channel) {
         for (int i = 0; i < 6; ++i) { apKey = (apKey << 8) | bssid_array[i]; }
         markHandshakeReady(apKey);
         captured = true;
-        Serial.println("Handshake file already exists")
+        Serial.println("Handshake file already exists");
     }
 
     if (!wifi_atk_setWifi()) return; // error messages inside the function
