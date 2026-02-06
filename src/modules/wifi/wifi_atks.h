@@ -6,7 +6,7 @@
 extern wifi_ap_record_t ap_record;
 
 // Default target MAC (broadcast)
-static const uint8_t _default_target[6] = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF};
+extern const uint8_t _default_target[6];
 
 // Default Deauth Frame
 const uint8_t deauth_frame_default[] = {0xc0, 0x00, 0x3a, 0x01, 0xff, 0xff, 0xff, 0xff, 0xff,
