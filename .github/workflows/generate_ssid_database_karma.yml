@@ -1,0 +1,250 @@
+name: Generate SSID Database
+
+on:
+  push:
+    paths:
+      - 'src/modules/wifi/ssid_list.txt'
+  workflow_dispatch:
+  repository_dispatch:
+
+jobs:
+  generate:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+      
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.10'
+        
+    - name: Generate SSID database
+      run: |
+        cat > generate.py << 'EOF'
+        #!/usr/bin/env python3
+        import sys
+        import os
+        
+        def escape_cpp_string(s):
+            s = s.replace('\\', '\\\\')
+            s = s.replace('"', '\\"')
+            trigraph_pairs = [
+                ('??=', '?" "?='),
+                ('??/', '?" "?/'),
+                ("??'", '?" "?\''),
+                ('??(', '?" "?('),
+                ('??)', '?" "?)'),
+                ('??!', '?" "?!'),
+                ('??<', '?" "?<'),
+                ('??>', '?" "?>'),
+                ('??-', '?" "?-'),
+            ]
+            for trigraph, replacement in trigraph_pairs:
+                if trigraph in s:
+                    s = s.replace(trigraph, replacement)
+            return s
+        
+        def main():
+            input_file = "src/modules/wifi/ssid_list.txt"
+            output_cpp = "src/modules/wifi/ssid_database.cpp"
+            output_header = "src/modules/wifi/ssid_database.h"
+            
+            os.makedirs(os.path.dirname(output_cpp), exist_ok=True)
+            
+            if not os.path.exists(input_file):
+                print(f"Error: {input_file} not found!")
+                sys.exit(1)
+            
+            ssids = []
+            trigraph_count = 0
+            with open(input_file, 'r', encoding='utf-8') as f:
+                for line in f:
+                    line = line.strip()
+                    if not line or line.startswith('#') or line.startswith('//'):
+                        continue
+                    
+                    if len(line) > 32:
+                        print(f"Warning: SSID too long ({len(line)} chars): {line[:20]}...")
+                        continue
+                    
+                    trigraphs = ['??=', '??/', "??'", '??(', '??)', '??!', '??<', '??>', '??-']
+                    has_trigraph = any(trigraph in line for trigraph in trigraphs)
+                    if has_trigraph:
+                        trigraph_count += 1
+                    
+                    escaped = escape_cpp_string(line)
+                    ssids.append(escaped)
+            
+            print(f"Processed {len(ssids)} SSIDs")
+            if trigraph_count > 0:
+                print(f"Found {trigraph_count} SSIDs with trigraphs")
+            
+            with open(output_cpp, 'w', encoding='utf-8') as f:
+                f.write(f'''#include "ssid_database.h"
+        #include <vector>
+        #include <Arduino.h>
+        
+        const char* const SSID_LIST[] PROGMEM = {{
+        ''')
+                
+                for i, ssid in enumerate(ssids):
+                    f.write(f'    "{ssid}"')
+                    if i < len(ssids):
+                        f.write(',')
+                    f.write('\n')
+                
+                f.write('''    nullptr
+        };
+        
+        String readPGMString(const char* ptr) {
+            if (!ptr) return "";
+            char buffer[33];
+            size_t i = 0;
+            char c;
+            while (i < 32 && (c = pgm_read_byte(ptr + i)) != '\\0') {
+                buffer[i++] = c;
+            }
+            buffer[i] = '\\0';
+            return String(buffer);
+        }
+        
+        size_t SSIDDatabase::getCount() {
+            size_t count = 0;
+            while (pgm_read_ptr(&SSID_LIST[count]) != nullptr) {
+                count++;
+            }
+            return count;
+        }
+        
+        String SSIDDatabase::getSSID(size_t index) {
+            const char* ptr = (const char*)pgm_read_ptr(&SSID_LIST[index]);
+            if (!ptr) return "";
+            return readPGMString(ptr);
+        }
+        
+        std::vector<String> SSIDDatabase::getAllSSIDs() {
+            std::vector<String> result;
+            size_t count = getCount();
+            result.reserve(count);
+            for (size_t i = 0; i < count; i++) {
+                result.push_back(getSSID(i));
+            }
+            return result;
+        }
+        
+        int SSIDDatabase::findSSID(const String &ssid) {
+            size_t count = getCount();
+            for (size_t i = 0; i < count; i++) {
+                if (getSSID(i) == ssid) return i;
+            }
+            return -1;
+        }
+        
+        String SSIDDatabase::getRandomSSID() {
+            size_t count = getCount();
+            if (count == 0) return "";
+            size_t index = random(count);
+            return getSSID(index);
+        }
+        
+        void SSIDDatabase::getBatch(size_t startIndex, size_t count, std::vector<String> &result) {
+            result.clear();
+            size_t total = getCount();
+            if (startIndex >= total) return;
+            size_t endIndex = startIndex + count;
+            if (endIndex > total) endIndex = total;
+            result.reserve(endIndex - startIndex);
+            for (size_t i = startIndex; i < endIndex; i++) {
+                result.push_back(getSSID(i));
+            }
+        }
+        
+        bool SSIDDatabase::contains(const String &ssid) {
+            return findSSID(ssid) >= 0;
+        }
+        
+        size_t SSIDDatabase::getAverageLength() {
+            size_t count = getCount();
+            if (count == 0) return 0;
+            size_t total = 0;
+            for (size_t i = 0; i < count; i++) {
+                total += getSSID(i).length();
+            }
+            return total / count;
+        }
+        
+        size_t SSIDDatabase::getMaxLength() {
+            size_t count = getCount();
+            size_t maxLen = 0;
+            for (size_t i = 0; i < count; i++) {
+                size_t len = getSSID(i).length();
+                if (len > maxLen) maxLen = len;
+            }
+            return maxLen;
+        }
+        
+        size_t SSIDDatabase::getMinLength() {
+            size_t count = getCount();
+            if (count == 0) return 0;
+            size_t minLen = 32;
+            for (size_t i = 0; i < count; i++) {
+                size_t len = getSSID(i).length();
+                if (len < minLen) minLen = len;
+            }
+            return minLen;
+        }
+        ''')
+            
+            with open(output_header, 'w', encoding='utf-8') as f:
+                f.write('''#ifndef SSID_DATABASE_H
+        #define SSID_DATABASE_H
+        
+        #include <Arduino.h>
+        #include <vector>
+        
+        class SSIDDatabase {
+        public:
+            static size_t getCount();
+            static String getSSID(size_t index);
+            static std::vector<String> getAllSSIDs();
+            static int findSSID(const String &ssid);
+            static String getRandomSSID();
+            static void getBatch(size_t startIndex, size_t count, std::vector<String> &result);
+            static bool contains(const String &ssid);
+            static size_t getAverageLength();
+            static size_t getMaxLength();
+            static size_t getMinLength();
+        };
+        
+        #endif // SSID_DATABASE_H
+        ''')
+            
+            print(f"Generated {output_cpp} and {output_header}")
+        
+        if __name__ == "__main__":
+            main()
+        EOF
+        
+        python generate.py
+        
+        echo "SSID list lines: $(wc -l < src/modules/wifi/ssid_list.txt)"
+        ls -la src/modules/wifi/ssid_database.cpp src/modules/wifi/ssid_database.h
+        
+    - name: Commit generated files
+      run: |
+        git config --local user.email "action@github.com"
+        git config --local user.name "GitHub Action"
+        git add src/modules/wifi/ssid_database.cpp src/modules/wifi/ssid_database.h
+        git commit -m "Update generated SSID database" || echo "No changes to commit"
+        git push || echo "Nothing to push"
+        
+    - name: Upload generated files
+      uses: actions/upload-artifact@v4
+      with:
+        name: ssid-database-files
+        path: |
+          src/modules/wifi/ssid_database.cpp
+          src/modules/wifi/ssid_database.h
+        retention-days: 90
