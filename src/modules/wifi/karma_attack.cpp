@@ -102,6 +102,34 @@ std::vector<PendingPortal> activePortals;
 
 //===== FUNCTIONS =====//
 
+void wifi_complete_cleanup() {
+    Serial.println("[KARMA] Complete WiFi cleanup");
+    esp_wifi_set_promiscuous(false);
+    esp_wifi_set_promiscuous_rx_cb(NULL);
+    esp_wifi_stop();
+    esp_wifi_deinit();
+    esp_wifi_restore();
+    WiFi.disconnect(true);
+    WiFi.mode(WIFI_OFF);
+    delay(300);
+}
+
+void checkHeap(const char* tag) {
+    uint32_t currentHeap = ESP.getFreeHeap();
+    Serial.printf("[HEAP] %s - Free: %d, Frag: %d%%\n", tag, currentHeap, ESP.getHeapFragmentation());
+}
+
+void resetGlobalState() {
+    options.clear();
+    options.shrink_to_fit();
+    SelPress = false;
+    EscPress = false;
+    PrevPress = false;
+    NextPress = false;
+    returnToMenu = false;
+    tft.fillScreen(bruceConfig.bgColor);
+}
+
 String generateUniqueFilename(FS &fs, bool compressed) {
     String basePath = "/ProbeData/";
     String baseName = compressed ? "karma_compressed_" : "probe_capture_";
@@ -120,6 +148,9 @@ String generateUniqueFilename(FS &fs, bool compressed) {
 }
 
 void initMACCache() {
+    if (macRingBuffer) {
+        vRingbufferDelete(macRingBuffer);
+    }
     macRingBuffer = xRingbufferCreate(MAC_CACHE_SIZE * 18, RINGBUF_TYPE_NOSPLIT);
     if (!macRingBuffer) {
         Serial.println("[ERROR] Failed to create MAC ring buffer!");
@@ -589,7 +620,7 @@ void loadPortalTemplates() {
         if (!LittleFS.exists("/PortalTemplates")) {
             LittleFS.mkdir("/PortalTemplates");
         }
-        
+
         if (LittleFS.exists("/PortalTemplates")) {
             File root = LittleFS.open("/PortalTemplates");
             File file = root.openNextFile();
@@ -621,7 +652,7 @@ void loadPortalTemplates() {
         if (!SD.exists("/PortalTemplates")) {
             SD.mkdir("/PortalTemplates");
         }
-        
+
         if (SD.exists("/PortalTemplates")) {
             File root = SD.open("/PortalTemplates");
             File file = root.openNextFile();
@@ -680,7 +711,7 @@ bool selectPortalTemplate() {
 
     templateOptions.push_back({"Load Custom File", [=]() {
         std::vector<Option> loadOptions;
-        
+
         loadOptions.push_back({"Load from SD", [=]() {
             if (setupSdCard()) {
                 String templateFile = loopSD(SD, true, "HTML");
@@ -690,7 +721,7 @@ bool selectPortalTemplate() {
                     customTmpl.filename = templateFile;
                     customTmpl.isDefault = false;
                     customTmpl.verifyPassword = false;
-                    
+
                     File file = SD.open(templateFile, FILE_READ);
                     if (file) {
                         String firstLine = file.readStringUntil('\n');
@@ -700,11 +731,11 @@ bool selectPortalTemplate() {
                             customTmpl.name += " (verify)";
                         }
                     }
-                    
+
                     selectedTemplate = customTmpl;
                     templateSelected = true;
                     portalTemplates.push_back(customTmpl);
-                    
+
                     drawMainBorderWithTitle("KARMA SETUP");
                     displayTextLine("Selected: " + customTmpl.name);
                     delay(1000);
@@ -714,7 +745,7 @@ bool selectPortalTemplate() {
                 delay(1000);
             }
         }});
-        
+
         loadOptions.push_back({"Load from LittleFS", [=]() {
             if (LittleFS.begin()) {
                 String templateFile = loopSD(LittleFS, true, "HTML");
@@ -724,7 +755,7 @@ bool selectPortalTemplate() {
                     customTmpl.filename = templateFile;
                     customTmpl.isDefault = false;
                     customTmpl.verifyPassword = false;
-                    
+
                     File file = LittleFS.open(templateFile, FILE_READ);
                     if (file) {
                         String firstLine = file.readStringUntil('\n');
@@ -734,11 +765,11 @@ bool selectPortalTemplate() {
                             customTmpl.name += " (verify)";
                         }
                     }
-                    
+
                     selectedTemplate = customTmpl;
                     templateSelected = true;
                     portalTemplates.push_back(customTmpl);
-                    
+
                     drawMainBorderWithTitle("KARMA SETUP");
                     displayTextLine("Selected: " + customTmpl.name);
                     delay(1000);
@@ -749,11 +780,11 @@ bool selectPortalTemplate() {
                 delay(1000);
             }
         }});
-        
+
         loadOptions.push_back({"Back", [=]() {
             returnToMenu = false;
         }});
-        
+
         loopOptions(loadOptions);
     }});
 
@@ -1116,7 +1147,7 @@ void updateKarmaDisplay() {
         if (broadcastAttack.isActive()) {
             tft.setCursor(tftWidth - 150, tftHeight - 85);
             tft.print("BROADCAST");
-            
+
             // Show broadcast progress
             float progress = broadcastAttack.getProgressPercent();
             tft.setCursor(tftWidth - 100, tftHeight - 85);
@@ -1150,21 +1181,18 @@ void safe_wifi_deinit() {
     esp_wifi_set_promiscuous(false);
     esp_wifi_stop();
     esp_wifi_deinit();
-    vTaskDelay(100 / portTICK_PERIOD_MS);
+    vTaskDelay(100 / portTICK_RATE_MS);
 }
 
 void karma_setup() {
-    returnToMenu = false;
+    resetGlobalState();
     templateSelected = false;
     redrawNeeded = true;
 
-    if (esp_wifi_stop() == ESP_OK) { safe_wifi_deinit(); }
+    checkHeap("Karma start");
 
+    wifi_complete_cleanup();
     delay(200);
-
-    FS *Fs;
-    int redraw = true;
-    String FileSys = "LittleFS";
 
     drawMainBorderWithTitle("KARMA ATTACK SETUP");
     displayTextLine("Select portal template:");
@@ -1177,6 +1205,10 @@ void karma_setup() {
     }
 
     drawMainBorderWithTitle("ENHANCED KARMA ATK");
+
+    FS *Fs;
+    int redraw = true;
+    String FileSys = "LittleFS";
 
     if (setupSdCard()) {
         Fs = &SD;
@@ -1232,6 +1264,8 @@ void karma_setup() {
 
     for (;;) {
         if (returnToMenu) {
+            Serial.println("[KARMA] Exiting - performing cleanup");
+            
             // Stop broadcast attack
             if (broadcastAttack.isActive()) {
                 broadcastAttack.stop();
@@ -1241,14 +1275,33 @@ void karma_setup() {
             esp_wifi_set_promiscuous_rx_cb(nullptr);
             esp_wifi_stop();
             esp_wifi_deinit();
-            vTaskDelay(100 / portTICK_PERIOD_MS);
+            esp_wifi_restore();
             
             if (macRingBuffer) {
                 vRingbufferDelete(macRingBuffer);
                 macRingBuffer = NULL;
             }
             
+            portalTemplates.clear();
+            portalTemplates.shrink_to_fit();
+            pendingPortals.clear();
+            pendingPortals.shrink_to_fit();
+            activePortals.clear();
+            activePortals.shrink_to_fit();
+            popularSSIDs.clear();
+            popularSSIDs.shrink_to_fit();
+            ssidFrequency.clear();
+            clientBehaviors.clear();
+            probeBufferIndex = 0;
+            bufferWrapped = false;
+            
+            delay(200);
+            WiFi.mode(WIFI_OFF);
+            WiFi.disconnect(true);
+            
             tft.fillScreen(bruceConfig.bgColor);
+            
+            Serial.printf("[KARMA] Cleanup complete. Heap: %d\n", ESP.getFreeHeap());
             return;
         }
 
@@ -1384,7 +1437,7 @@ void karma_setup() {
 
                          templateOptions.push_back({"Load Custom File", [=]() {
                              std::vector<Option> loadOptions;
-                             
+
                              loadOptions.push_back({"Load from SD", [=]() {
                                  if (setupSdCard()) {
                                      String templateFile = loopSD(SD, true, "HTML");
@@ -1394,7 +1447,7 @@ void karma_setup() {
                                          customTmpl.filename = templateFile;
                                          customTmpl.isDefault = false;
                                          customTmpl.verifyPassword = false;
-                                         
+
                                          File file = SD.open(templateFile, FILE_READ);
                                          if (file) {
                                              String firstLine = file.readStringUntil('\n');
@@ -1404,7 +1457,7 @@ void karma_setup() {
                                                  customTmpl.name += " (verify)";
                                              }
                                          }
-                                         
+
                                          selectedTemplate = customTmpl;
                                          templateSelected = true;
                                          portalTemplates.push_back(customTmpl);
@@ -1417,7 +1470,7 @@ void karma_setup() {
                                      delay(1000);
                                  }
                              }});
-                             
+
                              loadOptions.push_back({"Load from LittleFS", [=]() {
                                  if (LittleFS.begin()) {
                                      String templateFile = loopSD(LittleFS, true, "HTML");
@@ -1427,7 +1480,7 @@ void karma_setup() {
                                          customTmpl.filename = templateFile;
                                          customTmpl.isDefault = false;
                                          customTmpl.verifyPassword = false;
-                                         
+
                                          File file = LittleFS.open(templateFile, FILE_READ);
                                          if (file) {
                                              String firstLine = file.readStringUntil('\n');
@@ -1437,7 +1490,7 @@ void karma_setup() {
                                                  customTmpl.name += " (verify)";
                                              }
                                          }
-                                         
+
                                          selectedTemplate = customTmpl;
                                          templateSelected = true;
                                          portalTemplates.push_back(customTmpl);
@@ -1451,9 +1504,9 @@ void karma_setup() {
                                      delay(1000);
                                  }
                              }});
-                             
+
                              loadOptions.push_back({"Back", [=]() {}});
-                             
+
                              loopOptions(loadOptions);
                          }});
 
@@ -1517,7 +1570,7 @@ void karma_setup() {
                     // ===== BROADCAST ATTACK MENU OPTION =====
                     {"Active Broadcast Attack", [=]() {
                         std::vector<Option> broadcastOptions;
-                        
+
                         // Start/Stop toggle
                         broadcastOptions.push_back({broadcastAttack.isActive() ? 
                             "* Stop Broadcast" : "Start Broadcast", [=]() {
@@ -1536,7 +1589,7 @@ void karma_setup() {
                             }
                             delay(1000);
                         }});
-                        
+
                         // Speed settings
                         broadcastOptions.push_back({"Set Speed", [=]() {
                             std::vector<Option> speedOptions = {
@@ -1569,63 +1622,63 @@ void karma_setup() {
                             };
                             loopOptions(speedOptions);
                         }});
-                        
+
                         // Statistics
                         broadcastOptions.push_back({"Show Stats", [=]() {
                             drawMainBorderWithTitle("BROADCAST STATS");
-                            
+
                             int y = 40;
                             tft.setTextSize(1);
-                            
+
                             size_t totalSSIDs = SSIDDatabase::getCount();
                             size_t currentPos = broadcastAttack.getCurrentPosition();
                             float progress = broadcastAttack.getProgressPercent();
                             BroadcastStats stats = broadcastAttack.getStats();
-                            
+
                             unsigned long runtime = millis() - stats.startTime;
                             float broadcastsPerSec = stats.totalBroadcasts > 0 ? 
                                 (stats.totalBroadcasts * 1000.0) / runtime : 0;
-                            
+
                             tft.setCursor(10, y); y += 15;
                             tft.print("Total SSIDs: " + String(totalSSIDs));
-                            
+
                             tft.setCursor(10, y); y += 15;
                             tft.print("Progress: " + String(currentPos) + "/" + String(totalSSIDs));
-                            
+
                             tft.setCursor(10, y); y += 15;
                             tft.print("Percent: " + String(progress, 1) + "%");
-                            
+
                             tft.setCursor(10, y); y += 15;
                             tft.print("Broadcasts: " + String(stats.totalBroadcasts));
-                            
+
                             tft.setCursor(10, y); y += 15;
                             tft.print("Responses: " + String(stats.totalResponses));
-                            
+
                             tft.setCursor(10, y); y += 15;
                             tft.print("Rate: " + String(broadcastsPerSec, 1) + "/s");
-                            
+
                             tft.setCursor(10, y); y += 15;
                             tft.print("Status: " + String(broadcastAttack.isActive() ? "ACTIVE" : "INACTIVE"));
-                            
+
                             // Show top responses if any
                             auto topResponses = broadcastAttack.getTopResponses(3);
                             if (!topResponses.empty()) {
                                 y += 10;
                                 tft.setCursor(10, y); y += 15;
                                 tft.print("Top responses:");
-                                
+
                                 for (const auto &response : topResponses) {
                                     tft.setCursor(20, y); y += 12;
                                     String line = response.first.substring(0, 15) + ": " + String(response.second);
                                     tft.print(line);
                                 }
                             }
-                            
+
                             while (!check(SelPress) && !check(EscPress)) {
                                 delay(50);
                             }
                         }});
-                        
+
                         // Advanced settings
                         broadcastOptions.push_back({"Advanced Settings", [=]() {
                             std::vector<Option> advancedOptions = {
@@ -1643,9 +1696,9 @@ void karma_setup() {
                             };
                             loopOptions(advancedOptions);
                         }});
-                        
+
                         broadcastOptions.push_back({"Back", [=]() {}});
-                        
+
                         loopOptions(broadcastOptions);
                     }},
                     // ========================================
@@ -1820,7 +1873,7 @@ void karma_setup() {
         vRingbufferDelete(macRingBuffer);
         macRingBuffer = NULL;
     }
-    
+
     tft.fillScreen(bruceConfig.bgColor);
 }
 
