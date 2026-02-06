@@ -1271,7 +1271,6 @@ void karma_setup() {
 
             // Reinitialize display
             tft.fillScreen(bruceConfig.bgColor);
-            displayHeader(true);
             
             Serial.printf("[KARMA] Exiting to main menu. Heap: %lu\n", ESP.getFreeHeap());
             return;
