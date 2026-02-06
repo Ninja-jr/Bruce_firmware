@@ -8,7 +8,7 @@
 // Broadcast attack configuration
 struct BroadcastConfig {
     bool enableBroadcast = false;
-    uint32_t broadcastInterval = 300;    // ms between broadcasts
+    uint32_t broadcastInterval = 150;    // ms between broadcasts
     uint16_t batchSize = 100;            // SSIDs per batch
     bool rotateChannels = true;          // Auto-rotate channels
     uint32_t channelHopInterval = 5000;  // ms between channel hops
@@ -31,48 +31,48 @@ class ActiveBroadcastAttack {
 private:
     BroadcastConfig config;
     BroadcastStats stats;
-    
+
     size_t currentIndex;
     size_t batchStart;
     unsigned long lastBroadcastTime;
     unsigned long lastChannelHopTime;
-    bool isActive;
+    bool _active;
     uint8_t currentChannel;
-    
+
     std::vector<String> currentBatch;
     std::vector<String> highPrioritySSIDs;
-    
+
 public:
     ActiveBroadcastAttack();
-    
+
     // Control methods
     void start();
     void stop();
     void restart();
     bool isActive() const;
-    
+
     // Configuration
     void setConfig(const BroadcastConfig &newConfig);
     BroadcastConfig getConfig() const;
     void setBroadcastInterval(uint32_t interval);
     void setBatchSize(uint16_t size);
     void setChannel(uint8_t channel);
-    
+
     // Operation
     void update();
     void processProbeResponse(const String &ssid, const String &mac);
-    
+
     // Statistics
     BroadcastStats getStats() const;
     size_t getTotalSSIDs() const;
     size_t getCurrentPosition() const;
     float getProgressPercent() const;
     std::vector<std::pair<String, size_t>> getTopResponses(size_t count = 10) const;
-    
+
     // SSID management
     void addHighPrioritySSID(const String &ssid);
     void clearHighPrioritySSIDs();
-    
+
 private:
     void loadNextBatch();
     void broadcastSSID(const String &ssid);
