@@ -93,7 +93,7 @@ void ActiveBroadcastAttack::start() {
     loadNextBatch();
 
     Serial.printf("[BROADCAST] Started with %d SSIDs\n", total);
-    Serial.printf("[BROADCAST] Batch size: %d, Interval: %dms\n", 
+    Serial.printf("[BROADCAST] Batch size: %d, Interval: %ldms\n", 
                   config.batchSize, config.broadcastInterval);
 }
 
