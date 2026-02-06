@@ -3,6 +3,7 @@
 
 #include <Arduino.h>
 #include <vector>
+#include <map>
 #include "ssid_database.h"
 
 // Broadcast attack configuration
