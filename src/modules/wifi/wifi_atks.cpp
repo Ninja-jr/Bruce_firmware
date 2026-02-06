@@ -570,7 +570,16 @@ void capture_handshake(String tssid, String mac, uint8_t channel) {
         Serial.println("Handshake file already exists");
     }
 
-    if (!wifi_atk_setWifi()) return;
+    checkHeap("Handshake start");
+    
+    wifi_complete_cleanup();
+    delay(100);
+    
+    if (!WiFi.mode(WIFI_MODE_STA)) {
+        displayError("Failed starting WIFI", true);
+        return;
+    }
+    vTaskDelay(pdMS_TO_TICKS(100));
 
     // Initialize sniffer backend
     if (!sniffer_prepare_storage(fs, !isLittleFS)) {
@@ -665,7 +674,7 @@ void capture_handshake(String tssid, String mac, uint8_t channel) {
             tft.drawRightString(
                 "Press " + String(BTN_ALIAS) + " to send deauth", tftWidth - 10, tftHeight - 35, 1
             );
-    tft.drawString("Press Back to exit", 10, tftHeight - 20);
+            tft.drawString("Press Back to exit", 10, tftHeight - 20);
 
             // reset redraw flag
             needRedraw = false;
@@ -691,7 +700,7 @@ void capture_handshake(String tssid, String mac, uint8_t channel) {
 
     esp_wifi_set_promiscuous(false);
     esp_wifi_set_promiscuous_rx_cb(NULL);
-    wifi_atk_unsetWifi();
+    wifi_complete_cleanup();
     returnToMenu = true;
 }
 
