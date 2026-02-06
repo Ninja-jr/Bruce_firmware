@@ -118,6 +118,34 @@ void nextChannel() {
     }
 }
 
+void wifi_complete_cleanup() {
+    Serial.println("[WIFI_ATK] Complete WiFi cleanup");
+    esp_wifi_set_promiscuous(false);
+    esp_wifi_set_promiscuous_rx_cb(NULL);
+    esp_wifi_stop();
+    esp_wifi_deinit();
+    esp_wifi_restore();
+    WiFi.disconnect(true);
+    WiFi.mode(WIFI_OFF);
+    delay(300);
+}
+
+void checkHeap(const char* tag) {
+    uint32_t currentHeap = ESP.getFreeHeap();
+    Serial.printf("[HEAP] %s - Free: %d, Frag: %d%%\n", tag, currentHeap, ESP.getHeapFragmentation());
+}
+
+void resetGlobalState() {
+    options.clear();
+    options.shrink_to_fit();
+    SelPress = false;
+    EscPress = false;
+    PrevPress = false;
+    NextPress = false;
+    returnToMenu = false;
+    tft.fillScreen(bruceConfig.bgColor);
+}
+
 /***************************************************************************************
 ** Function: send_raw_frame
 ** @brief: Broadcasts deauth frames
@@ -191,6 +219,11 @@ void wifi_atk_info(String tssid, String mac, uint8_t channel) {
 ** @brief: Sets the Minimum Wifi parameters to WiFi Attacks
 ***************************************************************************************/
 bool wifi_atk_setWifi() {
+    checkHeap("Wifi atk start");
+    
+    wifi_complete_cleanup();
+    delay(100);
+
     if (WiFi.getMode() != WIFI_MODE_APSTA) {
         if (!WiFi.mode(WIFI_MODE_APSTA)) {
             displayError("Failed starting WIFI", true);
@@ -232,6 +265,15 @@ bool wifi_atk_unsetWifi() {
 ** @brief: Open menu to choose which AP Attack
 ***************************************************************************************/
 void wifi_atk_menu() {
+    resetGlobalState();
+    
+    if (WiFi.getMode() == WIFI_MODE_NULL) {
+        wifi_complete_cleanup();
+        delay(500);
+    }
+    
+    checkHeap("Wifi menu start");
+
     bool scanAtks = false;
     options = {
         {"Target Atks",  [&]() { scanAtks = true; }    },
@@ -242,7 +284,7 @@ void wifi_atk_menu() {
     addOptionToMainMenu();
     loopOptions(options);
     if (!returnToMenu) {
-        if (!wifi_atk_setWifi()) return; // Error messages inside the function
+        if (!wifi_atk_setWifi()) return;
     }
     if (scanAtks) {
         int nets;
@@ -312,11 +354,16 @@ void wifi_atk_menu() {
 
         loopOptions(options);
         options.clear();
+        ap_records.clear();
+        ap_records.shrink_to_fit();
     }
     wifi_atk_unsetWifi();
+    checkHeap("Wifi menu end");
 }
+
 void deauthFloodAttack() {
-    if (!wifi_atk_setWifi()) return; // error messages inside the function
+    resetGlobalState();
+    if (!wifi_atk_setWifi()) return;
 
     int nets;
 ScanNets:
@@ -371,7 +418,7 @@ ScanNets:
             count = 0;
             lastTime = millis();
         }
-        if (millis() - rescan_counter > 60000) goto ScanNets; // re-scan networks for more relability
+        if (millis() - rescan_counter > 60000) goto ScanNets;
 
         if (check(EscPress)) break;
     }
@@ -519,7 +566,7 @@ void capture_handshake(String tssid, String mac, uint8_t channel) {
         Serial.println("Handshake file already exists");
     }
 
-    if (!wifi_atk_setWifi()) return; // error messages inside the function
+    if (!wifi_atk_setWifi()) return;
 
     // Initialize sniffer backend
     if (!sniffer_prepare_storage(fs, !isLittleFS)) {
@@ -663,7 +710,7 @@ AGAIN:
     addOptionToMainMenu();
 
     loopOptions(options);
-    if (!returnToMenu) goto AGAIN; // get back from Information without overflow the stack
+    if (!returnToMenu) goto AGAIN;
 }
 
 /***************************************************************************************
@@ -671,8 +718,8 @@ AGAIN:
 ** @brief: Deploy Target deauth
 ***************************************************************************************/
 void target_atk(String tssid, String mac, uint8_t channel) {
-    // Initialize WiFi attack mode
-    if (!wifi_atk_setWifi()) return; // Error messages handled internally
+    resetGlobalState();
+    if (!wifi_atk_setWifi()) return;
 
     // Prepare deauth frame
     memcpy(deauth_frame, deauth_frame_default, sizeof(deauth_frame_default));
@@ -718,14 +765,14 @@ void target_atk(String tssid, String mac, uint8_t channel) {
         uint32_t currentTime = millis();
         if (currentTime - lastUpdateTime >= UPDATE_INTERVAL_MS) {
             // Calculate dynamic position for status text
-            uint16_t statusX = tftWidth * 0.05;                // 5% from left
-            uint16_t statusY = tftHeight - (tftHeight * 0.08); // 8% from bottom
+            uint16_t statusX = tftWidth * 0.05;
+            uint16_t statusY = tftHeight - (tftHeight * 0.08);
 
             tft.setCursor(statusX, statusY);
 
             // Calculate frames per second correctly
             float fps = (frameCount * 1000.0) / (currentTime - lastUpdateTime);
-            tft.print("Frames: " + String((int)fps) + "/s   "); // Spaces to clear old text
+            tft.print("Frames: " + String((int)fps) + "/s   ");
 
             frameCount = 0;
             lastUpdateTime = currentTime;
@@ -735,13 +782,13 @@ void target_atk(String tssid, String mac, uint8_t channel) {
         if (check(SelPress) || EscPress) {
             EscPress = false;
             displayTextLine("Deauth Paused");
-            delay(500); // Debouncing
+            delay(500);
 
             // Wait for user input
             while (!check(SelPress)) {
                 vTaskDelay(10 / portTICK_PERIOD_MS);
                 if (check(EscPress)) {
-                    attackActive = false; // Exit main loop
+                    attackActive = false;
                     break;
                 }
             }
@@ -749,7 +796,6 @@ void target_atk(String tssid, String mac, uint8_t channel) {
         }
     }
 
-    // Cleanup
     wifi_atk_unsetWifi();
     returnToMenu = true;
 }
@@ -761,11 +807,11 @@ void generateRandomWiFiMac(uint8_t *mac) {
 char randomName[32];
 char *randomSSID() {
     const char *charset = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ";
-    int len = rand() % 22 + 7; // Generate a random length between 1 and 10
+    int len = rand() % 22 + 7;
     for (int i = 0; i < len; ++i) {
-        randomName[i] = charset[rand() % strlen(charset)]; // S elect random characters from the charset
+        randomName[i] = charset[rand() % strlen(charset)];
     }
-    randomName[len] = '\0'; // Null-terminate the string
+    randomName[len] = '\0';
     return randomName;
 }
 
@@ -898,12 +944,13 @@ void beaconSpamSingle(String baseSSID) {
             counter = 1;
             nextChannel(); // change channel after resetting the counter
         }
-        if (EscPress) break; // exit condition preserved
+        if (EscPress) break;
     }
 }
 
 void beaconAttack() {
-    if (!wifi_atk_setWifi()) return; // error messages inside the function
+    resetGlobalState();
+    if (!wifi_atk_setWifi()) return;
 
     int BeaconMode;
     String txt = "";
@@ -943,7 +990,7 @@ void beaconAttack() {
     addOptionToMainMenu();
     loopOptions(options);
 
-    wifiConnected = true; // display wifi icon
+    wifiConnected = true;
     String beaconFile = "";
     File file;
     FS *fs;
@@ -952,7 +999,7 @@ void beaconAttack() {
     if (BeaconMode == 4) {
         singleSSID = keyboard("BruceBeacon", 26, "Base SSID:");
         if (singleSSID.length() == 0) {
-            return; // User cancelled
+            return;
         }
     }
 #endif
