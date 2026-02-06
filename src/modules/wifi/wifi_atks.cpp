@@ -221,6 +221,10 @@ void wifi_atk_info(String tssid, String mac, uint8_t channel) {
 bool wifi_atk_setWifi() {
     checkHeap("Wifi atk start");
 
+    if (WiFi.getMode() != WIFI_MODE_NULL) {
+        return true;
+    }
+
     wifi_complete_cleanup();
     delay(100);
 
@@ -661,7 +665,7 @@ void capture_handshake(String tssid, String mac, uint8_t channel) {
             tft.drawRightString(
                 "Press " + String(BTN_ALIAS) + " to send deauth", tftWidth - 10, tftHeight - 35, 1
             );
-            tft.drawString("Press Back to exit", 10, tftHeight - 20);
+    tft.drawString("Press Back to exit", 10, tftHeight - 20);
 
             // reset redraw flag
             needRedraw = false;
