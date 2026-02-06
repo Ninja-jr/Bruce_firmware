@@ -30,10 +30,28 @@ jobs:
         import sys
         import os
         
+        def escape_cpp_string(s):
+            """Escape a string for C++ with special handling for trigraphs"""
+            # Replace backslashes first
+            s = s.replace('\\', '\\\\')
+            # Replace quotes
+            s = s.replace('"', '\\"')
+            # Handle trigraph sequences by inserting space
+            # Trigraph sequences: ??=, ??/, ??', ??(, ??), ??!, ??<, ??>, ??-
+            trigraphs = ['??=', '??/', "??'", '??(', '??)', '??!', '??<', '??>', '??-']
+            for trigraph in trigraphs:
+                if trigraph in s:
+                    # Insert space between ?? and the third character to break trigraph
+                    s = s.replace(trigraph, '?? ' + trigraph[2])
+            return s
+        
         def main():
             input_file = "ssid_list.txt"
-            output_cpp = "ssid_database.cpp"
-            output_header = "ssid_database.h"
+            output_cpp = "src/modules/wifi/ssid_database.cpp"
+            output_header = "src/modules/wifi/ssid_database.h"
+            
+            # Ensure output directory exists
+            os.makedirs(os.path.dirname(output_cpp), exist_ok=True)
             
             # Check if input exists
             if not os.path.exists(input_file):
@@ -52,8 +70,8 @@ jobs:
                         print(f"Warning: SSID too long ({len(line)} chars): {line[:20]}...")
                         continue
                     
-                    # Escape for C++ string
-                    escaped = line.replace('\\', '\\\\').replace('"', '\\"')
+                    # Escape for C++ string (handles trigraphs)
+                    escaped = escape_cpp_string(line)
                     ssids.append(escaped)
             
             print(f"Processed {len(ssids)} SSIDs")
@@ -62,6 +80,7 @@ jobs:
             with open(output_cpp, 'w', encoding='utf-8') as f:
                 f.write(f'''#include "ssid_database.h"
         #include <vector>
+        #include <Arduino.h>
         
         // ===== SSID DATABASE =====
         // Auto-generated from {input_file}
@@ -72,10 +91,11 @@ jobs:
                 
                 for i, ssid in enumerate(ssids):
                     f.write(f'    "{ssid}"')
-                    if i < len(ssids) - 1:
+                    if i < len(ssids):
                         f.write(',')
                     f.write('\n')
                 
+                # Add NULL terminator as a separate element
                 f.write('''    nullptr
         };
         
@@ -103,10 +123,11 @@ jobs:
         }
         
         String SSIDDatabase::getSSID(size_t index) {
-            if (pgm_read_ptr(&SSID_LIST[index]) == nullptr) {
+            const char* ptr = (const char*)pgm_read_ptr(&SSID_LIST[index]);
+            if (!ptr) {
                 return "";
             }
-            return readPGMString((const char*)pgm_read_ptr(&SSID_LIST[index]));
+            return readPGMString(ptr);
         }
         
         std::vector<String> SSIDDatabase::getAllSSIDs() {
@@ -236,25 +257,21 @@ jobs:
         echo "=== Generation Complete ==="
         echo "SSID list lines: $(wc -l < ssid_list.txt)"
         echo "Generated files size:"
-        ls -la ssid_database.cpp ssid_database.h
+        ls -la src/modules/wifi/ssid_database.cpp src/modules/wifi/ssid_database.h
+        
+    - name: Commit generated files
+      run: |
+        git config --local user.email "action@github.com"
+        git config --local user.name "GitHub Action"
+        git add src/modules/wifi/ssid_database.cpp src/modules/wifi/ssid_database.h
+        git commit -m "Update generated SSID database" || echo "No changes to commit"
+        git push || echo "Nothing to push"
         
     - name: Upload generated files
       uses: actions/upload-artifact@v4
       with:
         name: ssid-database-files
         path: |
-          ssid_database.cpp
-          ssid_database.h
+          src/modules/wifi/ssid_database.cpp
+          src/modules/wifi/ssid_database.h
         retention-days: 90  # Keep for 3 months
-        
-    - name: Upload as single zip
-      run: |
-        zip -r ssid-database.zip ssid_database.cpp ssid_database.h
-        ls -la ssid-database.zip
-        
-    - name: Upload zip artifact
-      uses: actions/upload-artifact@v4
-      with:
-        name: ssid-database-zip
-        path: ssid-database.zip
-        retention-days: 90
