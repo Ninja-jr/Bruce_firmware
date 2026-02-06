@@ -102,34 +102,6 @@ std::vector<PendingPortal> activePortals;
 
 //===== FUNCTIONS =====//
 
-void wifi_complete_cleanup() {
-    Serial.println("[KARMA] Complete WiFi cleanup");
-    esp_wifi_set_promiscuous(false);
-    esp_wifi_set_promiscuous_rx_cb(NULL);
-    esp_wifi_stop();
-    esp_wifi_deinit();
-    esp_wifi_restore();
-    WiFi.disconnect(true);
-    WiFi.mode(WIFI_OFF);
-    delay(300);
-}
-
-void checkHeap(const char* tag) {
-    uint32_t currentHeap = ESP.getFreeHeap();
-    Serial.printf("[HEAP] %s - Free: %d, Frag: %d%%\n", tag, currentHeap, ESP.getHeapFragmentation());
-}
-
-void resetGlobalState() {
-    options.clear();
-    options.shrink_to_fit();
-    SelPress = false;
-    EscPress = false;
-    PrevPress = false;
-    NextPress = false;
-    returnToMenu = false;
-    tft.fillScreen(bruceConfig.bgColor);
-}
-
 String generateUniqueFilename(FS &fs, bool compressed) {
     String basePath = "/ProbeData/";
     String baseName = compressed ? "karma_compressed_" : "probe_capture_";
@@ -148,9 +120,6 @@ String generateUniqueFilename(FS &fs, bool compressed) {
 }
 
 void initMACCache() {
-    if (macRingBuffer) {
-        vRingbufferDelete(macRingBuffer);
-    }
     macRingBuffer = xRingbufferCreate(MAC_CACHE_SIZE * 18, RINGBUF_TYPE_NOSPLIT);
     if (!macRingBuffer) {
         Serial.println("[ERROR] Failed to create MAC ring buffer!");
@@ -1185,14 +1154,25 @@ void safe_wifi_deinit() {
 }
 
 void karma_setup() {
-    resetGlobalState();
+    returnToMenu = false;
     templateSelected = false;
     redrawNeeded = true;
 
-    checkHeap("Karma start");
+    if (esp_wifi_stop() == ESP_OK) { 
+        esp_wifi_set_promiscuous(false);
+        esp_wifi_set_promiscuous_rx_cb(nullptr);
+        esp_wifi_stop();
+        esp_wifi_deinit();
+        esp_wifi_restore();
+        WiFi.disconnect(true);
+        WiFi.mode(WIFI_OFF);
+    }
 
-    wifi_complete_cleanup();
     delay(200);
+
+    FS *Fs;
+    int redraw = true;
+    String FileSys = "LittleFS";
 
     drawMainBorderWithTitle("KARMA ATTACK SETUP");
     displayTextLine("Select portal template:");
@@ -1205,10 +1185,6 @@ void karma_setup() {
     }
 
     drawMainBorderWithTitle("ENHANCED KARMA ATK");
-
-    FS *Fs;
-    int redraw = true;
-    String FileSys = "LittleFS";
 
     if (setupSdCard()) {
         Fs = &SD;
@@ -1264,24 +1240,23 @@ void karma_setup() {
 
     for (;;) {
         if (returnToMenu) {
-            Serial.println("[KARMA] Exiting - performing cleanup");
-            
             // Stop broadcast attack
             if (broadcastAttack.isActive()) {
                 broadcastAttack.stop();
             }
-            
+
             esp_wifi_set_promiscuous(false);
             esp_wifi_set_promiscuous_rx_cb(nullptr);
             esp_wifi_stop();
             esp_wifi_deinit();
             esp_wifi_restore();
-            
+            vTaskDelay(100 / portTICK_PERIOD_MS);
+
             if (macRingBuffer) {
                 vRingbufferDelete(macRingBuffer);
                 macRingBuffer = NULL;
             }
-            
+
             portalTemplates.clear();
             portalTemplates.shrink_to_fit();
             pendingPortals.clear();
@@ -1294,14 +1269,13 @@ void karma_setup() {
             clientBehaviors.clear();
             probeBufferIndex = 0;
             bufferWrapped = false;
-            
-            delay(200);
+
             WiFi.mode(WIFI_OFF);
             WiFi.disconnect(true);
             
             tft.fillScreen(bruceConfig.bgColor);
             
-            Serial.printf("[KARMA] Cleanup complete. Heap: %d\n", ESP.getFreeHeap());
+            Serial.printf("[KARMA] Cleanup complete. Heap: %lu\n", ESP.getFreeHeap());
             return;
         }
 
