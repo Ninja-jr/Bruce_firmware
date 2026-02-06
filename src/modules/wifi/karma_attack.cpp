@@ -1240,42 +1240,23 @@ void karma_setup() {
 
     for (;;) {
         if (returnToMenu) {
-            // Stop broadcast attack
             if (broadcastAttack.isActive()) {
                 broadcastAttack.stop();
             }
-
+            
             esp_wifi_set_promiscuous(false);
-            esp_wifi_set_promiscuous_rx_cb(nullptr);
             esp_wifi_stop();
+            esp_wifi_set_promiscuous_rx_cb(NULL);
             esp_wifi_deinit();
-            esp_wifi_restore();
             vTaskDelay(100 / portTICK_PERIOD_MS);
-
+            
             if (macRingBuffer) {
                 vRingbufferDelete(macRingBuffer);
                 macRingBuffer = NULL;
             }
-
-            portalTemplates.clear();
-            portalTemplates.shrink_to_fit();
-            pendingPortals.clear();
-            pendingPortals.shrink_to_fit();
-            activePortals.clear();
-            activePortals.shrink_to_fit();
-            popularSSIDs.clear();
-            popularSSIDs.shrink_to_fit();
-            ssidFrequency.clear();
-            clientBehaviors.clear();
-            probeBufferIndex = 0;
-            bufferWrapped = false;
-
-            WiFi.mode(WIFI_OFF);
-            WiFi.disconnect(true);
             
             tft.fillScreen(bruceConfig.bgColor);
-            
-            Serial.printf("[KARMA] Cleanup complete. Heap: %lu\n", ESP.getFreeHeap());
+            Serial.printf("[KARMA] Exiting to main menu. Heap: %lu\n", ESP.getFreeHeap());
             return;
         }
 
