@@ -1158,16 +1158,11 @@ void karma_setup() {
     templateSelected = false;
     redrawNeeded = true;
 
-    if (esp_wifi_stop() == ESP_OK) { 
-        esp_wifi_set_promiscuous(false);
-        esp_wifi_set_promiscuous_rx_cb(nullptr);
-        esp_wifi_stop();
-        esp_wifi_deinit();
-        esp_wifi_restore();
-        WiFi.disconnect(true);
-        WiFi.mode(WIFI_OFF);
-    }
-
+    // Simple WiFi cleanup - don't do aggressive deinit
+    esp_wifi_set_promiscuous(false);
+    esp_wifi_set_promiscuous_rx_cb(nullptr);
+    WiFi.disconnect(true);
+    WiFi.mode(WIFI_OFF);
     delay(200);
 
     FS *Fs;
@@ -1243,18 +1238,18 @@ void karma_setup() {
             if (broadcastAttack.isActive()) {
                 broadcastAttack.stop();
             }
-            
+
             esp_wifi_set_promiscuous(false);
             esp_wifi_stop();
             esp_wifi_set_promiscuous_rx_cb(NULL);
             esp_wifi_deinit();
             vTaskDelay(100 / portTICK_PERIOD_MS);
-            
+
             if (macRingBuffer) {
                 vRingbufferDelete(macRingBuffer);
                 macRingBuffer = NULL;
             }
-            
+
             tft.fillScreen(bruceConfig.bgColor);
             Serial.printf("[KARMA] Exiting to main menu. Heap: %lu\n", ESP.getFreeHeap());
             return;
