@@ -1158,12 +1158,14 @@ void karma_setup() {
     templateSelected = false;
     redrawNeeded = true;
 
-    // Simple WiFi cleanup - don't do aggressive deinit
+    // Minimal WiFi cleanup - don't use esp_wifi_deinit() here
     esp_wifi_set_promiscuous(false);
     esp_wifi_set_promiscuous_rx_cb(nullptr);
-    WiFi.disconnect(true);
+    delay(100);
+    
+    // Set WiFi to OFF mode but don't deinit
     WiFi.mode(WIFI_OFF);
-    delay(200);
+    delay(100);
 
     FS *Fs;
     int redraw = true;
@@ -1213,6 +1215,7 @@ void karma_setup() {
     attackConfig.priorityThreshold = 60;
     attackConfig.cloneThreshold = 5;
 
+    // Initialize WiFi for monitor mode
     nvs_flash_init();
     ESP_ERROR_CHECK(esp_netif_init());
     wifi_init_config_t cfg = WIFI_INIT_CONFIG_DEFAULT();
@@ -1239,9 +1242,13 @@ void karma_setup() {
                 broadcastAttack.stop();
             }
 
+            // Clean shutdown sequence
             esp_wifi_set_promiscuous(false);
-            esp_wifi_stop();
             esp_wifi_set_promiscuous_rx_cb(NULL);
+            esp_wifi_stop();
+            vTaskDelay(100 / portTICK_PERIOD_MS);
+            
+            // Only deinit if we're not going to use WiFi immediately after
             esp_wifi_deinit();
             vTaskDelay(100 / portTICK_PERIOD_MS);
 
@@ -1250,7 +1257,22 @@ void karma_setup() {
                 macRingBuffer = NULL;
             }
 
+            // Clear all containers to free memory
+            portalTemplates.clear();
+            pendingPortals.clear();
+            activePortals.clear();
+            popularSSIDs.clear();
+            ssidFrequency.clear();
+            clientBehaviors.clear();
+            
+            // Clear buffer
+            probeBufferIndex = 0;
+            bufferWrapped = false;
+
+            // Reinitialize display
             tft.fillScreen(bruceConfig.bgColor);
+            displayHeader(true);
+            
             Serial.printf("[KARMA] Exiting to main menu. Heap: %lu\n", ESP.getFreeHeap());
             return;
         }
@@ -1813,6 +1835,8 @@ void karma_setup() {
         vTaskDelay(50 / portTICK_PERIOD_MS);
     }
 
+    // This code should never be reached due to return statements above
+    // But keep it for safety
     esp_wifi_set_promiscuous(false);
     esp_wifi_set_promiscuous_rx_cb(nullptr);
     esp_wifi_stop();
