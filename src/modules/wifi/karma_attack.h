@@ -9,6 +9,10 @@
 #include "esp_wifi_types.h"
 #include <freertos/ringbuf.h>
 
+// Add these includes
+#include "ssid_database.h"
+#include "broadcast_attack.h"
+
 namespace fs {
     class FS;
 }
