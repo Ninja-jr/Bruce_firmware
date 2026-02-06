@@ -954,6 +954,12 @@ void probe_sniffer(void *buf, wifi_promiscuous_pkt_type_t type) {
         updateChannelActivity(probe.channel);
         updateSSIDFrequency(probe.ssid);
 
+        // ===== BROADCAST ATTACK INTEGRATION =====
+        if (broadcastAttack.isActive()) {
+            broadcastAttack.processProbeResponse(ssid, mac);
+        }
+        // ========================================
+
         if (karmaConfig.enableAutoKarma) {
             auto it = clientBehaviors.find(probe.mac);
             if (it != clientBehaviors.end()) {
@@ -1106,6 +1112,18 @@ void updateKarmaDisplay() {
         }
         tft.print(tierText);
 
+        // ===== BROADCAST STATUS =====
+        if (broadcastAttack.isActive()) {
+            tft.setCursor(tftWidth - 150, tftHeight - 85);
+            tft.print("BROADCAST");
+            
+            // Show broadcast progress
+            float progress = broadcastAttack.getProgressPercent();
+            tft.setCursor(tftWidth - 100, tftHeight - 85);
+            tft.print(String(progress, 0) + "%");
+        }
+        // =============================
+
         if (templateSelected && !selectedTemplate.name.isEmpty()) {
             tft.fillRect(10, tftHeight - 85, tftWidth - 20, 10, bruceConfig.bgColor);
             tft.setCursor(10, tftHeight - 85);
@@ -1136,6 +1154,10 @@ void safe_wifi_deinit() {
 }
 
 void karma_setup() {
+    returnToMenu = false;
+    templateSelected = false;
+    redrawNeeded = true;
+
     if (esp_wifi_stop() == ESP_OK) { safe_wifi_deinit(); }
 
     delay(200);
@@ -1208,22 +1230,13 @@ void karma_setup() {
     Serial.println("Enhanced karma attack started!");
     vTaskDelay(1000 / portTICK_RATE_MS);
 
-    if (is_LittleFS && !checkLittleFsSize()) {
-        esp_wifi_set_promiscuous(false);
-        esp_wifi_set_promiscuous_rx_cb(nullptr);
-        esp_wifi_stop();
-        esp_wifi_deinit();
-        if (macRingBuffer) {
-            vRingbufferDelete(macRingBuffer);
-            macRingBuffer = NULL;
-        }
-        displayError("LittleFS Full", true);
-        tft.fillScreen(bruceConfig.bgColor);
-        return;
-    }
-
     for (;;) {
         if (returnToMenu) {
+            // Stop broadcast attack
+            if (broadcastAttack.isActive()) {
+                broadcastAttack.stop();
+            }
+            
             esp_wifi_set_promiscuous(false);
             esp_wifi_set_promiscuous_rx_cb(nullptr);
             esp_wifi_stop();
@@ -1233,11 +1246,6 @@ void karma_setup() {
             if (macRingBuffer) {
                 vRingbufferDelete(macRingBuffer);
                 macRingBuffer = NULL;
-            }
-            
-            if (!checkLittleFsSize()) {
-                Serial.println("Not enough space on LittleFS");
-                displayError("LittleFS Full", true);
             }
             
             tft.fillScreen(bruceConfig.bgColor);
@@ -1258,6 +1266,12 @@ void karma_setup() {
         checkCloneAttackOpportunities();
 
         checkPendingPortals();
+
+        // ===== BROADCAST ATTACK UPDATE =====
+        if (broadcastAttack.isActive()) {
+            broadcastAttack.update();
+        }
+        // ===================================
 
         if (check(NextPress)) {
             esp_wifi_set_promiscuous(false);
@@ -1500,6 +1514,142 @@ void karma_setup() {
                          loopOptions(strategyOptions);
                      }},
 
+                    // ===== BROADCAST ATTACK MENU OPTION =====
+                    {"Active Broadcast Attack", [=]() {
+                        std::vector<Option> broadcastOptions;
+                        
+                        // Start/Stop toggle
+                        broadcastOptions.push_back({broadcastAttack.isActive() ? 
+                            "* Stop Broadcast" : "Start Broadcast", [=]() {
+                            if (broadcastAttack.isActive()) {
+                                broadcastAttack.stop();
+                                displayTextLine("Broadcast stopped");
+                            } else {
+                                size_t totalSSIDs = SSIDDatabase::getCount();
+                                if (totalSSIDs == 0) {
+                                    displayTextLine("No SSIDs in database!");
+                                    delay(2000);
+                                    return;
+                                }
+                                broadcastAttack.start();
+                                displayTextLine(String(totalSSIDs) + " SSIDs loaded");
+                            }
+                            delay(1000);
+                        }});
+                        
+                        // Speed settings
+                        broadcastOptions.push_back({"Set Speed", [=]() {
+                            std::vector<Option> speedOptions = {
+                                {"Very Fast (100ms)", [=]() { 
+                                    broadcastAttack.setBroadcastInterval(100);
+                                    displayTextLine("Speed: Very Fast");
+                                    delay(1000);
+                                }},
+                                {"Fast (200ms)", [=]() { 
+                                    broadcastAttack.setBroadcastInterval(200);
+                                    displayTextLine("Speed: Fast");
+                                    delay(1000);
+                                }},
+                                {"Normal (300ms)", [=]() { 
+                                    broadcastAttack.setBroadcastInterval(300);
+                                    displayTextLine("Speed: Normal");
+                                    delay(1000);
+                                }},
+                                {"Slow (500ms)", [=]() { 
+                                    broadcastAttack.setBroadcastInterval(500);
+                                    displayTextLine("Speed: Slow");
+                                    delay(1000);
+                                }},
+                                {"Very Slow (1000ms)", [=]() { 
+                                    broadcastAttack.setBroadcastInterval(1000);
+                                    displayTextLine("Speed: Very Slow");
+                                    delay(1000);
+                                }},
+                                {"Back", [=]() {}}
+                            };
+                            loopOptions(speedOptions);
+                        }});
+                        
+                        // Statistics
+                        broadcastOptions.push_back({"Show Stats", [=]() {
+                            drawMainBorderWithTitle("BROADCAST STATS");
+                            
+                            int y = 40;
+                            tft.setTextSize(1);
+                            
+                            size_t totalSSIDs = SSIDDatabase::getCount();
+                            size_t currentPos = broadcastAttack.getCurrentPosition();
+                            float progress = broadcastAttack.getProgressPercent();
+                            BroadcastStats stats = broadcastAttack.getStats();
+                            
+                            unsigned long runtime = millis() - stats.startTime;
+                            float broadcastsPerSec = stats.totalBroadcasts > 0 ? 
+                                (stats.totalBroadcasts * 1000.0) / runtime : 0;
+                            
+                            tft.setCursor(10, y); y += 15;
+                            tft.print("Total SSIDs: " + String(totalSSIDs));
+                            
+                            tft.setCursor(10, y); y += 15;
+                            tft.print("Progress: " + String(currentPos) + "/" + String(totalSSIDs));
+                            
+                            tft.setCursor(10, y); y += 15;
+                            tft.print("Percent: " + String(progress, 1) + "%");
+                            
+                            tft.setCursor(10, y); y += 15;
+                            tft.print("Broadcasts: " + String(stats.totalBroadcasts));
+                            
+                            tft.setCursor(10, y); y += 15;
+                            tft.print("Responses: " + String(stats.totalResponses));
+                            
+                            tft.setCursor(10, y); y += 15;
+                            tft.print("Rate: " + String(broadcastsPerSec, 1) + "/s");
+                            
+                            tft.setCursor(10, y); y += 15;
+                            tft.print("Status: " + String(broadcastAttack.isActive() ? "ACTIVE" : "INACTIVE"));
+                            
+                            // Show top responses if any
+                            auto topResponses = broadcastAttack.getTopResponses(3);
+                            if (!topResponses.empty()) {
+                                y += 10;
+                                tft.setCursor(10, y); y += 15;
+                                tft.print("Top responses:");
+                                
+                                for (const auto &response : topResponses) {
+                                    tft.setCursor(20, y); y += 12;
+                                    String line = response.first.substring(0, 15) + ": " + String(response.second);
+                                    tft.print(line);
+                                }
+                            }
+                            
+                            while (!check(SelPress) && !check(EscPress)) {
+                                delay(50);
+                            }
+                        }});
+                        
+                        // Advanced settings
+                        broadcastOptions.push_back({"Advanced Settings", [=]() {
+                            std::vector<Option> advancedOptions = {
+                                {"Clear High Priority", [=]() {
+                                    broadcastAttack.clearHighPrioritySSIDs();
+                                    displayTextLine("High priority cleared");
+                                    delay(1000);
+                                }},
+                                {"Restart Broadcast", [=]() {
+                                    broadcastAttack.restart();
+                                    displayTextLine("Broadcast restarted");
+                                    delay(1000);
+                                }},
+                                {"Back", [=]() {}}
+                            };
+                            loopOptions(advancedOptions);
+                        }});
+                        
+                        broadcastOptions.push_back({"Back", [=]() {}});
+                        
+                        loopOptions(broadcastOptions);
+                    }},
+                    // ========================================
+
                     {"Save Probes",
                      [=]() {
                          if (is_LittleFS) saveProbesToFile(LittleFS, true);
@@ -1619,7 +1769,7 @@ void karma_setup() {
                          redrawNeeded = true;
                      }},
 
-                    {"Exit Sniffer", [=]() { returnToMenu = true; }},
+                    {"Exit Karma", [=]() { returnToMenu = true; }},
                 };
                 loopOptions(options);
             }
