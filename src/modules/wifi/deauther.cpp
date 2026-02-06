@@ -1,3 +1,4 @@
+#include "deauther.h"
 #include "clients.h"
 #include "core/display.h"
 #include "core/mykeyboard.h"
@@ -55,25 +56,25 @@ bool macCompare(const uint8_t* mac1, const uint8_t* mac2) {
 
 int getAPChannel(const uint8_t* target_bssid) {
     int found_channel = 0;
-    
+
     int numNetworks = WiFi.scanNetworks(false, false);
-    
+
     for (int i = 0; i < numNetworks; i++) {
         uint8_t* bssid_ptr = WiFi.BSSID(i);
-        
+
         if (macCompare(bssid_ptr, target_bssid)) {
             found_channel = WiFi.channel(i);
             break;
         }
     }
-    
+
     WiFi.scanDelete();
-    
+
     if (found_channel == 0) {
         found_channel = WiFi.channel();
         if (found_channel == 0) found_channel = 1;
     }
-    
+
     return found_channel;
 }
 
@@ -122,8 +123,8 @@ void buildOptimizedDeauthFrame(uint8_t* frame,
     frame[0] = is_disassoc ? 0xA0 : 0xC0;
     frame[1] = 0x00;
 
-    frame[2] = 0x3A;
-    frame[3] = 0x01;
+    frame[2] = 0x00;
+    frame[3] = 0x00;
 
     memcpy(&frame[4], dest, 6);
     memcpy(&frame[10], src, 6);
@@ -139,6 +140,11 @@ void buildOptimizedDeauthFrame(uint8_t* frame,
 }
 
 void stationDeauth(Host host) {
+    if (WiFi.status() != WL_CONNECTED) {
+        displayError("Not connected to WiFi", true);
+        return;
+    }
+    
     uint8_t targetMAC[6];
     uint8_t gatewayMAC[6];
     uint8_t victimIP[4];
@@ -146,14 +152,14 @@ void stationDeauth(Host host) {
     for (int i = 0; i < 4; i++) victimIP[i] = host.ip[i];
 
     stringToMAC(host.mac.c_str(), targetMAC);
-    
+
     if (isMACZero(targetMAC)) {
         displayError("Invalid MAC address", true);
         return;
     }
 
     getGatewayMAC(gatewayMAC);
-    
+
     if (isMACZero(gatewayMAC)) {
         displayError("Could not get gateway MAC", true);
         return;
@@ -172,7 +178,7 @@ void stationDeauth(Host host) {
         if (currentSsid.length() == 0) {
             currentSsid = "DEAUTH_" + String(random(1000, 9999));
         }
-        
+
         if (!WiFi.softAP(currentSsid.c_str(), emptyString, channel, 1, 4, false)) {
             Serial.println("Fail Starting AP Mode");
             displayError("Fail starting Deauth", true);
