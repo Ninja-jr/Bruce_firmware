@@ -1,9 +1,6 @@
 #include "ssid_database.h"
 #include <vector>
-
-// ===== SSID DATABASE =====
-// Auto-generated from ssid_list.txt
-// Total SSIDs: 14969
+#include <Arduino.h>
 
 const char* const SSID_LIST[] PROGMEM = {
     "xfinitywifi",
@@ -785,7 +782,7 @@ const char* const SSID_LIST[] PROGMEM = {
     "ALICE-WLAN75",
     "??? ????",
     "default_home_2g",
-    "????-5G",
+    "???" "?-5G",
     "UNL-Wireless-Registration",
     "OHSWNET",
     "Guest_Internet",
@@ -7135,7 +7132,7 @@ const char* const SSID_LIST[] PROGMEM = {
     "HP-Print-64-ENVY 4500 series",
     "DIRECT-78-HP OfficeJet Pro 8710",
     "DIRECT-12-HP OfficeJet 4650",
-    "???-5G",
+    "??" "?-5G",
     "00_MCD-FREE-WIFI",
     "Welcome Home",
     "Tineco_1717",
@@ -10014,7 +10011,7 @@ const char* const SSID_LIST[] PROGMEM = {
     "HP-Print-E4-Officejet Pro 8610",
     "HP-Print-A3-Officejet Pro 8610",
     "Aafje",
-    "??-5G",
+    "?" "?-5G",
     "RODOLFO",
     "remi",
     "NETGEAR94_EXT",
@@ -14974,22 +14971,19 @@ const char* const SSID_LIST[] PROGMEM = {
     "WIPT",
     "Welcome_to_UGA",
     "WBnS",
-    "RETALIS WI FI"
+    "RETALIS WI FI",
     nullptr
 };
 
 String readPGMString(const char* ptr) {
     if (!ptr) return "";
-    
     char buffer[33];
     size_t i = 0;
     char c;
-    
     while (i < 32 && (c = pgm_read_byte(ptr + i)) != '\0') {
         buffer[i++] = c;
     }
     buffer[i] = '\0';
-    
     return String(buffer);
 }
 
@@ -15002,30 +14996,25 @@ size_t SSIDDatabase::getCount() {
 }
 
 String SSIDDatabase::getSSID(size_t index) {
-    if (pgm_read_ptr(&SSID_LIST[index]) == nullptr) {
-        return "";
-    }
-    return readPGMString((const char*)pgm_read_ptr(&SSID_LIST[index]));
+    const char* ptr = (const char*)pgm_read_ptr(&SSID_LIST[index]);
+    if (!ptr) return "";
+    return readPGMString(ptr);
 }
 
 std::vector<String> SSIDDatabase::getAllSSIDs() {
     std::vector<String> result;
     size_t count = getCount();
     result.reserve(count);
-    
     for (size_t i = 0; i < count; i++) {
         result.push_back(getSSID(i));
     }
-    
     return result;
 }
 
 int SSIDDatabase::findSSID(const String &ssid) {
     size_t count = getCount();
     for (size_t i = 0; i < count; i++) {
-        if (getSSID(i) == ssid) {
-            return i;
-        }
+        if (getSSID(i) == ssid) return i;
     }
     return -1;
 }
@@ -15033,7 +15022,6 @@ int SSIDDatabase::findSSID(const String &ssid) {
 String SSIDDatabase::getRandomSSID() {
     size_t count = getCount();
     if (count == 0) return "";
-    
     size_t index = random(count);
     return getSSID(index);
 }
@@ -15041,14 +15029,10 @@ String SSIDDatabase::getRandomSSID() {
 void SSIDDatabase::getBatch(size_t startIndex, size_t count, std::vector<String> &result) {
     result.clear();
     size_t total = getCount();
-    
     if (startIndex >= total) return;
-    
     size_t endIndex = startIndex + count;
     if (endIndex > total) endIndex = total;
-    
     result.reserve(endIndex - startIndex);
-    
     for (size_t i = startIndex; i < endIndex; i++) {
         result.push_back(getSSID(i));
     }
@@ -15061,7 +15045,6 @@ bool SSIDDatabase::contains(const String &ssid) {
 size_t SSIDDatabase::getAverageLength() {
     size_t count = getCount();
     if (count == 0) return 0;
-    
     size_t total = 0;
     for (size_t i = 0; i < count; i++) {
         total += getSSID(i).length();
@@ -15072,12 +15055,9 @@ size_t SSIDDatabase::getAverageLength() {
 size_t SSIDDatabase::getMaxLength() {
     size_t count = getCount();
     size_t maxLen = 0;
-    
     for (size_t i = 0; i < count; i++) {
         size_t len = getSSID(i).length();
-        if (len > maxLen) {
-            maxLen = len;
-        }
+        if (len > maxLen) maxLen = len;
     }
     return maxLen;
 }
@@ -15085,13 +15065,10 @@ size_t SSIDDatabase::getMaxLength() {
 size_t SSIDDatabase::getMinLength() {
     size_t count = getCount();
     if (count == 0) return 0;
-    
     size_t minLen = 32;
     for (size_t i = 0; i < count; i++) {
         size_t len = getSSID(i).length();
-        if (len < minLen) {
-            minLen = len;
-        }
+        if (len < minLen) minLen = len;
     }
     return minLen;
 }
