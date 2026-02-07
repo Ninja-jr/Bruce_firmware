@@ -86,6 +86,7 @@ uint32_t autoPortalsLaunched = 0;
 uint32_t cloneAttacksLaunched = 0;
 bool redrawNeeded = true;
 bool isPortalActive = false;
+bool restartKarmaAfterPortal = false;
 
 // Portal templates
 std::vector<PortalTemplate> portalTemplates;
@@ -795,17 +796,16 @@ void launchTieredEvilPortal(PendingPortal &portal) {
         delay(100);
     }
 
-    Serial.printf("[PORTAL] Timeout reached (%ds), restarting karma...\n", portal.duration / 1000);
+    Serial.printf("[PORTAL] Portal finished, returning to karma...\n");
 
     isPortalActive = false;
+    restartKarmaAfterPortal = true;
 
     if (portal.isCloneAttack) {
         cloneAttacksLaunched++;
     } else {
         autoPortalsLaunched++;
     }
-
-    karma_setup();
 }
 
 void executeTieredAttackStrategy() {
@@ -913,9 +913,9 @@ void launchManualEvilPortal(const String &ssid, uint8_t channel, bool verifyPwd)
     EvilPortal portalInstance(ssid, channel, karmaConfig.enableDeauth, verifyPwd, false);
 
     isPortalActive = false;
+    restartKarmaAfterPortal = true;
 
-    Serial.println("[MANUAL] Portal closed, restarting karma...");
-    karma_setup();
+    Serial.println("[MANUAL] Portal closed, returning to karma...");
 }
 
 void probe_sniffer(void *buf, wifi_promiscuous_pkt_type_t type) {
@@ -952,11 +952,9 @@ void probe_sniffer(void *buf, wifi_promiscuous_pkt_type_t type) {
         updateChannelActivity(probe.channel);
         updateSSIDFrequency(probe.ssid);
 
-        // ===== BROADCAST ATTACK INTEGRATION =====
         if (broadcastAttack.isActive()) {
             broadcastAttack.processProbeResponse(ssid, mac);
         }
-        // ========================================
 
         if (karmaConfig.enableAutoKarma) {
             auto it = clientBehaviors.find(probe.mac);
@@ -1110,17 +1108,14 @@ void updateKarmaDisplay() {
         }
         tft.print(tierText);
 
-        // ===== BROADCAST STATUS =====
         if (broadcastAttack.isActive()) {
             tft.setCursor(tftWidth - 150, tftHeight - 85);
             tft.print("BROADCAST");
 
-            // Show broadcast progress
             float progress = broadcastAttack.getProgressPercent();
             tft.setCursor(tftWidth - 100, tftHeight - 85);
             tft.print(String(progress, 0) + "%");
         }
-        // =============================
 
         if (templateSelected && !selectedTemplate.name.isEmpty()) {
             tft.fillRect(10, tftHeight - 85, tftWidth - 20, 10, bruceConfig.bgColor);
@@ -1144,29 +1139,33 @@ void updateKarmaDisplay() {
     }
 }
 
-void safe_wifi_deinit() {
-    esp_wifi_set_promiscuous(false);
-    esp_wifi_stop();
-    vTaskDelay(100 / portTICK_RATE_MS);
-}
-
 void karma_setup() {
+    esp_wifi_set_promiscuous(false);
+    esp_wifi_set_promiscuous_rx_cb(nullptr);
+    esp_wifi_stop();
+    delay(100);
+    
     returnToMenu = false;
+    isPortalActive = false;
+    restartKarmaAfterPortal = false;
     templateSelected = false;
     redrawNeeded = true;
 
-    // Simple cleanup - just stop promiscuous mode
-    esp_wifi_set_promiscuous(false);
-    esp_wifi_set_promiscuous_rx_cb(nullptr);
-    delay(100);
-    
-    // Let wifi_common.h handle WiFi mode changes
-    // Don't set WiFi.mode(WIFI_OFF) here - wifi_common.h will do it
+    probeBufferIndex = 0;
+    bufferWrapped = false;
 
-    FS *Fs;
-    int redraw = true;
-    String FileSys = "LittleFS";
+    if (macRingBuffer) {
+        vRingbufferDelete(macRingBuffer);
+    }
+    initMACCache();
 
+    pendingPortals.clear();
+    activePortals.clear();
+    clientBehaviors.clear();
+    ssidFrequency.clear();
+    popularSSIDs.clear();
+
+    display_clear();
     drawMainBorderWithTitle("KARMA ATTACK SETUP");
     displayTextLine("Select portal template:");
     delay(1000);
@@ -1178,6 +1177,10 @@ void karma_setup() {
     }
 
     drawMainBorderWithTitle("ENHANCED KARMA ATK");
+
+    FS *Fs;
+    int redraw = true;
+    String FileSys = "LittleFS";
 
     if (setupSdCard()) {
         Fs = &SD;
@@ -1195,7 +1198,6 @@ void karma_setup() {
     tft.setTextSize(FP);
     tft.setCursor(80, 100);
 
-    initMACCache();
     clearProbes();
 
     karmaConfig.enableAutoKarma = true;
@@ -1211,7 +1213,6 @@ void karma_setup() {
     attackConfig.priorityThreshold = 60;
     attackConfig.cloneThreshold = 5;
 
-    // Initialize WiFi for monitor mode
     nvs_flash_init();
     ESP_ERROR_CHECK(esp_netif_init());
     wifi_init_config_t cfg = WIFI_INIT_CONFIG_DEFAULT();
@@ -1233,34 +1234,49 @@ void karma_setup() {
     vTaskDelay(1000 / portTICK_RATE_MS);
 
     for (;;) {
-        if (returnToMenu) {
-            if (broadcastAttack.isActive()) {
-                broadcastAttack.stop();
-            }
-
-            // Clean shutdown sequence - DO NOT deinit WiFi!
-            esp_wifi_set_promiscuous(false);
-            esp_wifi_set_promiscuous_rx_cb(NULL);
+        if (restartKarmaAfterPortal) {
+            restartKarmaAfterPortal = false;
+            
             esp_wifi_stop();
-            vTaskDelay(100 / portTICK_PERIOD_MS);
+            delay(100);
+            
+            esp_wifi_start();
+            esp_wifi_set_promiscuous(true);
+            esp_wifi_set_promiscuous_rx_cb(probe_sniffer);
+            esp_wifi_set_channel(all_wifi_channels[channl], secondCh);
+            
+            redraw = true;
+            redrawNeeded = true;
+        }
 
+        if (returnToMenu) {
+            esp_wifi_set_promiscuous(false);
+            esp_wifi_set_promiscuous_rx_cb(nullptr);
+            
+            delay(50);
+            
+            esp_wifi_stop();
+            
+            WiFi.mode(WIFI_OFF);
+            
             if (macRingBuffer) {
                 vRingbufferDelete(macRingBuffer);
                 macRingBuffer = NULL;
             }
-
-            // Clear all containers to free memory
+            
             portalTemplates.clear();
             pendingPortals.clear();
             activePortals.clear();
             popularSSIDs.clear();
             ssidFrequency.clear();
             clientBehaviors.clear();
-
-            // Clear buffer
+            
             probeBufferIndex = 0;
             bufferWrapped = false;
-
+            
+            display_clear();
+            tft.fillScreen(bruceConfig.bgColor);
+            
             Serial.printf("[KARMA] Exiting to main menu. Heap: %lu\n", ESP.getFreeHeap());
             return;
         }
@@ -1280,11 +1296,9 @@ void karma_setup() {
 
         checkPendingPortals();
 
-        // ===== BROADCAST ATTACK UPDATE =====
         if (broadcastAttack.isActive()) {
             broadcastAttack.update();
         }
-        // ===================================
 
         if (check(NextPress)) {
             esp_wifi_set_promiscuous(false);
@@ -1527,11 +1541,9 @@ void karma_setup() {
                          loopOptions(strategyOptions);
                      }},
 
-                    // ===== BROADCAST ATTACK MENU OPTION =====
                     {"Active Broadcast Attack", [=]() {
                         std::vector<Option> broadcastOptions;
 
-                        // Start/Stop toggle
                         broadcastOptions.push_back({broadcastAttack.isActive() ? 
                             "* Stop Broadcast" : "Start Broadcast", [=]() {
                             if (broadcastAttack.isActive()) {
@@ -1550,7 +1562,6 @@ void karma_setup() {
                             delay(1000);
                         }});
 
-                        // Speed settings
                         broadcastOptions.push_back({"Set Speed", [=]() {
                             std::vector<Option> speedOptions = {
                                 {"Very Fast (100ms)", [=]() { 
@@ -1583,7 +1594,6 @@ void karma_setup() {
                             loopOptions(speedOptions);
                         }});
 
-                        // Statistics
                         broadcastOptions.push_back({"Show Stats", [=]() {
                             drawMainBorderWithTitle("BROADCAST STATS");
 
@@ -1620,7 +1630,6 @@ void karma_setup() {
                             tft.setCursor(10, y); y += 15;
                             tft.print("Status: " + String(broadcastAttack.isActive() ? "ACTIVE" : "INACTIVE"));
 
-                            // Show top responses if any
                             auto topResponses = broadcastAttack.getTopResponses(3);
                             if (!topResponses.empty()) {
                                 y += 10;
@@ -1639,7 +1648,6 @@ void karma_setup() {
                             }
                         }});
 
-                        // Advanced settings
                         broadcastOptions.push_back({"Advanced Settings", [=]() {
                             std::vector<Option> advancedOptions = {
                                 {"Clear High Priority", [=]() {
@@ -1661,7 +1669,6 @@ void karma_setup() {
 
                         loopOptions(broadcastOptions);
                     }},
-                    // ========================================
 
                     {"Save Probes",
                      [=]() {
@@ -1821,18 +1828,6 @@ void karma_setup() {
         updateKarmaDisplay();
 
         vTaskDelay(50 / portTICK_PERIOD_MS);
-    }
-
-    // This code should never be reached due to return statements above
-    // But keep it for safety
-    esp_wifi_set_promiscuous(false);
-    esp_wifi_set_promiscuous_rx_cb(nullptr);
-    esp_wifi_stop();
-    vTaskDelay(100 / portTICK_PERIOD_MS);
-
-    if (macRingBuffer) {
-        vRingbufferDelete(macRingBuffer);
-        macRingBuffer = NULL;
     }
 }
 
