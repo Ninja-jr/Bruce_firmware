@@ -245,7 +245,7 @@ std::vector<ClientBehavior> getVulnerableClients();
 // Enhanced functions
 size_t buildEnhancedProbeResponse(uint8_t *buffer, const String &ssid, 
                                  const String &targetMAC, uint8_t channel, 
-                                 const RSNInfo &rsn, bool isHidden = false);
+                                 const RSNInfo &rsn, bool isHidden);
 size_t buildBeaconFrame(uint8_t *buffer, const String &ssid, 
                         uint8_t channel, const RSNInfo &rsn);
 void generateRandomBSSID(uint8_t *bssid);
