@@ -778,7 +778,6 @@ void launchTieredEvilPortal(PendingPortal &portal) {
 
     esp_wifi_set_promiscuous(false);
     esp_wifi_stop();
-    esp_wifi_deinit();
     delay(500);
 
     EvilPortal portalInstance(portal.ssid, portal.channel, 
@@ -909,7 +908,6 @@ void launchManualEvilPortal(const String &ssid, uint8_t channel, bool verifyPwd)
 
     esp_wifi_set_promiscuous(false);
     esp_wifi_stop();
-    esp_wifi_deinit();
     delay(500);
 
     EvilPortal portalInstance(ssid, channel, karmaConfig.enableDeauth, verifyPwd, false);
@@ -1149,7 +1147,6 @@ void updateKarmaDisplay() {
 void safe_wifi_deinit() {
     esp_wifi_set_promiscuous(false);
     esp_wifi_stop();
-    esp_wifi_deinit();
     vTaskDelay(100 / portTICK_RATE_MS);
 }
 
@@ -1158,14 +1155,13 @@ void karma_setup() {
     templateSelected = false;
     redrawNeeded = true;
 
-    // Minimal WiFi cleanup - don't use esp_wifi_deinit() here
+    // Simple cleanup - just stop promiscuous mode
     esp_wifi_set_promiscuous(false);
     esp_wifi_set_promiscuous_rx_cb(nullptr);
     delay(100);
     
-    // Set WiFi to OFF mode but don't deinit
-    WiFi.mode(WIFI_OFF);
-    delay(100);
+    // Let wifi_common.h handle WiFi mode changes
+    // Don't set WiFi.mode(WIFI_OFF) here - wifi_common.h will do it
 
     FS *Fs;
     int redraw = true;
@@ -1242,14 +1238,10 @@ void karma_setup() {
                 broadcastAttack.stop();
             }
 
-            // Clean shutdown sequence
+            // Clean shutdown sequence - DO NOT deinit WiFi!
             esp_wifi_set_promiscuous(false);
             esp_wifi_set_promiscuous_rx_cb(NULL);
             esp_wifi_stop();
-            vTaskDelay(100 / portTICK_PERIOD_MS);
-            
-            // Only deinit if we're not going to use WiFi immediately after
-            esp_wifi_deinit();
             vTaskDelay(100 / portTICK_PERIOD_MS);
 
             if (macRingBuffer) {
@@ -1264,14 +1256,11 @@ void karma_setup() {
             popularSSIDs.clear();
             ssidFrequency.clear();
             clientBehaviors.clear();
-            
+
             // Clear buffer
             probeBufferIndex = 0;
             bufferWrapped = false;
 
-            // Reinitialize display
-            tft.fillScreen(bruceConfig.bgColor);
-            
             Serial.printf("[KARMA] Exiting to main menu. Heap: %lu\n", ESP.getFreeHeap());
             return;
         }
@@ -1839,15 +1828,12 @@ void karma_setup() {
     esp_wifi_set_promiscuous(false);
     esp_wifi_set_promiscuous_rx_cb(nullptr);
     esp_wifi_stop();
-    esp_wifi_deinit();
     vTaskDelay(100 / portTICK_PERIOD_MS);
 
     if (macRingBuffer) {
         vRingbufferDelete(macRingBuffer);
         macRingBuffer = NULL;
     }
-
-    tft.fillScreen(bruceConfig.bgColor);
 }
 
 void saveProbesToFile(FS &fs, bool compressed) {
