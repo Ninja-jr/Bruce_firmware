@@ -31,9 +31,11 @@
 #include <TimeLib.h>
 #include <globals.h>
 
-// Channel definitions if not provided elsewhere
-#ifndef all_wifi_channels
-const uint8_t all_wifi_channels[] = {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14};
+// Use the existing all_wifi_channels from sniffer.h
+// Add karma-specific channels if needed
+#ifndef KARMA_CHANNELS
+#define KARMA_CHANNELS
+const uint8_t karma_channels[] = {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14};
 #endif
 
 // Module display helpers
@@ -460,15 +462,8 @@ void ActiveBroadcastAttack::launchAttackForResponse(const String &ssid, const St
     // External variables needed for this function
     extern bool templateSelected;
     extern std::vector<PendingPortal> pendingPortals;
-    extern struct {
-        String name;
-        String filename;
-        bool isDefault;
-        bool verifyPassword;
-    } selectedTemplate;
-    extern struct {
-        uint16_t highTierDuration;
-    } attackConfig;
+    extern PortalTemplate selectedTemplate;
+    extern AttackConfig attackConfig;
 
     if (!templateSelected) return;
 
@@ -882,7 +877,7 @@ void rotateBSSID() {
 // Build enhanced probe response with proper encryption
 size_t buildEnhancedProbeResponse(uint8_t *buffer, const String &ssid, 
                                  const String &targetMAC, uint8_t channel, 
-                                 const RSNInfo &rsn, bool isHidden = false) {
+                                 const RSNInfo &rsn, bool isHidden) {
     uint8_t pos = 0;
     
     buffer[pos++] = 0x50;
@@ -1280,7 +1275,7 @@ void sendBeaconFrames() {
             beaconsSent++;
             
             if (beaconsSent % 100 == 0) {
-                Serial.printf("[BEACON] Sent %d beacons for %s\n", 
+                Serial.printf("[BEACON] Sent %ld beacons for %s\n", 
                              beaconsSent, activeNetworks[i].ssid.c_str());
             }
         }
@@ -1304,7 +1299,8 @@ void processResponseQueue() {
                                                     task.ssid,
                                                     task.targetMAC,
                                                     task.channel,
-                                                    task.rsn);
+                                                    task.rsn,
+                                                    false);
         
         esp_wifi_set_channel(task.channel, WIFI_SECOND_CHAN_NONE);
         esp_err_t err = esp_wifi_80211_tx(WIFI_IF_AP, responseFrame, frameLen, false);
@@ -1388,7 +1384,7 @@ void checkForAssociations() {
                         it->second.successfulConnections++;
                         
                         if (it->second.successfulConnections % 10 == 0) {
-                            Serial.printf("[SUCCESS] Potential %d connections to %s\n",
+                            Serial.printf("[SUCCESS] Potential %ld connections to %s\n",
                                          it->second.successfulConnections, ssid.c_str());
                         }
                     }
@@ -1864,7 +1860,7 @@ void handleBroadcastResponse(const String& ssid, const String& mac) {
             behavior.probeCount = 1;
             behavior.avgRSSI = -50;
             behavior.probedSSIDs.push_back(ssid);
-            behavior.favoriteChannel = all_wifi_channels[channl];
+            behavior.favoriteChannel = karma_channels[channl % 14];
             behavior.lastKarmaAttempt = 0;
             behavior.isVulnerable = true;
             
@@ -1877,7 +1873,7 @@ void handleBroadcastResponse(const String& ssid, const String& mac) {
             if (karmaConfig.enableAutoKarma) {
                 PendingPortal portal;
                 portal.ssid = ssid;
-                portal.channel = all_wifi_channels[channl];
+                portal.channel = karma_channels[channl % 14];
                 portal.targetMAC = mac;
                 portal.timestamp = millis();
                 portal.launched = false;
@@ -1924,7 +1920,7 @@ void probe_sniffer(void *buf, wifi_promiscuous_pkt_type_t type) {
         probe.ssid = ssid;
         probe.rssi = ctrl.rssi;
         probe.timestamp = millis();
-        probe.channel = all_wifi_channels[channl];
+        probe.channel = karma_channels[channl % 14];
         probe.encryption_type = (rsn.akmSuite > 0) ? 3 : 0;
         
         probeBuffer[probeBufferIndex] = probe;
@@ -2124,7 +2120,7 @@ void updateKarmaDisplay() {
         tft.print("Pending: " + String(pendingPortals.size()));
         
         tft.setCursor(tftWidth/2, tftHeight - 80);
-        tft.print("Ch: " + String(all_wifi_channels[channl]));
+        tft.print("Ch: " + String(karma_channels[channl % 14]));
         
         tft.setCursor(tftWidth/2, tftHeight - 70);
         String hopStatus = String(auto_hopping ? "A:" : "M:") + String(hop_interval) + "ms";
@@ -2189,7 +2185,7 @@ void saveNetworkHistory(FS &fs) {
         file.println("SSID,ResponsesSent,SuccessfulConnections,LastResponse");
         
         for (const auto &history : networkHistory) {
-            file.printf("\"%s\",%d,%d,%lu\n",
+            file.printf("\"%s\",%lu,%lu,%lu\n",
                        history.first.c_str(),
                        history.second.responsesSent,
                        history.second.successfulConnections,
@@ -2308,7 +2304,7 @@ void karma_setup() {
     esp_wifi_set_promiscuous(true);
     esp_wifi_set_promiscuous_rx_cb(probe_sniffer);
     wifi_second_chan_t secondCh = (wifi_second_chan_t)NULL;
-    esp_wifi_set_channel(all_wifi_channels[channl], secondCh);
+    esp_wifi_set_channel(karma_channels[channl % 14], secondCh);
     
     Serial.println("Modern karma attack started!");
     Serial.printf("BSSID: %02X:%02X:%02X:%02X:%02X:%02X\n",
@@ -2327,7 +2323,7 @@ void karma_setup() {
             esp_wifi_start();
             esp_wifi_set_promiscuous(true);
             esp_wifi_set_promiscuous_rx_cb(probe_sniffer);
-            esp_wifi_set_channel(all_wifi_channels[channl], secondCh);
+            esp_wifi_set_channel(karma_channels[channl % 14], secondCh);
             
             redraw = true;
             redrawNeeded = true;
@@ -2362,7 +2358,7 @@ void karma_setup() {
         }
         
         if (karmaConfig.enableDeauth && (currentTime - lastDeauthTime > DEAUTH_INTERVAL)) {
-            sendDeauth("FF:FF:FF:FF:FF:FF", all_wifi_channels[channl], true);
+            sendDeauth("FF:FF:FF:FF:FF:FF", karma_channels[channl % 14], true);
             lastDeauthTime = currentTime;
         }
         
@@ -2386,9 +2382,9 @@ void karma_setup() {
             esp_wifi_set_promiscuous(false);
             esp_wifi_set_promiscuous_rx_cb(nullptr);
             channl++;
-            if (channl >= sizeof(all_wifi_channels)/sizeof(all_wifi_channels[0])) channl = 0;
+            if (channl >= 14) channl = 0;
             wifi_second_chan_t secondCh = (wifi_second_chan_t)NULL;
-            esp_wifi_set_channel(all_wifi_channels[channl], secondCh);
+            esp_wifi_set_channel(karma_channels[channl % 14], secondCh);
             redraw = true;
             vTaskDelay(50 / portTICK_RATE_MS);
             esp_wifi_set_promiscuous(true);
@@ -2423,9 +2419,9 @@ void karma_setup() {
             esp_wifi_set_promiscuous(false);
             esp_wifi_set_promiscuous_rx_cb(nullptr);
             if (channl > 0) channl--;
-            else channl = sizeof(all_wifi_channels)/sizeof(all_wifi_channels[0]) - 1;
+            else channl = 13;
             wifi_second_chan_t secondCh = (wifi_second_chan_t)NULL;
-            esp_wifi_set_channel(all_wifi_channels[channl], secondCh);
+            esp_wifi_set_channel(karma_channels[channl % 14], secondCh);
             redraw = true;
             vTaskDelay(50 / portTICK_PERIOD_MS);
             esp_wifi_set_promiscuous(true);
@@ -3078,11 +3074,11 @@ void karma_setup() {
             tft.drawRightString(
                 "Ch." +
                     String(
-                        all_wifi_channels[channl] < 10    ? "  "
-                        : all_wifi_channels[channl] < 100 ? " "
+                        karma_channels[channl % 14] < 10    ? "  "
+                        : karma_channels[channl % 14] < 100 ? " "
                                                           : ""
                     ) +
-                    String(all_wifi_channels[channl]) + "(Next)",
+                    String(karma_channels[channl % 14]) + "(Next)",
                 tftWidth - 10,
                 tftHeight - 18,
                 1
