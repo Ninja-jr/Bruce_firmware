@@ -123,8 +123,9 @@ void wifi_complete_cleanup() {
     esp_wifi_set_promiscuous(false);
     esp_wifi_set_promiscuous_rx_cb(NULL);
     esp_wifi_stop();
-    esp_wifi_deinit();
-    esp_wifi_restore();
+    // DO NOT call esp_wifi_deinit() here - let wifi_common.h handle it
+    // esp_wifi_deinit(); // REMOVED
+    // esp_wifi_restore(); // REMOVED
     WiFi.disconnect(true);
     WiFi.mode(WIFI_OFF);
     delay(300);
@@ -571,10 +572,10 @@ void capture_handshake(String tssid, String mac, uint8_t channel) {
     }
 
     checkHeap("Handshake start");
-    
+
     wifi_complete_cleanup();
     delay(100);
-    
+
     if (!WiFi.mode(WIFI_MODE_STA)) {
         displayError("Failed starting WIFI", true);
         return;
@@ -700,7 +701,10 @@ void capture_handshake(String tssid, String mac, uint8_t channel) {
 
     esp_wifi_set_promiscuous(false);
     esp_wifi_set_promiscuous_rx_cb(NULL);
-    wifi_complete_cleanup();
+    // DO NOT call wifi_complete_cleanup() here - it has esp_wifi_deinit()
+    // Just stop WiFi operations
+    esp_wifi_stop();
+    delay(100);
     returnToMenu = true;
 }
 
