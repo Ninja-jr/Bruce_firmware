@@ -15,6 +15,28 @@ enum AttackTier {
     TIER_CLONE = 4     // Clone network attacks
 };
 
+// Broadcast attack configuration
+struct BroadcastConfig {
+    bool enableBroadcast = false;
+    uint32_t broadcastInterval = 150;    // ms between broadcasts
+    uint16_t batchSize = 100;            // SSIDs per batch
+    bool rotateChannels = true;          // Auto-rotate channels
+    uint32_t channelHopInterval = 5000;  // ms between channel hops
+    bool respondToProbes = true;         // Launch attacks on probe responses
+    uint8_t maxActiveAttacks = 3;        // Max simultaneous attacks
+    bool prioritizeResponses = true;     // Focus on SSIDs that get responses
+};
+
+// Broadcast statistics
+struct BroadcastStats {
+    size_t totalBroadcasts = 0;
+    size_t totalResponses = 0;
+    size_t successfulAttacks = 0;
+    std::map<String, size_t> ssidResponseCount;
+    unsigned long startTime = 0;
+    unsigned long lastResponseTime = 0;
+};
+
 // RSN/WPA2/WPA3 information for encryption mimicry
 typedef struct {
     uint16_t version;
@@ -123,58 +145,89 @@ typedef struct {
     uint8_t maxCloneNetworks;
 } AttackConfig;
 
-// Broadcast attack statistics
-struct BroadcastStats {
-    unsigned long startTime;
-    size_t totalBroadcasts;
-    size_t totalResponses;
-};
-
 // Broadcast attack class
-class BroadcastAttack {
+class ActiveBroadcastAttack {
+private:
+    BroadcastConfig config;
+    BroadcastStats stats;
+
+    size_t currentIndex;
+    size_t batchStart;
+    unsigned long lastBroadcastTime;
+    unsigned long lastChannelHopTime;
+    bool _active;
+    uint8_t currentChannel;
+
+    std::vector<String> currentBatch;
+    std::vector<String> highPrioritySSIDs;
+
 public:
-    BroadcastAttack();
-    bool isActive();
+    ActiveBroadcastAttack();
+
+    // Control methods
     void start();
     void stop();
-    void update();
-    void processProbeResponse(const String& ssid, const String& mac);
-    float getProgressPercent();
-    void setBroadcastInterval(uint16_t interval);
-    size_t getCurrentPosition();
     void restart();
+    bool isActive() const;
+
+    // Configuration
+    void setConfig(const BroadcastConfig &newConfig);
+    BroadcastConfig getConfig() const;
+    void setBroadcastInterval(uint32_t interval);
+    void setBatchSize(uint16_t size);
+    void setChannel(uint8_t channel);
+
+    // Operation
+    void update();
+    void processProbeResponse(const String &ssid, const String &mac);
+
+    // Statistics
+    BroadcastStats getStats() const;
+    size_t getTotalSSIDs() const;
+    size_t getCurrentPosition() const;
+    float getProgressPercent() const;
+    std::vector<std::pair<String, size_t>> getTopResponses(size_t count = 10) const;
+
+    // SSID management
+    void addHighPrioritySSID(const String &ssid);
     void clearHighPrioritySSIDs();
-    
-    BroadcastStats getStats();
-    std::vector<std::pair<String, size_t>> getTopResponses(size_t count);
-    
+
 private:
-    bool active;
-    uint16_t broadcastInterval;
-    unsigned long startTime;
-    size_t currentPos;
-    size_t totalBroadcasts;
-    size_t totalResponses;
-    std::map<String, size_t> responseCounts;
+    void loadNextBatch();
+    void broadcastSSID(const String &ssid);
+    void rotateChannel();
+    void sendBeaconFrame(const String &ssid, uint8_t channel);
+    void recordResponse(const String &ssid);
+    void launchAttackForResponse(const String &ssid, const String &mac);
 };
 
 // SSID Database class
 class SSIDDatabase {
+private:
+    static std::vector<String> ssidCache;
+    static bool cacheLoaded;
+    static String currentFilename;
+    static bool useLittleFS;
+
+    static bool loadFromFile();
+
 public:
     static size_t getCount();
-    static std::vector<String> getSSIDs();
-    static std::vector<String> getPopularSSIDs(size_t count);
-    static bool loadFromFile(FS &fs, const String &filename);
-    static void clear();
-    static void addSSID(const String &ssid);
-    static void setHighPriority(const String &ssid, bool highPriority);
-    static bool autoLoad();
-    static bool isDatabaseLoaded();
-    
-private:
-    static std::vector<String> ssids;
-    static std::vector<String> highPrioritySSIDs;
-    static void createDefaultDatabase();
+    static String getSSID(size_t index);
+    static std::vector<String> getAllSSIDs();
+    static int findSSID(const String &ssid);
+    static String getRandomSSID();
+    static void getBatch(size_t startIndex, size_t count, std::vector<String> &result);
+    static bool contains(const String &ssid);
+    static size_t getAverageLength();
+    static size_t getMaxLength();
+    static size_t getMinLength();
+
+    static bool setSourceFile(const String &filename, bool useLittleFS = false);
+    static bool reload();
+    static void clearCache();
+    static bool isLoaded();
+    static String getSourceFile();
 };
 
 // Function prototypes
@@ -204,6 +257,9 @@ void sendBeaconFrames();
 void checkForAssociations();
 void saveNetworkHistory(FS &fs);
 
+// Helper function for beacon frames
+void sendBeaconFrameHelper(const String &ssid, uint8_t channel);
+
 // External variables
 extern std::map<String, ClientBehavior> clientBehaviors;
 extern ProbeRequest probeBuffer[1000];
@@ -211,6 +267,6 @@ extern uint16_t probeBufferIndex;
 extern bool bufferWrapped;
 extern KarmaConfig karmaConfig;
 extern AttackConfig attackConfig;
-extern BroadcastAttack broadcastAttack;
+extern ActiveBroadcastAttack broadcastAttack;
 
 #endif // KARMA_ATTACK_H
