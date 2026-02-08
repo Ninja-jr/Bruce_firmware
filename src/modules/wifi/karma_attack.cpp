@@ -31,21 +31,17 @@
 #include <TimeLib.h>
 #include <globals.h>
 
-// Use the existing all_wifi_channels from sniffer.h
-// Add karma-specific channels if needed
 #ifndef KARMA_CHANNELS
 #define KARMA_CHANNELS
 const uint8_t karma_channels[] = {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14};
 #endif
 
-// Module display helpers
 #ifndef display_clear
 void display_clear() {
     tft.fillScreen(bruceConfig.bgColor);
 }
 #endif
 
-//===== ENHANCED SETTINGS =====//
 #define FILENAME "probe_capture_"
 #define SAVE_INTERVAL 10
 #define MAX_PROBE_BUFFER 1000
@@ -62,34 +58,32 @@ void display_clear() {
 #define MAX_CONCURRENT_SSIDS 8
 #define MAC_ROTATION_INTERVAL 30000
 
-// Vendor OUIs for believable MACs
 const uint8_t vendorOUIs[][3] = {
-    {0x00, 0x50, 0xF2}, // Microsoft
-    {0x00, 0x1A, 0x11}, // Google
-    {0x00, 0x1B, 0x63}, // Apple
-    {0x00, 0x24, 0x01}, // Cisco
-    {0x00, 0x0C, 0x29}, // VMware
-    {0x00, 0x1D, 0x0F}, // TP-Link
-    {0x00, 0x26, 0x5E}, // Netgear
-    {0x00, 0x19, 0xE3}, // D-Link
-    {0x00, 0x21, 0x91}, // Intel
-    {0x00, 0x1E, 0x8C}, // Broadcom
-    {0x00, 0x12, 0x17}, // Aruba
-    {0x00, 0x18, 0xDE}, // Samsung
-    {0x00, 0x1E, 0xE1}, // Sony
-    {0x00, 0x13, 0x10}, // Linksys
-    {0x00, 0x1C, 0xDF}, // Ubiquiti
-    {0x00, 0x0F, 0xEA}, // Asus
-    {0x00, 0x14, 0x6C}, // Belkin
-    {0x00, 0x25, 0x9C}, // Ruckus
-    {0x00, 0x11, 0x22}, // Buffalo
-    {0x00, 0x16, 0x6F}  // ZyXEL
+    {0x00, 0x50, 0xF2},
+    {0x00, 0x1A, 0x11},
+    {0x00, 0x1B, 0x63},
+    {0x00, 0x24, 0x01},
+    {0x00, 0x0C, 0x29},
+    {0x00, 0x1D, 0x0F},
+    {0x00, 0x26, 0x5E},
+    {0x00, 0x19, 0xE3},
+    {0x00, 0x21, 0x91},
+    {0x00, 0x1E, 0x8C},
+    {0x00, 0x12, 0x17},
+    {0x00, 0x18, 0xDE},
+    {0x00, 0x1E, 0xE1},
+    {0x00, 0x13, 0x10},
+    {0x00, 0x1C, 0xDF},
+    {0x00, 0x0F, 0xEA},
+    {0x00, 0x14, 0x6C},
+    {0x00, 0x25, 0x9C},
+    {0x00, 0x11, 0x22},
+    {0x00, 0x16, 0x6F}
 };
 
 const uint8_t priorityChannels[] = {1, 6, 11, 3, 8, 2, 7, 4, 9, 5, 10, 12, 13};
 #define NUM_PRIORITY_CHANNELS 13
 
-//===== SSIDDatabase Implementation =====//
 std::vector<String> SSIDDatabase::ssidCache;
 bool SSIDDatabase::cacheLoaded = false;
 String SSIDDatabase::currentFilename = "/ssid_list.txt";
@@ -242,7 +236,6 @@ size_t SSIDDatabase::getMinLength() {
     return minLen;
 }
 
-//===== ActiveBroadcastAttack Implementation =====//
 ActiveBroadcastAttack::ActiveBroadcastAttack() 
     : currentIndex(0), batchStart(0), lastBroadcastTime(0),
       lastChannelHopTime(0), _active(false), currentChannel(1) {
@@ -310,23 +303,19 @@ void ActiveBroadcastAttack::update() {
 
     unsigned long now = millis();
 
-    // Channel rotation
     if (config.rotateChannels && (now - lastChannelHopTime > config.channelHopInterval)) {
         rotateChannel();
         lastChannelHopTime = now;
     }
 
-    // Broadcast next SSID
     if (now - lastBroadcastTime < config.broadcastInterval) return;
 
-    // Check if we need new batch
     if (currentIndex >= currentBatch.size()) {
         batchStart += currentBatch.size();
         loadNextBatch();
         currentIndex = 0;
 
         if (currentBatch.empty()) {
-            // Reached end, loop back
             batchStart = 0;
             loadNextBatch();
             Serial.println("[BROADCAST] Restarted from beginning");
@@ -336,7 +325,6 @@ void ActiveBroadcastAttack::update() {
     if (currentIndex < currentBatch.size()) {
         String ssid = currentBatch[currentIndex];
 
-        // Prioritize high-priority SSIDs if any
         if (!highPrioritySSIDs.empty() && stats.totalBroadcasts % 10 == 0) {
             size_t hpIndex = stats.totalBroadcasts % highPrioritySSIDs.size();
             ssid = highPrioritySSIDs[hpIndex];
@@ -347,7 +335,6 @@ void ActiveBroadcastAttack::update() {
         stats.totalBroadcasts++;
         lastBroadcastTime = now;
 
-        // Log progress
         if (stats.totalBroadcasts % 500 == 0) {
             Serial.printf("[BROADCAST] Sent: %d, Responses: %d\n", 
                          stats.totalBroadcasts, stats.totalResponses);
@@ -364,8 +351,7 @@ void ActiveBroadcastAttack::processProbeResponse(const String &ssid, const Strin
         addHighPrioritySSID(ssid);
     }
 
-    // Check if we should launch an attack
-    if (stats.ssidResponseCount[ssid] >= 1) { // Respond on first probe
+    if (stats.ssidResponseCount[ssid] >= 1) {
         launchAttackForResponse(ssid, mac);
     }
 }
@@ -409,14 +395,12 @@ std::vector<std::pair<String, size_t>> ActiveBroadcastAttack::getTopResponses(si
 }
 
 void ActiveBroadcastAttack::addHighPrioritySSID(const String &ssid) {
-    // Check if already in list
     for (const auto &hpSSID : highPrioritySSIDs) {
         if (hpSSID == ssid) return;
     }
 
     highPrioritySSIDs.push_back(ssid);
 
-    // Keep list manageable
     if (highPrioritySSIDs.size() > 20) {
         highPrioritySSIDs.erase(highPrioritySSIDs.begin());
     }
@@ -459,7 +443,6 @@ void ActiveBroadcastAttack::recordResponse(const String &ssid) {
 }
 
 void ActiveBroadcastAttack::launchAttackForResponse(const String &ssid, const String &mac) {
-    // External variables needed for this function
     extern bool templateSelected;
     extern std::vector<PendingPortal> pendingPortals;
     extern PortalTemplate selectedTemplate;
@@ -467,7 +450,6 @@ void ActiveBroadcastAttack::launchAttackForResponse(const String &ssid, const St
 
     if (!templateSelected) return;
 
-    // Check max active attacks
     int activeCount = 0;
     for (const auto &portal : pendingPortals) {
         if (!portal.launched) activeCount++;
@@ -478,7 +460,6 @@ void ActiveBroadcastAttack::launchAttackForResponse(const String &ssid, const St
         return;
     }
 
-    // Create pending portal
     PendingPortal portal;
     portal.ssid = ssid;
     portal.channel = currentChannel;
@@ -489,7 +470,7 @@ void ActiveBroadcastAttack::launchAttackForResponse(const String &ssid, const St
     portal.templateFile = selectedTemplate.filename;
     portal.isDefaultTemplate = selectedTemplate.isDefault;
     portal.verifyPassword = selectedTemplate.verifyPassword;
-    portal.priority = 95; // High priority for broadcast responses
+    portal.priority = 95;
     portal.tier = TIER_HIGH;
     portal.duration = attackConfig.highTierDuration;
     portal.isCloneAttack = false;
@@ -502,10 +483,8 @@ void ActiveBroadcastAttack::launchAttackForResponse(const String &ssid, const St
                  mac.c_str(), ssid.c_str());
 }
 
-// Global instance
 ActiveBroadcastAttack broadcastAttack;
 
-//===== ENHANCED Run-Time variables =====//
 unsigned long last_time = 0;
 unsigned long last_ChannelChange = 0;
 unsigned long lastFrequencyReset = 0;
@@ -546,27 +525,21 @@ bool redrawNeeded = true;
 bool isPortalActive = false;
 bool restartKarmaAfterPortal = false;
 
-// Enhanced tracking
 std::map<String, NetworkHistory> networkHistory;
 std::queue<ProbeResponseTask> responseQueue;
 std::vector<ActiveNetwork> activeNetworks;
 std::map<String, uint32_t> macBlacklist;
 uint8_t currentBSSID[6];
 
-// Portal templates
 std::vector<PortalTemplate> portalTemplates;
 PortalTemplate selectedTemplate;
 bool templateSelected = false;
 
-// SSID frequency tracking
 std::map<String, uint16_t> ssidFrequency;
 std::vector<std::pair<String, uint16_t>> popularSSIDs;
 
-// Auto-portal launching
 std::vector<PendingPortal> pendingPortals;
 std::vector<PendingPortal> activePortals;
-
-//===== FUNCTIONS =====//
 
 String generateUniqueFilename(FS &fs, bool compressed) {
     String basePath = "/ProbeData/";
@@ -702,7 +675,6 @@ String extractMAC(const wifi_promiscuous_pkt_t *packet) {
     return String(mac);
 }
 
-// Extract RSN (WPA2/WPA3) information from probe
 RSNInfo extractRSNInfo(const uint8_t *frame, int len) {
     RSNInfo rsn = {0, 0, 0, 0};
     int pos = 24;
@@ -711,7 +683,7 @@ RSNInfo extractRSNInfo(const uint8_t *frame, int len) {
         uint8_t tag = frame[pos];
         uint8_t tagLen = frame[pos + 1];
         
-        if (tag == 0x30 && tagLen >= 2) { // RSN tag
+        if (tag == 0x30 && tagLen >= 2) {
             if (pos + 2 + tagLen <= len) {
                 rsn.version = (frame[pos + 2] << 8) | frame[pos + 3];
                 
@@ -851,7 +823,6 @@ uint16_t getPortalDuration(AttackTier tier) {
     }
 }
 
-// Generate believable random MAC
 void generateRandomBSSID(uint8_t *bssid) {
     uint8_t vendorIndex = esp_random() % (sizeof(vendorOUIs) / 3);
     memcpy(bssid, vendorOUIs[vendorIndex], 3);
@@ -863,7 +834,6 @@ void generateRandomBSSID(uint8_t *bssid) {
     bssid[0] &= 0xFE;
 }
 
-// Rotate BSSID periodically
 void rotateBSSID() {
     if (millis() - lastMACRotation > MAC_ROTATION_INTERVAL) {
         generateRandomBSSID(currentBSSID);
@@ -874,7 +844,6 @@ void rotateBSSID() {
     }
 }
 
-// Build enhanced probe response with proper encryption
 size_t buildEnhancedProbeResponse(uint8_t *buffer, const String &ssid, 
                                  const String &targetMAC, uint8_t channel, 
                                  const RSNInfo &rsn, bool isHidden) {
@@ -1005,7 +974,6 @@ size_t buildEnhancedProbeResponse(uint8_t *buffer, const String &ssid,
     return pos;
 }
 
-// Build beacon frame
 size_t buildBeaconFrame(uint8_t *buffer, const String &ssid, 
                         uint8_t channel, const RSNInfo &rsn) {
     uint8_t pos = 0;
@@ -1106,7 +1074,6 @@ size_t buildBeaconFrame(uint8_t *buffer, const String &ssid,
     return pos;
 }
 
-// Helper function for beacon frames
 void sendBeaconFrameHelper(const String &ssid, uint8_t channel) {
     if (ssid.isEmpty() || channel < 1 || channel > 14) return;
 
@@ -1250,7 +1217,6 @@ void sendDeauth(const String &mac, uint8_t channel, bool broadcast) {
     deauthPacketsSent++;
 }
 
-// Send beacon frames for active networks
 void sendBeaconFrames() {
     unsigned long now = millis();
     if (now - lastBeaconTime < BEACON_INTERVAL_MS / 10) {
@@ -1282,7 +1248,6 @@ void sendBeaconFrames() {
     }
 }
 
-// Process response queue (low-latency)
 void processResponseQueue() {
     unsigned long now = millis();
     
@@ -1345,7 +1310,6 @@ void processResponseQueue() {
     }
 }
 
-// Queue probe response for fast processing
 void queueProbeResponse(const ProbeRequest &probe, const RSNInfo &rsn) {
     if (macBlacklist.find(probe.mac) != macBlacklist.end()) {
         if (millis() - macBlacklist[probe.mac] < 60000) {
@@ -1369,7 +1333,6 @@ void queueProbeResponse(const ProbeRequest &probe, const RSNInfo &rsn) {
     }
 }
 
-// Check for successful connections (associations)
 void checkForAssociations() {
     unsigned long now = millis();
     
@@ -1579,7 +1542,7 @@ void loadPortalTemplates() {
     }
 }
 
-bool selectPortalTemplate() {
+bool selectPortalTemplate(bool isInitialSetup) {
     loadPortalTemplates();
 
     if (portalTemplates.empty()) {
@@ -1601,97 +1564,190 @@ bool selectPortalTemplate() {
             selectedTemplate = tmpl;
             templateSelected = true;
 
-            drawMainBorderWithTitle("KARMA SETUP");
-            displayTextLine("Selected: " + tmpl.name);
-            delay(1000);
+            if (isInitialSetup) {
+                drawMainBorderWithTitle("KARMA SETUP");
+                displayTextLine("Selected: " + tmpl.name);
+                delay(1000);
+            }
         }});
     }
 
     templateOptions.push_back({"Load Custom File", [=]() {
-        std::vector<Option> loadOptions;
+        if (isInitialSetup) {
+            display_clear();
+            drawMainBorderWithTitle("LOAD TEMPLATE");
+            
+            std::vector<Option> directOptions = {
+                {"From SD Card", [=]() {
+                    display_clear();
+                    drawMainBorderWithTitle("BROWSE SD");
+                    delay(100);
+                    
+                    if (setupSdCard()) {
+                        String templateFile = loopSD(SD, true, "HTML");
+                        if (templateFile.length() > 0) {
+                            PortalTemplate customTmpl;
+                            customTmpl.name = "[SD] " + templateFile;
+                            customTmpl.filename = templateFile;
+                            customTmpl.isDefault = false;
+                            customTmpl.verifyPassword = false;
 
-        loadOptions.push_back({"Load from SD", [=]() {
-            if (setupSdCard()) {
-                String templateFile = loopSD(SD, true, "HTML");
-                if (templateFile.length() > 0) {
-                    PortalTemplate customTmpl;
-                    customTmpl.name = "[Custom] " + templateFile;
-                    customTmpl.filename = templateFile;
-                    customTmpl.isDefault = false;
-                    customTmpl.verifyPassword = false;
+                            File file = SD.open(templateFile, FILE_READ);
+                            if (file) {
+                                String firstLine = file.readStringUntil('\n');
+                                file.close();
+                                if (firstLine.indexOf("verify=\"true\"") != -1) {
+                                    customTmpl.verifyPassword = true;
+                                    customTmpl.name += " (verify)";
+                                }
+                            }
 
-                    File file = SD.open(templateFile, FILE_READ);
-                    if (file) {
-                        String firstLine = file.readStringUntil('\n');
-                        file.close();
-                        if (firstLine.indexOf("verify=\"true\"") != -1) {
-                            customTmpl.verifyPassword = true;
-                            customTmpl.name += " (verify)";
+                            selectedTemplate = customTmpl;
+                            templateSelected = true;
+                            portalTemplates.push_back(customTmpl);
+                            
+                            display_clear();
+                            drawMainBorderWithTitle("SELECTED");
+                            displayTextLine(customTmpl.name);
+                            delay(1500);
                         }
                     }
+                }},
+                
+                {"From LittleFS", [=]() {
+                    display_clear();
+                    drawMainBorderWithTitle("BROWSE LITTLEFS");
+                    delay(100);
+                    
+                    if (LittleFS.begin()) {
+                        String templateFile = loopSD(LittleFS, true, "HTML");
+                        if (templateFile.length() > 0) {
+                            PortalTemplate customTmpl;
+                            customTmpl.name = "[FS] " + templateFile;
+                            customTmpl.filename = templateFile;
+                            customTmpl.isDefault = false;
+                            customTmpl.verifyPassword = false;
 
-                    selectedTemplate = customTmpl;
-                    templateSelected = true;
-                    portalTemplates.push_back(customTmpl);
+                            File file = LittleFS.open(templateFile, FILE_READ);
+                            if (file) {
+                                String firstLine = file.readStringUntil('\n');
+                                file.close();
+                                if (firstLine.indexOf("verify=\"true\"") != -1) {
+                                    customTmpl.verifyPassword = true;
+                                    customTmpl.name += " (verify)";
+                                }
+                            }
 
-                    drawMainBorderWithTitle("KARMA SETUP");
-                    displayTextLine("Selected: " + customTmpl.name);
-                    delay(1000);
-                }
-            } else {
-                displayTextLine("SD Card not found!");
-                delay(1000);
-            }
-        }});
-
-        loadOptions.push_back({"Load from LittleFS", [=]() {
-            if (LittleFS.begin()) {
-                String templateFile = loopSD(LittleFS, true, "HTML");
-                if (templateFile.length() > 0) {
-                    PortalTemplate customTmpl;
-                    customTmpl.name = "[Custom] " + templateFile;
-                    customTmpl.filename = templateFile;
-                    customTmpl.isDefault = false;
-                    customTmpl.verifyPassword = false;
-
-                    File file = LittleFS.open(templateFile, FILE_READ);
-                    if (file) {
-                        String firstLine = file.readStringUntil('\n');
-                        file.close();
-                        if (firstLine.indexOf("verify=\"true\"") != -1) {
-                            customTmpl.verifyPassword = true;
-                            customTmpl.name += " (verify)";
+                            selectedTemplate = customTmpl;
+                            templateSelected = true;
+                            portalTemplates.push_back(customTmpl);
+                            
+                            LittleFS.end();
+                            
+                            display_clear();
+                            drawMainBorderWithTitle("SELECTED");
+                            displayTextLine(customTmpl.name);
+                            delay(1500);
+                        } else {
+                            LittleFS.end();
                         }
                     }
+                }},
+                
+                {"Back", [=]() {
+                }}
+            };
+            
+            loopOptions(directOptions);
+        } else {
+            std::vector<Option> loadOptions;
 
-                    selectedTemplate = customTmpl;
-                    templateSelected = true;
-                    portalTemplates.push_back(customTmpl);
+            loadOptions.push_back({"Load from SD", [=]() {
+                if (setupSdCard()) {
+                    String templateFile = loopSD(SD, true, "HTML");
+                    if (templateFile.length() > 0) {
+                        PortalTemplate customTmpl;
+                        customTmpl.name = "[Custom] " + templateFile;
+                        customTmpl.filename = templateFile;
+                        customTmpl.isDefault = false;
+                        customTmpl.verifyPassword = false;
 
-                    drawMainBorderWithTitle("KARMA SETUP");
-                    displayTextLine("Selected: " + customTmpl.name);
+                        File file = SD.open(templateFile, FILE_READ);
+                        if (file) {
+                            String firstLine = file.readStringUntil('\n');
+                            file.close();
+                            if (firstLine.indexOf("verify=\"true\"") != -1) {
+                                customTmpl.verifyPassword = true;
+                                customTmpl.name += " (verify)";
+                            }
+                        }
+
+                        selectedTemplate = customTmpl;
+                        templateSelected = true;
+                        portalTemplates.push_back(customTmpl);
+
+                        drawMainBorderWithTitle("KARMA SETUP");
+                        displayTextLine("Selected: " + customTmpl.name);
+                        delay(1000);
+                    }
+                } else {
+                    displayTextLine("SD Card not found!");
                     delay(1000);
                 }
-                LittleFS.end();
-            } else {
-                displayTextLine("LittleFS error!");
-                delay(1000);
-            }
-        }});
+            }});
 
-        loadOptions.push_back({"Back", [=]() {
-            returnToMenu = false;
-        }});
+            loadOptions.push_back({"Load from LittleFS", [=]() {
+                if (LittleFS.begin()) {
+                    String templateFile = loopSD(LittleFS, true, "HTML");
+                    if (templateFile.length() > 0) {
+                        PortalTemplate customTmpl;
+                        customTmpl.name = "[Custom] " + templateFile;
+                        customTmpl.filename = templateFile;
+                        customTmpl.isDefault = false;
+                        customTmpl.verifyPassword = false;
 
-        loopOptions(loadOptions);
+                        File file = LittleFS.open(templateFile, FILE_READ);
+                        if (file) {
+                            String firstLine = file.readStringUntil('\n');
+                            file.close();
+                            if (firstLine.indexOf("verify=\"true\"") != -1) {
+                                customTmpl.verifyPassword = true;
+                                customTmpl.name += " (verify)";
+                            }
+                        }
+
+                        selectedTemplate = customTmpl;
+                        templateSelected = true;
+                        portalTemplates.push_back(customTmpl);
+
+                        drawMainBorderWithTitle("KARMA SETUP");
+                        displayTextLine("Selected: " + customTmpl.name);
+                        delay(1000);
+                    }
+                    LittleFS.end();
+                } else {
+                    displayTextLine("LittleFS error!");
+                    delay(1000);
+                }
+            }});
+
+            loadOptions.push_back({"Back", [=]() {
+                returnToMenu = false;
+            }});
+
+            loopOptions(loadOptions);
+        }
     }});
 
     templateOptions.push_back({"Disable Auto-Portal", [=]() {
         karmaConfig.enableAutoPortal = false;
         templateSelected = false;
-        drawMainBorderWithTitle("KARMA SETUP");
-        displayTextLine("Auto-portal disabled");
-        delay(1000);
+        
+        if (isInitialSetup) {
+            drawMainBorderWithTitle("KARMA SETUP");
+            displayTextLine("Auto-portal disabled");
+            delay(1000);
+        }
     }});
 
     loopOptions(templateOptions);
@@ -1846,7 +1902,6 @@ void launchManualEvilPortal(const String &ssid, uint8_t channel, bool verifyPwd)
     Serial.println("[MANUAL] Portal closed, returning to karma...");
 }
 
-// Handle broadcast response integration
 void handleBroadcastResponse(const String& ssid, const String& mac) {
     if (broadcastAttack.isActive()) {
         broadcastAttack.processProbeResponse(ssid, mac);
@@ -1896,7 +1951,6 @@ void handleBroadcastResponse(const String& ssid, const String& mac) {
     }
 }
 
-// Enhanced probe sniffer with RSN detection
 void probe_sniffer(void *buf, wifi_promiscuous_pkt_type_t type) {
     if (type != WIFI_PKT_MGMT) return;
     
@@ -1933,7 +1987,6 @@ void probe_sniffer(void *buf, wifi_promiscuous_pkt_type_t type) {
         updateChannelActivity(probe.channel);
         updateSSIDFrequency(probe.ssid);
         
-        // Broadcast attack integration
         if (broadcastAttack.isActive()) {
             std::vector<String> recentBroadcasts = SSIDDatabase::getAllSSIDs();
             if (recentBroadcasts.size() > 10) {
@@ -2083,7 +2136,6 @@ std::vector<ClientBehavior> getVulnerableClients() {
     return vulnerable;
 }
 
-// Enhanced update display
 void updateKarmaDisplay() {
     unsigned long currentTime = millis();
     
@@ -2174,7 +2226,6 @@ void updateKarmaDisplay() {
     }
 }
 
-// Save network history to file
 void saveNetworkHistory(FS &fs) {
     if (!fs.exists("/ProbeData")) fs.mkdir("/ProbeData");
     
@@ -2197,12 +2248,9 @@ void saveNetworkHistory(FS &fs) {
     }
 }
 
-// Main karma setup function - enhanced version
 void karma_setup() {
     esp_wifi_set_promiscuous(false);
     esp_wifi_set_promiscuous_rx_cb(nullptr);
-    esp_wifi_stop();
-    delay(100);
     
     returnToMenu = false;
     isPortalActive = false;
@@ -2240,7 +2288,7 @@ void karma_setup() {
     displayTextLine("Enhanced Karma v2.0");
     delay(500);
     
-    if (!selectPortalTemplate()) {
+    if (!selectPortalTemplate(true)) {
         drawMainBorderWithTitle("KARMA SETUP");
         displayTextLine("Starting without portal...");
         delay(1000);
@@ -2289,18 +2337,17 @@ void karma_setup() {
     attackConfig.cloneDuration = 90000;
     attackConfig.maxCloneNetworks = 3;
     
-    nvs_flash_init();
-    ESP_ERROR_CHECK(esp_netif_init());
+    ensureWifiPlatform();
+    
     wifi_init_config_t cfg = WIFI_INIT_CONFIG_DEFAULT();
     
     cfg.rx_ba_win = 16;
     cfg.nvs_enable = false;
     
-    ESP_ERROR_CHECK(esp_wifi_init(&cfg));
-    ESP_ERROR_CHECK(esp_wifi_set_storage(WIFI_STORAGE_RAM));
-    
-    ESP_ERROR_CHECK(esp_wifi_set_mode(WIFI_MODE_NULL));
-    ESP_ERROR_CHECK(esp_wifi_start());
+    esp_wifi_init(&cfg);
+    esp_wifi_set_storage(WIFI_STORAGE_RAM);
+    esp_wifi_set_mode(WIFI_MODE_NULL);
+    esp_wifi_start();
     esp_wifi_set_promiscuous(true);
     esp_wifi_set_promiscuous_rx_cb(probe_sniffer);
     wifi_second_chan_t secondCh = (wifi_second_chan_t)NULL;
@@ -2317,8 +2364,8 @@ void karma_setup() {
         if (restartKarmaAfterPortal) {
             restartKarmaAfterPortal = false;
             
-            esp_wifi_stop();
-            delay(100);
+            esp_wifi_set_promiscuous(false);
+            esp_wifi_set_promiscuous_rx_cb(nullptr);
             
             esp_wifi_start();
             esp_wifi_set_promiscuous(true);
@@ -2332,7 +2379,6 @@ void karma_setup() {
         if (returnToMenu) {
             esp_wifi_set_promiscuous(false);
             esp_wifi_set_promiscuous_rx_cb(nullptr);
-            esp_wifi_stop();
             
             if (macRingBuffer) {
                 vRingbufferDelete(macRingBuffer);
@@ -2344,6 +2390,8 @@ void karma_setup() {
             }
             
             display_clear();
+            tft.setTextSize(1);
+            tft.setTextColor(bruceConfig.priColor, bruceConfig.bgColor);
             
             Serial.printf("[KARMA] Exit complete. Heap: %lu\n", ESP.getFreeHeap());
             return;
@@ -2566,106 +2614,7 @@ void karma_setup() {
 
                     {"Select Template",
                      [=]() {
-                         std::vector<Option> templateOptions;
-
-                         for (const auto &tmpl : portalTemplates) {
-                             String displayName = tmpl.name;
-                             if (tmpl.isDefault) displayName = "[D] " + displayName;
-                             if (tmpl.verifyPassword) displayName += " (verify)";
-
-                             templateOptions.push_back({displayName.c_str(), [=, &tmpl]() {
-                                 selectedTemplate = tmpl;
-                                 templateSelected = true;
-                                 karmaConfig.enableAutoPortal = true;
-                                 displayTextLine("Template: " + tmpl.name);
-                                 delay(1000);
-                             }});
-                         }
-
-                         templateOptions.push_back({"Load Custom File", [=]() {
-                             std::vector<Option> loadOptions;
-
-                             loadOptions.push_back({"Load from SD", [=]() {
-                                 if (setupSdCard()) {
-                                     String templateFile = loopSD(SD, true, "HTML");
-                                     if (templateFile.length() > 0) {
-                                         PortalTemplate customTmpl;
-                                         customTmpl.name = "[Custom] " + templateFile;
-                                         customTmpl.filename = templateFile;
-                                         customTmpl.isDefault = false;
-                                         customTmpl.verifyPassword = false;
-
-                                         File file = SD.open(templateFile, FILE_READ);
-                                         if (file) {
-                                             String firstLine = file.readStringUntil('\n');
-                                             file.close();
-                                             if (firstLine.indexOf("verify=\"true\"") != -1) {
-                                                 customTmpl.verifyPassword = true;
-                                                 customTmpl.name += " (verify)";
-                                             }
-                                         }
-
-                                         selectedTemplate = customTmpl;
-                                         templateSelected = true;
-                                         portalTemplates.push_back(customTmpl);
-                                         karmaConfig.enableAutoPortal = true;
-                                         displayTextLine("Selected: " + customTmpl.name);
-                                         delay(1000);
-                                     }
-                                 } else {
-                                     displayTextLine("SD Card not found!");
-                                     delay(1000);
-                                 }
-                             }});
-
-                             loadOptions.push_back({"Load from LittleFS", [=]() {
-                                 if (LittleFS.begin()) {
-                                     String templateFile = loopSD(LittleFS, true, "HTML");
-                                     if (templateFile.length() > 0) {
-                                         PortalTemplate customTmpl;
-                                         customTmpl.name = "[Custom] " + templateFile;
-                                         customTmpl.filename = templateFile;
-                                         customTmpl.isDefault = false;
-                                         customTmpl.verifyPassword = false;
-
-                                         File file = LittleFS.open(templateFile, FILE_READ);
-                                         if (file) {
-                                             String firstLine = file.readStringUntil('\n');
-                                             file.close();
-                                             if (firstLine.indexOf("verify=\"true\"") != -1) {
-                                                 customTmpl.verifyPassword = true;
-                                                 customTmpl.name += " (verify)";
-                                             }
-                                         }
-
-                                         selectedTemplate = customTmpl;
-                                         templateSelected = true;
-                                         portalTemplates.push_back(customTmpl);
-                                         karmaConfig.enableAutoPortal = true;
-                                         displayTextLine("Selected: " + customTmpl.name);
-                                         delay(1000);
-                                     }
-                                     LittleFS.end();
-                                 } else {
-                                     displayTextLine("LittleFS error!");
-                                     delay(1000);
-                                 }
-                             }});
-
-                             loadOptions.push_back({"Back", [=]() {}});
-
-                             loopOptions(loadOptions);
-                         }});
-
-                         templateOptions.push_back({"Disable Auto-Portal", [=]() {
-                             karmaConfig.enableAutoPortal = false;
-                             templateSelected = false;
-                             displayTextLine("Auto-portal disabled");
-                             delay(1000);
-                         }});
-
-                         templateOptions.push_back({"Back", [=]() {}});
-                         loopOptions(templateOptions);
+                         selectPortalTemplate(false);
                      }},
 
                     {"Attack Strategy",
@@ -2778,7 +2727,6 @@ void karma_setup() {
                                     
                                     for (const auto& probe : probes) {
                                         if (!probe.ssid.isEmpty()) {
-                                            // Add to database
                                             std::vector<String> current = SSIDDatabase::getAllSSIDs();
                                             bool exists = false;
                                             for (const auto& existing : current) {
