@@ -1446,26 +1446,27 @@ void checkCloneAttackOpportunities() {
                 }
             }
 
-        if (!alreadyAttacking) {
-            PendingPortal portal;
-            portal.ssid = ssidPair.first;
-            portal.channel = getBestChannel();
-            portal.timestamp = millis();
-            portal.launched = false;
-            portal.templateName = selectedTemplate.name;
-            portal.templateFile = selectedTemplate.filename;
-            portal.isDefaultTemplate = selectedTemplate.isDefault;
-            portal.verifyPassword = selectedTemplate.verifyPassword;
-            portal.priority = 100;
-            portal.tier = TIER_CLONE;
-            portal.duration = (uint16_t)attackConfig.cloneDuration;
-            portal.isCloneAttack = true;
-            portal.probeCount = ssidPair.second;
+            if (!alreadyAttacking) {
+                PendingPortal portal;
+                portal.ssid = ssidPair.first;
+                portal.channel = getBestChannel();
+                portal.timestamp = millis();
+                portal.launched = false;
+                portal.templateName = selectedTemplate.name;
+                portal.templateFile = selectedTemplate.filename;
+                portal.isDefaultTemplate = selectedTemplate.isDefault;
+                portal.verifyPassword = selectedTemplate.verifyPassword;
+                portal.priority = 100;
+                portal.tier = TIER_CLONE;
+                portal.duration = (uint16_t)attackConfig.cloneDuration;
+                portal.isCloneAttack = true;
+                portal.probeCount = ssidPair.second;
 
-            pendingPortals.push_back(portal);
+                pendingPortals.push_back(portal);
 
-            Serial.printf("[CLONE] Scheduled clone attack for %s (%d probes)\n",
-                        ssidPair.first.c_str(), ssidPair.second);
+                Serial.printf("[CLONE] Scheduled clone attack for %s (%d probes)\n",
+                            ssidPair.first.c_str(), ssidPair.second);
+            }
         }
     }
 }
@@ -2102,7 +2103,7 @@ void clearProbes() {
     Serial.println("[KARMA] All data cleared");
 }
 
-std::vector<ProbeRequest> getUniqueProbes() {
+std::vector<ProbeRequest> getUniqueProbes(void) {
     std::vector<ProbeRequest> unique;
     std::set<String> seen;
 
@@ -2123,7 +2124,7 @@ std::vector<ProbeRequest> getUniqueProbes() {
     return unique;
 }
 
-std::vector<ClientBehavior> getVulnerableClients() {
+std::vector<ClientBehavior> getVulnerableClients(void) {
     std::vector<ClientBehavior> vulnerable;
 
     for (const auto &pair : clientBehaviors) {
