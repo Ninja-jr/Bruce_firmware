@@ -2090,7 +2090,7 @@ void updateKarmaDisplay() {
     if (currentTime - last_time > 1000) {
         last_time = currentTime;
         
-        tft.fillRect(10, tftHeight - 95, tftWidth - 20, 85, bruceConfig.bgColor);
+        tft.fillRect(10, tftHeight - 110, tftWidth - 20, 105, bruceConfig.bgColor);
         
         tft.setTextSize(1);
         tft.setTextColor(bruceConfig.priColor, bruceConfig.bgColor);
@@ -2197,8 +2197,10 @@ void saveNetworkHistory(FS &fs) {
 }
 
 void karma_setup() {
+    if (esp_wifi_set_promiscuous_rx_cb) {
+        esp_wifi_set_promiscuous_rx_cb(nullptr);
+    }
     esp_wifi_set_promiscuous(false);
-    esp_wifi_set_promiscuous_rx_cb(nullptr);
     
     returnToMenu = false;
     isPortalActive = false;
@@ -2287,13 +2289,6 @@ void karma_setup() {
     
     ensureWifiPlatform();
     
-    wifi_init_config_t cfg = WIFI_INIT_CONFIG_DEFAULT();
-    
-    cfg.rx_ba_win = 16;
-    cfg.nvs_enable = false;
-    
-    esp_wifi_init(&cfg);
-    esp_wifi_set_storage(WIFI_STORAGE_RAM);
     esp_wifi_set_mode(WIFI_MODE_NULL);
     esp_wifi_start();
     esp_wifi_set_promiscuous(true);
@@ -2336,6 +2331,8 @@ void karma_setup() {
             while (!responseQueue.empty()) {
                 responseQueue.pop();
             }
+            
+            wifiDisconnect();
             
             display_clear();
             tft.setTextSize(1);
@@ -2511,12 +2508,19 @@ void karma_setup() {
                          std::vector<ClientBehavior> vulnerable = getVulnerableClients();
                          std::vector<ProbeRequest> uniqueProbes = getUniqueProbes();
 
+                         if (vulnerable.empty() && uniqueProbes.empty()) {
+                             displayTextLine("No targets found!");
+                             delay(1000);
+                             redrawNeeded = true;
+                             return;
+                         }
+
                          std::vector<Option> karmaOptions;
 
                          for (const auto &client : vulnerable) {
                              if (!client.probedSSIDs.empty()) {
                                  String itemText = client.mac.substring(9) + " (VULN)";
-                                 karmaOptions.push_back({itemText.c_str(), [=]() {
+                                 karmaOptions.push_back({itemText.c_str(), [=, &client]() {
                                      launchManualEvilPortal(client.probedSSIDs[0], 
                                                            client.favoriteChannel, 
                                                            selectedTemplate.verifyPassword);
@@ -2527,15 +2531,62 @@ void karma_setup() {
 
                          for (const auto &probe : uniqueProbes) {
                              String itemText = probe.ssid + " (" + String(probe.rssi) + "|ch " + String(probe.channel) + ")";
-                             karmaOptions.push_back({itemText.c_str(), [=]() {
+                             if (itemText.length() > 40) {
+                                 itemText = itemText.substring(0, 37) + "...";
+                             }
+                             karmaOptions.push_back({itemText.c_str(), [=, &probe]() {
                                  launchManualEvilPortal(probe.ssid, probe.channel, 
                                                        selectedTemplate.verifyPassword);
                                  redrawNeeded = true;
                              }});
                          }
 
-                         karmaOptions.push_back({"Back", [=]() {}});
-                         loopOptions(karmaOptions);
+                         karmaOptions.push_back({"Back to Options", [=]() {}});
+                         
+                         drawMainBorderWithTitle("KARMA TARGETS");
+                         
+                         bool exitKarmaMenu = false;
+                         int selectedIndex = 0;
+                         
+                         while (!exitKarmaMenu) {
+                             int y = 40;
+                             tft.setTextSize(1);
+                             
+                             for (size_t i = 0; i < karmaOptions.size(); i++) {
+                                 tft.setCursor(10, y);
+                                 if (i == selectedIndex) {
+                                     tft.setTextColor(bruceConfig.bgColor, bruceConfig.priColor);
+                                     tft.print("> ");
+                                 } else {
+                                     tft.setTextColor(bruceConfig.priColor, bruceConfig.bgColor);
+                                     tft.print("  ");
+                                 }
+                                 
+                                 String displayText = karmaOptions[i].name;
+                                 if (displayText.length() > 40) {
+                                     displayText = displayText.substring(0, 37) + "...";
+                                 }
+                                 tft.print(displayText);
+                                 y += 15;
+                             }
+                             
+                             tft.setCursor(10, tftHeight - 30);
+                             tft.setTextColor(bruceConfig.priColor, bruceConfig.bgColor);
+                             tft.print("Sel: Attack | Prev/Esc: Back");
+                             
+                             if (check(SelPress)) {
+                                 karmaOptions[selectedIndex].function();
+                                 exitKarmaMenu = true;
+                             } else if (check(PrevPress) || check(EscPress)) {
+                                 exitKarmaMenu = true;
+                             } else if (check(NextPress)) {
+                                 selectedIndex = (selectedIndex + 1) % karmaOptions.size();
+                                 delay(150);
+                             }
+                             
+                             delay(50);
+                         }
+                         
                          redrawNeeded = true;
                      }},
 
