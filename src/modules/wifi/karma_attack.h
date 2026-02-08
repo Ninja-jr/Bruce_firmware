@@ -232,15 +232,14 @@ public:
 
 // Function prototypes
 void karma_setup();
-void enhanced_karma_setup();
 void clearProbes();
 void saveProbesToFile(FS &fs, bool compressed);
 void sendProbeResponse(const String &ssid, const String &mac, uint8_t channel);
 void sendDeauth(const String &mac, uint8_t channel, bool broadcast);
 void launchManualEvilPortal(const String &ssid, uint8_t channel, bool verifyPwd);
 void launchTieredEvilPortal(PendingPortal &portal);
-std::vector<ProbeRequest> getUniqueProbes();
-std::vector<ClientBehavior> getVulnerableClients();
+std::vector<ProbeRequest> getUniqueProbes(void);
+std::vector<ClientBehavior> getVulnerableClients(void);
 
 // Enhanced functions
 size_t buildEnhancedProbeResponse(uint8_t *buffer, const String &ssid, 
@@ -260,6 +259,9 @@ void saveNetworkHistory(FS &fs);
 // Helper function for beacon frames
 void sendBeaconFrameHelper(const String &ssid, uint8_t channel);
 
+// Template selection
+bool selectPortalTemplate(bool isInitialSetup);
+
 // External variables
 extern std::map<String, ClientBehavior> clientBehaviors;
 extern ProbeRequest probeBuffer[1000];
@@ -268,5 +270,7 @@ extern bool bufferWrapped;
 extern KarmaConfig karmaConfig;
 extern AttackConfig attackConfig;
 extern ActiveBroadcastAttack broadcastAttack;
+extern PortalTemplate selectedTemplate;
+extern bool templateSelected;
 
 #endif // KARMA_ATTACK_H
