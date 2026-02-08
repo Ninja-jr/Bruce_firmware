@@ -1446,27 +1446,26 @@ void checkCloneAttackOpportunities() {
                 }
             }
 
-            if (!alreadyAttacking) {
-                PendingPortal portal;
-                portal.ssid = ssidPair.first;
-                portal.channel = getBestChannel();
-                portal.timestamp = millis();
-                portal.launched = false;
-                portal.templateName = selectedTemplate.name;
-                portal.templateFile = selectedTemplate.filename;
-                portal.isDefaultTemplate = selectedTemplate.isDefault;
-                portal.verifyPassword = selectedTemplate.verifyPassword;
-                portal.priority = 100;
-                portal.tier = TIER_CLONE;
-                portal.duration = (uint16_t)attackConfig.cloneDuration;
-                portal.isCloneAttack = true;
-                portal.probeCount = ssidPair.second;
+        if (!alreadyAttacking) {
+            PendingPortal portal;
+            portal.ssid = ssidPair.first;
+            portal.channel = getBestChannel();
+            portal.timestamp = millis();
+            portal.launched = false;
+            portal.templateName = selectedTemplate.name;
+            portal.templateFile = selectedTemplate.filename;
+            portal.isDefaultTemplate = selectedTemplate.isDefault;
+            portal.verifyPassword = selectedTemplate.verifyPassword;
+            portal.priority = 100;
+            portal.tier = TIER_CLONE;
+            portal.duration = (uint16_t)attackConfig.cloneDuration;
+            portal.isCloneAttack = true;
+            portal.probeCount = ssidPair.second;
 
-                pendingPortals.push_back(portal);
+            pendingPortals.push_back(portal);
 
-                Serial.printf("[CLONE] Scheduled clone attack for %s (%d probes)\n",
-                            ssidPair.first.c_str(), ssidPair.second);
-            }
+            Serial.printf("[CLONE] Scheduled clone attack for %s (%d probes)\n",
+                        ssidPair.first.c_str(), ssidPair.second);
         }
     }
 }
@@ -1584,7 +1583,7 @@ bool selectPortalTemplate(bool isInitialSetup) {
                     delay(100);
                     
                     if (setupSdCard()) {
-                        String templateFile = loopSD(SD, true, "HTML");
+                        String templateFile = loopSD(SD, true, "HTML", "/");
                         if (templateFile.length() > 0) {
                             PortalTemplate customTmpl;
                             customTmpl.name = "[SD] " + templateFile;
@@ -1620,7 +1619,7 @@ bool selectPortalTemplate(bool isInitialSetup) {
                     delay(100);
                     
                     if (LittleFS.begin()) {
-                        String templateFile = loopSD(LittleFS, true, "HTML");
+                        String templateFile = loopSD(LittleFS, true, "HTML", "/");
                         if (templateFile.length() > 0) {
                             PortalTemplate customTmpl;
                             customTmpl.name = "[FS] " + templateFile;
@@ -1664,7 +1663,7 @@ bool selectPortalTemplate(bool isInitialSetup) {
 
             loadOptions.push_back({"Load from SD", [=]() {
                 if (setupSdCard()) {
-                    String templateFile = loopSD(SD, true, "HTML");
+                    String templateFile = loopSD(SD, true, "HTML", "/");
                     if (templateFile.length() > 0) {
                         PortalTemplate customTmpl;
                         customTmpl.name = "[Custom] " + templateFile;
@@ -1698,7 +1697,7 @@ bool selectPortalTemplate(bool isInitialSetup) {
 
             loadOptions.push_back({"Load from LittleFS", [=]() {
                 if (LittleFS.begin()) {
-                    String templateFile = loopSD(LittleFS, true, "HTML");
+                    String templateFile = loopSD(LittleFS, true, "HTML", "/");
                     if (templateFile.length() > 0) {
                         PortalTemplate customTmpl;
                         customTmpl.name = "[Custom] " + templateFile;
@@ -2255,7 +2254,7 @@ void karma_setup() {
     returnToMenu = false;
     isPortalActive = false;
     restartKarmaAfterPortal = false;
-    templateSelected = false;
+    
     redrawNeeded = true;
     
     probeBufferIndex = 0;
@@ -2284,14 +2283,21 @@ void karma_setup() {
     lastMACRotation = millis();
     
     display_clear();
-    drawMainBorderWithTitle("MODERN KARMA ATTACK");
-    displayTextLine("Enhanced Karma v2.0");
-    delay(500);
     
-    if (!selectPortalTemplate(true)) {
-        drawMainBorderWithTitle("KARMA SETUP");
-        displayTextLine("Starting without portal...");
-        delay(1000);
+    if (!templateSelected) {
+        drawMainBorderWithTitle("MODERN KARMA ATTACK");
+        displayTextLine("Enhanced Karma v2.0");
+        delay(500);
+        
+        if (!selectPortalTemplate(true)) {
+            drawMainBorderWithTitle("KARMA SETUP");
+            displayTextLine("Starting without portal...");
+            delay(1000);
+        }
+    } else {
+        drawMainBorderWithTitle("ENHANCED KARMA ATK");
+        displayTextLine("Template: " + selectedTemplate.name);
+        delay(500);
     }
     
     drawMainBorderWithTitle("ENHANCED KARMA ATK");
@@ -2441,28 +2447,6 @@ void karma_setup() {
         
         if (PrevPress) {
 #if !defined(HAS_KEYBOARD) && !defined(HAS_ENCODER)
-            LongPress = true;
-            long _tmp = millis();
-            while (PrevPress) {
-                if (millis() - _tmp > 150)
-                    tft.drawArc(
-                        tftWidth / 2,
-                        tftHeight / 2,
-                        25,
-                        15,
-                        0,
-                        360 * (millis() - _tmp) / 700,
-                        getColorVariation(bruceConfig.priColor),
-                        bruceConfig.bgColor
-                    );
-                vTaskDelay(10 / portTICK_RATE_MS);
-            }
-            LongPress = false;
-            if (millis() - _tmp > 700) {
-                returnToMenu = true;
-                continue;
-            }
-#endif
             check(PrevPress);
             esp_wifi_set_promiscuous(false);
             esp_wifi_set_promiscuous_rx_cb(nullptr);
@@ -2474,16 +2458,10 @@ void karma_setup() {
             vTaskDelay(50 / portTICK_PERIOD_MS);
             esp_wifi_set_promiscuous(true);
             esp_wifi_set_promiscuous_rx_cb(probe_sniffer);
-        }
-        
-#if defined(HAS_KEYBOARD) || defined(T_EMBED)
-        if (check(EscPress)) {
-            returnToMenu = true;
-            continue;
-        }
 #endif
+        }
         
-        if (check(SelPress) || redraw || redrawNeeded) {
+        if (check(SelPress) || check(EscPress) || redraw || redrawNeeded) {
             vTaskDelay(200 / portTICK_PERIOD_MS);
             if (!redraw && !redrawNeeded) {
                 std::vector<Option> options = {
@@ -2550,7 +2528,14 @@ void karma_setup() {
                              tft.print(line);
                          }
                          
-                         while (!check(SelPress) && !check(EscPress)) {
+                         tft.setCursor(10, tftHeight - 20);
+                         tft.print("Press any button to return");
+                         
+                         bool buttonPressed = false;
+                         while (!buttonPressed) {
+                             if (check(SelPress) || check(EscPress) || check(PrevPress) || check(NextPress)) {
+                                 buttonPressed = true;
+                             }
                              delay(50);
                          }
                          redrawNeeded = true;
@@ -2714,7 +2699,14 @@ void karma_setup() {
                                 tft.print(line);
                             }
                             
-                            while (!check(SelPress) && !check(EscPress)) {
+                            tft.setCursor(10, tftHeight - 20);
+                            tft.print("Press any button to return");
+                            
+                            bool buttonPressed = false;
+                            while (!buttonPressed) {
+                                if (check(SelPress) || check(EscPress) || check(PrevPress) || check(NextPress)) {
+                                    buttonPressed = true;
+                                }
                                 delay(50);
                             }
                         }});
@@ -2868,7 +2860,14 @@ void karma_setup() {
                                 }
                             }
                             
-                            while (!check(SelPress) && !check(EscPress)) {
+                            tft.setCursor(10, tftHeight - 20);
+                            tft.print("Press any button to return");
+                            
+                            bool buttonPressed = false;
+                            while (!buttonPressed) {
+                                if (check(SelPress) || check(EscPress) || check(PrevPress) || check(NextPress)) {
+                                    buttonPressed = true;
+                                }
                                 delay(50);
                             }
                         }});
@@ -2991,7 +2990,14 @@ void karma_setup() {
                          }
                          tft.print("Attack Tier: " + tierName);
 
-                         while (!check(SelPress) && !check(EscPress)) {
+                         tft.setCursor(10, tftHeight - 20);
+                         tft.print("Press any button to return");
+
+                         bool buttonPressed = false;
+                         while (!buttonPressed) {
+                             if (check(SelPress) || check(EscPress) || check(PrevPress) || check(NextPress)) {
+                                 buttonPressed = true;
+                             }
                              delay(50);
                          }
                          redrawNeeded = true;
@@ -3018,7 +3024,7 @@ void karma_setup() {
             } else {
                 padprintln("Template: None");
             }
-            padprintln(String(BTN_ALIAS) + ": Enhanced Menu");
+            padprintln("PREV/SEL: Menu");
             tft.drawRightString(
                 "Ch." +
                     String(
@@ -3026,7 +3032,7 @@ void karma_setup() {
                         : karma_channels[channl % 14] < 100 ? " "
                                                           : ""
                     ) +
-                    String(karma_channels[channl % 14]) + "(Next)",
+                    String(karma_channels[channl % 14]),
                 tftWidth - 10,
                 tftHeight - 18,
                 1
