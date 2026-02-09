@@ -31,11 +31,6 @@
 #include <TimeLib.h>
 #include <globals.h>
 
-struct Option {
-    const char* name;
-    std::function<void()> function;
-};
-
 #ifndef KARMA_CHANNELS
 #define KARMA_CHANNELS
 const uint8_t karma_channels[] = {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14};
