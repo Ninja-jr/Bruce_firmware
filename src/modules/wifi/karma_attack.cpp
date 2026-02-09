@@ -238,7 +238,8 @@ size_t SSIDDatabase::getMinLength() {
 
 ActiveBroadcastAttack::ActiveBroadcastAttack() 
     : currentIndex(0), batchStart(0), lastBroadcastTime(0),
-      lastChannelHopTime(0), _active(false), currentChannel(1) {
+      lastChannelHopTime(0), _active(false), currentChannel(1),
+      totalSSIDsInFile(0), ssidsProcessed(0), updateCounter(0) {
     stats.startTime = millis();
 }
 
@@ -254,6 +255,10 @@ void ActiveBroadcastAttack::start() {
     batchStart = 0;
     stats.startTime = millis();
     loadNextBatch();
+
+    totalSSIDsInFile = SSIDDatabase::getCount();
+    ssidsProcessed = 0;
+    updateCounter = 0;
 
     Serial.printf("[BROADCAST] Started with %d SSIDs\n", total);
     Serial.printf("[BROADCAST] Batch size: %d, Interval: %ldms\n", 
@@ -333,11 +338,19 @@ void ActiveBroadcastAttack::update() {
         broadcastSSID(ssid);
         currentIndex++;
         stats.totalBroadcasts++;
+        ssidsProcessed++;
+        updateCounter++;
         lastBroadcastTime = now;
 
-        if (stats.totalBroadcasts % 500 == 0) {
-            Serial.printf("[BROADCAST] Sent: %d, Responses: %d\n", 
-                         stats.totalBroadcasts, stats.totalResponses);
+        if (updateCounter >= 5) {
+            updateCounter = 0;
+            redrawNeeded = true;
+        }
+
+        if (stats.totalBroadcasts % 100 == 0) {
+            Serial.printf("[BROADCAST] Sent: %d, Responses: %d, Progress: %d/%d\n", 
+                         stats.totalBroadcasts, stats.totalResponses,
+                         ssidsProcessed, totalSSIDsInFile);
         }
     }
 }
@@ -361,18 +374,20 @@ BroadcastStats ActiveBroadcastAttack::getStats() const {
 }
 
 size_t ActiveBroadcastAttack::getTotalSSIDs() const {
-    return SSIDDatabase::getCount();
+    return totalSSIDsInFile;
 }
 
 size_t ActiveBroadcastAttack::getCurrentPosition() const {
-    return batchStart + currentIndex;
+    return ssidsProcessed;
+}
+
+String ActiveBroadcastAttack::getProgressString() const {
+    return String(ssidsProcessed) + "/" + String(totalSSIDsInFile);
 }
 
 float ActiveBroadcastAttack::getProgressPercent() const {
-    size_t total = getTotalSSIDs();
-    if (total == 0) return 0.0f;
-
-    return (getCurrentPosition() * 100.0f) / total;
+    if (totalSSIDsInFile == 0) return 0.0f;
+    return (ssidsProcessed * 100.0f) / totalSSIDsInFile;
 }
 
 std::vector<std::pair<String, size_t>> ActiveBroadcastAttack::getTopResponses(size_t count) const {
@@ -2148,9 +2163,8 @@ void updateKarmaDisplay() {
             tft.setCursor(tftWidth - 150, tftHeight - 100);
             tft.print("BROADCAST");
 
-            float progress = broadcastAttack.getProgressPercent();
-            tft.setCursor(tftWidth - 100, tftHeight - 100);
-            tft.print(String(progress, 0) + "%");
+            tft.setCursor(tftWidth - 80, tftHeight - 100);
+            tft.print(broadcastAttack.getProgressString());
         }
 
         if (templateSelected && !selectedTemplate.name.isEmpty()) {
@@ -2302,6 +2316,8 @@ void karma_setup() {
 
     vTaskDelay(1000 / portTICK_RATE_MS);
 
+    bool inOptionsMenu = false;
+
     for (;;) {
         if (restartKarmaAfterPortal) {
             restartKarmaAfterPortal = false;
@@ -2383,23 +2399,28 @@ void karma_setup() {
             esp_wifi_set_promiscuous_rx_cb(probe_sniffer);
         }
 
-        if (PrevPress) {
-            check(PrevPress);
-            redraw = false;
-            redrawNeeded = false;
-            break;
+        if (check(PrevPress)) {
+            if (!inOptionsMenu) {
+                inOptionsMenu = true;
+                redraw = false;
+                redrawNeeded = false;
+                check(PrevPress);
+            }
         }
 
-#if defined(HAS_KEYBOARD) || defined(T_EMBED)
         if (check(EscPress)) {
-            returnToMenu = true;
-            continue;
+            if (inOptionsMenu) {
+                inOptionsMenu = false;
+                redrawNeeded = true;
+            } else {
+                returnToMenu = true;
+                continue;
+            }
         }
-#endif
 
         if (check(SelPress) || redraw || redrawNeeded) {
             vTaskDelay(200 / portTICK_PERIOD_MS);
-            if (!redraw && !redrawNeeded) {
+            if (!redraw && !redrawNeeded && !inOptionsMenu) {
                 std::vector<Option> options = {
                     {"Enhanced Stats", [=]() {
                          drawMainBorderWithTitle("ADVANCED STATS");
@@ -3046,7 +3067,7 @@ void karma_setup() {
                 1
             );
             tft.drawString(
-                "Prev: Menu",
+                "Prev: Options",
                 10,
                 tftHeight - 18,
                 1
