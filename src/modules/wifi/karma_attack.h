@@ -6,28 +6,25 @@
 #include <map>
 #include <queue>
 
-// Attack tiers for prioritization
 enum AttackTier {
     TIER_NONE = 0,
-    TIER_FAST = 1,     // Quick opportunistic attacks
-    TIER_MEDIUM = 2,   // Standard priority targets
-    TIER_HIGH = 3,     // High-value targets
-    TIER_CLONE = 4     // Clone network attacks
+    TIER_FAST = 1,
+    TIER_MEDIUM = 2,
+    TIER_HIGH = 3,
+    TIER_CLONE = 4
 };
 
-// Broadcast attack configuration
 struct BroadcastConfig {
     bool enableBroadcast = false;
-    uint32_t broadcastInterval = 150;    // ms between broadcasts
-    uint16_t batchSize = 100;            // SSIDs per batch
-    bool rotateChannels = true;          // Auto-rotate channels
-    uint32_t channelHopInterval = 5000;  // ms between channel hops
-    bool respondToProbes = true;         // Launch attacks on probe responses
-    uint8_t maxActiveAttacks = 3;        // Max simultaneous attacks
-    bool prioritizeResponses = true;     // Focus on SSIDs that get responses
+    uint32_t broadcastInterval = 150;
+    uint16_t batchSize = 100;
+    bool rotateChannels = true;
+    uint32_t channelHopInterval = 5000;
+    bool respondToProbes = true;
+    uint8_t maxActiveAttacks = 3;
+    bool prioritizeResponses = true;
 };
 
-// Broadcast statistics
 struct BroadcastStats {
     size_t totalBroadcasts = 0;
     size_t totalResponses = 0;
@@ -37,15 +34,13 @@ struct BroadcastStats {
     unsigned long lastResponseTime = 0;
 };
 
-// RSN/WPA2/WPA3 information for encryption mimicry
 typedef struct {
     uint16_t version;
     uint8_t groupCipher;
     uint8_t pairwiseCipher;
-    uint8_t akmSuite; // 0 = none, 1 = WPA2, 2 = WPA3
+    uint8_t akmSuite;
 } RSNInfo;
 
-// Probe request data structure
 typedef struct {
     String mac;
     String ssid;
@@ -55,7 +50,6 @@ typedef struct {
     uint8_t encryption_type;
 } ProbeRequest;
 
-// Client behavior tracking
 typedef struct {
     String mac;
     unsigned long firstSeen;
@@ -68,7 +62,6 @@ typedef struct {
     bool isVulnerable;
 } ClientBehavior;
 
-// Active network for beaconing
 typedef struct {
     String ssid;
     uint8_t channel;
@@ -77,7 +70,6 @@ typedef struct {
     unsigned long lastBeacon;
 } ActiveNetwork;
 
-// Network history tracking
 typedef struct {
     String ssid;
     uint32_t responsesSent;
@@ -85,7 +77,6 @@ typedef struct {
     unsigned long lastResponse;
 } NetworkHistory;
 
-// Probe response task for queueing
 typedef struct {
     String ssid;
     String targetMAC;
@@ -94,7 +85,6 @@ typedef struct {
     unsigned long timestamp;
 } ProbeResponseTask;
 
-// Portal template structure
 typedef struct {
     String name;
     String filename;
@@ -102,7 +92,6 @@ typedef struct {
     bool verifyPassword;
 } PortalTemplate;
 
-// Pending portal attack
 typedef struct {
     String ssid;
     uint8_t channel;
@@ -120,7 +109,6 @@ typedef struct {
     uint32_t probeCount;
 } PendingPortal;
 
-// Karma configuration
 typedef struct {
     bool enableAutoKarma;
     bool enableDeauth;
@@ -130,7 +118,6 @@ typedef struct {
     uint16_t maxClients;
 } KarmaConfig;
 
-// Attack strategy configuration
 typedef struct {
     AttackTier defaultTier;
     bool enableCloneMode;
@@ -145,50 +132,41 @@ typedef struct {
     uint8_t maxCloneNetworks;
 } AttackConfig;
 
-// Broadcast attack class
 class ActiveBroadcastAttack {
 private:
     BroadcastConfig config;
     BroadcastStats stats;
-
     size_t currentIndex;
     size_t batchStart;
     unsigned long lastBroadcastTime;
     unsigned long lastChannelHopTime;
     bool _active;
     uint8_t currentChannel;
-
+    size_t totalSSIDsInFile;
+    size_t ssidsProcessed;
+    uint8_t updateCounter;
     std::vector<String> currentBatch;
     std::vector<String> highPrioritySSIDs;
 
 public:
     ActiveBroadcastAttack();
-
-    // Control methods
     void start();
     void stop();
     void restart();
     bool isActive() const;
-
-    // Configuration
     void setConfig(const BroadcastConfig &newConfig);
     BroadcastConfig getConfig() const;
     void setBroadcastInterval(uint32_t interval);
     void setBatchSize(uint16_t size);
     void setChannel(uint8_t channel);
-
-    // Operation
     void update();
     void processProbeResponse(const String &ssid, const String &mac);
-
-    // Statistics
     BroadcastStats getStats() const;
     size_t getTotalSSIDs() const;
     size_t getCurrentPosition() const;
+    String getProgressString() const;
     float getProgressPercent() const;
     std::vector<std::pair<String, size_t>> getTopResponses(size_t count = 10) const;
-
-    // SSID management
     void addHighPrioritySSID(const String &ssid);
     void clearHighPrioritySSIDs();
 
@@ -201,14 +179,12 @@ private:
     void launchAttackForResponse(const String &ssid, const String &mac);
 };
 
-// SSID Database class
 class SSIDDatabase {
 private:
     static std::vector<String> ssidCache;
     static bool cacheLoaded;
     static String currentFilename;
     static bool useLittleFS;
-
     static bool loadFromFile();
 
 public:
@@ -222,7 +198,6 @@ public:
     static size_t getAverageLength();
     static size_t getMaxLength();
     static size_t getMinLength();
-
     static bool setSourceFile(const String &filename, bool useLittleFS = false);
     static bool reload();
     static void clearCache();
@@ -230,7 +205,6 @@ public:
     static String getSourceFile();
 };
 
-// Function prototypes
 void karma_setup();
 void enhanced_karma_setup();
 void clearProbes();
@@ -241,8 +215,6 @@ void launchManualEvilPortal(const String &ssid, uint8_t channel, bool verifyPwd)
 void launchTieredEvilPortal(PendingPortal &portal);
 std::vector<ProbeRequest> getUniqueProbes();
 std::vector<ClientBehavior> getVulnerableClients();
-
-// Enhanced functions
 size_t buildEnhancedProbeResponse(uint8_t *buffer, const String &ssid, 
                                  const String &targetMAC, uint8_t channel, 
                                  const RSNInfo &rsn, bool isHidden);
@@ -256,11 +228,8 @@ void processResponseQueue();
 void sendBeaconFrames();
 void checkForAssociations();
 void saveNetworkHistory(FS &fs);
-
-// Helper function for beacon frames
 void sendBeaconFrameHelper(const String &ssid, uint8_t channel);
 
-// External variables
 extern std::map<String, ClientBehavior> clientBehaviors;
 extern ProbeRequest probeBuffer[1000];
 extern uint16_t probeBufferIndex;
@@ -269,4 +238,4 @@ extern KarmaConfig karmaConfig;
 extern AttackConfig attackConfig;
 extern ActiveBroadcastAttack broadcastAttack;
 
-#endif // KARMA_ATTACK_H
+#endif
