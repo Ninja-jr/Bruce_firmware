@@ -19,15 +19,11 @@ No exploit is guaranteed to work. The suite attempts multiple approaches, but:
 
 Use this tool to understand attack surfaces, not as a "hack everything" solution.
 
----
-
 About BLE Suite
 
 The system is basically a Swiss Army knife for BLE security testing - recon, exploitation, and post-exploitation all in one. It's designed to be both automated (for quick testing) and manual (for targeted attacks).
 
 Part of the Bruce firmware for ESP32 devices. This module provides comprehensive Bluetooth Low Energy security testing capabilities with hardware integration and multi-stage attack chains.
-
----
 
 Realistic Expectations
 
@@ -46,17 +42,15 @@ Typical scenarios:
 · ⚠️ Modern smartphones - Many protections in place
 · ❌ Enterprise laptops - Usually well-hardened
 
----
-
 Hardware Integration
 
 NRF24 Module Support:
 
 · Jam & Connect Attack - Uses modules/NRF24/nrf_jammer_api.cpp for BLE frequency jamming
 · Three jamming modes:
-  · Advertising channel jamming
-  · Hopping advertisement jamming
-  · Full BLE channel hopping
+· Advertising channel jamming
+· Hopping advertisement jamming
+· Full BLE channel hopping
 · Requires: NRF24L01+ module connected to ESP32
 · Purpose: Disrupts target BLE while attempting connection, increasing exploit success rate
 
@@ -64,13 +58,11 @@ FastPair Crypto Engine:
 
 · Crypto Operations - Uses fastpair_crypto.cpp for Google FastPair cryptographic attacks
 · Handshake Operations:
-  · Key pair generation
-  · ECDH shared secret computation
-  · Nonce generation
-  · Protocol message encryption/decryption
+· Key pair generation
+· ECDH shared secret computation
+· Nonce generation
+· Protocol message encryption/decryption
 · Purpose: Enables realistic FastPair handshake simulation for protocol-level attacks
-
----
 
 Module Dependencies
 
@@ -90,15 +82,12 @@ External Libraries:
 · TFT_eSPI - Display rendering
 · SD - Filesystem for script storage
 
----
-
 Core Components
 
 BLEAttackManager - Handles BLE setup/cleanup, device connections, and profiling
 ScannerData - Stores found devices during scans, handles deduplication with HFP detection
 HFPExploitEngine - Tests and exploits Hands-free Profile vulnerabilities including CVE-2025-36911
-
----
+FastPairExploitEngine - FastPair-specific scanning, exploitation, and popup spam capabilities
 
 Attack Capabilities
 
@@ -106,26 +95,32 @@ Connection Attacks
 
 · Multiple Connection Strategies - Normal, aggressive, and exploit-based BLE connections
 · HIDExploitEngine - Forces HID connections with various OS-specific attacks:
-  · Apple Magic Keyboard spoofing
-  · Windows HID bypass
-  · Android "Just Works" pairing
-  · Boot protocol injection
-  · Rapid state confusion attacks
+· Apple Magic Keyboard spoofing
+· Windows HID bypass
+· Android "Just Works" pairing
+· Boot protocol injection
+· Rapid state confusion attacks
 
 Specific Exploits
 
 · WhisperPairExploit - FastPair buffer overflow attacks:
-  · Protocol state confusion
-  · Crypto overflow attacks
-  · Handshake manipulation
+· Protocol state confusion
+· Crypto overflow attacks
+· Handshake manipulation
+· FastPairExploitEngine - Comprehensive FastPair exploitation:
+· Device-specific targeting (Samsung, Google, Sony, etc.)
+· Memory corruption attacks
+· Popup spam categories (Regular, Fun, Prank)
+· Crypto overflow testing
+· Device scanning with model identification
 
 HFP (Hands-free Profile) Attacks
 
 · HFPExploitEngine - Tests and exploits CVE-2025-36911 vulnerabilities:
-  · HFP service detection (UUIDs 0x111E, 0x111F)
-  · Unauthorized pairing attempts
-  · Microphone access vulnerability testing
-  · Automatic pivot to HID attacks
+· HFP service detection (UUIDs 0x111E, 0x111F)
+· Unauthorized pairing attempts
+· Microphone access vulnerability testing
+· Automatic pivot to HID attacks
 
 HID Attacks
 
@@ -136,16 +131,16 @@ HID Attacks
 Audio Attacks
 
 · AudioAttackService - Targets AVRCP/media services:
-  · Play/volume control hijacking
-  · Audio stack crashing
-  · Telephony alert injection
+· Play/volume control hijacking
+· Audio stack crashing
+· Telephony alert injection
 
 Auth & Pairing Attacks
 
 · AuthBypassEngine - Authentication bypass attempts:
-  · Address spoofing (pretending to be paired device)
-  · Zero-key auth bypass
-  · Legacy pairing attacks
+· Address spoofing (pretending to be paired device)
+· Zero-key auth bypass
+· Legacy pairing attacks
 · PairingAttackServiceClass - PIN brute force (tries common PINs like 0000, 1234)
 
 DoS & Jamming
@@ -160,8 +155,7 @@ Recon & Scanning
 · Device profiling - Service enumeration and characteristic analysis
 · Live BLE scanning - Active/passive scanning with filtering
 · HFP service detection - Identifies devices with Hands-free Profile
-
----
+· FastPair device scanning - Dedicated FastPair service discovery (UUID FE2C)
 
 UI & Menu System
 
@@ -170,8 +164,6 @@ UI & Menu System
 · Script selection system - Built-in examples + SD card loading
 · Confirmation prompts - Safety checks before attacks
 · Smart suggestions - Recommends HFP pivot when device has HFP service
-
----
 
 Key Features
 
@@ -185,55 +177,54 @@ Key Features
 · HFP vulnerability testing - CVE-2025-36911 detection and exploitation
 · Smart attack chaining - Auto-suggests HFP pivot for HFP-enabled devices
 · Integrated attack pipelines - HFP → HID → DuckyScript automatic chains
-
----
+· FastPair popup spam - Different categories (Regular devices, Fun popups, Prank alerts)
+· Device model database - Organized by manufacturer for targeted attacks
 
 Advanced Attack Chains
 
 Jam & Connect Exploit:
 
-1. Jamming Phase - Activates NRF24 to jam BLE frequencies
-2. Connection Phase - Attempts aggressive connection during jamming window
-3. Exploitation Phase - Executes selected exploit on connected target
-4. Cleanup - Stops jamming, closes connection
-
+Jamming Phase - Activates NRF24 to jam BLE frequencies
+Connection Phase - Attempts aggressive connection during jamming window
+Exploitation Phase - Executes selected exploit on connected target
+Cleanup - Stops jamming, closes connection
 FastPair Crypto Attack:
 
-1. Handshake - Performs real cryptographic handshake using fastpair_crypto.cpp
-2. State Analysis - Determines device's security posture
-3. Exploit Selection - Chooses appropriate attack (buffer overflow, state confusion, crypto overflow)
-4. Execution - Sends crafted packets targeting specific vulnerabilities
+Handshake - Performs real cryptographic handshake using fastpair_crypto.cpp
+State Analysis - Determines device's security posture
+Exploit Selection - Chooses appropriate attack (buffer overflow, state confusion, crypto overflow)
+Execution - Sends crafted packets targeting specific vulnerabilities
+FastPair → HID Chain Attack:
 
+FastPair Exploitation - Executes FastPair protocol attack
+HID Pivot - Uses successful FastPair connection to access HID services
+Payload Delivery - Executes keystroke injection or DuckyScript
+OS-Specific Targeting - Device-specific attacks based on model detection
 HFP → HID Pivot Attack:
 
-1. HFP Vulnerability Test - Checks for CVE-2025-36911
-2. HFP Connection - Establishes Hands-free Profile connection via exploit
-3. HID Discovery - Locates HID services from privileged position
-4. DuckyScript Injection - Executes payload via HID channel
-5. OS-Specific Payloads - Auto-selects Windows/Apple/Android scripts
-
+HFP Vulnerability Test - Checks for CVE-2025-36911
+HFP Connection - Establishes Hands-free Profile connection via exploit
+HID Discovery - Locates HID services from privileged position
+DuckyScript Injection - Executes payload via HID channel
+OS-Specific Payloads - Auto-selects Windows/Apple/Android scripts
 Smart HID Injection:
 
-1. Device Analysis - Checks for HFP service availability
-2. User Prompt - Suggests HFP pivot if device has HFP
-3. Attack Selection - User chooses direct HID or HFP-pivot approach
-4. Execution - Runs chosen attack chain with appropriate payload
-
----
-
+Device Analysis - Checks for HFP and FastPair service availability
+User Prompt - Suggests appropriate pivot based on available services
+Attack Selection - User chooses direct HID or service-pivot approach
+Execution - Runs chosen attack chain with appropriate payload
 Attack Methodology
 
 The suite implements adaptive attack strategies that respond to target behavior:
 
-1. Reconnaissance Phase
-
+Reconnaissance Phase
 · Active/passive scanning with device fingerprinting
 · RSSI-based proximity estimation
 · Service/characteristic enumeration
 · HFP service detection - Identifies microphone-capable devices
+· FastPair service detection - Scans for Google FastPair (UUID FE2C)
 
-2. Connection Establishment
-
+Connection Establishment
 Multiple fallback strategies:
 
 · Normal BLE connection
@@ -241,31 +232,29 @@ Multiple fallback strategies:
 · Exploit-based connection (disabled security)
 · Jamming-assisted connection (with NRF24)
 · HFP vulnerability exploitation - CVE-2025-36911 bypass
+· FastPair protocol exploitation
 
-3. Vulnerability Assessment
-
+Vulnerability Assessment
 · FastPair buffer overflow testing
 · HID service write access verification
 · Authentication bypass attempts
 · PIN strength testing
 · HFP vulnerability testing - CVE-2025-36911 check
+· FastPair vulnerability scanning - Systematic test suite
 
-4. Exploit Execution
-
+Exploit Execution
 · Protocol-specific payload delivery
 · State confusion attacks
 · Cryptographic manipulation
 · Persistent injection (DuckyScript)
 · HFP pivot attacks - Privileged escalation via audio profile
+· FastPair popup spam - Notification flooding attacks
 
-5. Cleanup & Reporting
-
+Cleanup & Reporting
 · Graceful disconnection
 · BLE stack reinitialization
 · Success/failure logging
 · Detailed result display
-
----
 
 Built-in Payloads
 
@@ -275,160 +264,180 @@ Built-in Payloads
 · Rickroll prank
 · Custom script support
 · OS-specific payloads - Auto-selected based on device detection
+· FastPair popup models - Device-specific advertisements
 
----
+Main Menu Items (35 Attacks)
 
-Main Menu Items (24 Attacks)
-
-1. FastPair Buffer Overflow
-
+FastPair Buffer Overflow
 · Targets Google FastPair devices with buffer overflow exploits
 · Can cause crashes or memory corruption
 
-2. Advanced Protocol Attack
-
+Advanced Protocol Attack
 · Submenu with 4 options:
-  · Protocol State Confusion
-  · Crypto Overflow
-  · Handshake Only
-  · All Attacks (full suite)
+· Protocol State Confusion
+· Crypto Overflow
+· Handshake Only
+· All Attacks (full suite)
 
-3. Audio Stack Crash
-
+Audio Stack Crash
 · Crashes target's audio services
 · Sends malformed packets to AVRCP services
 
-4. Media Control Hijack
-
+Media Control Hijack
 · Takes over music/video playback controls
 · Play/pause/volume injection
 
-5. HID Keystroke Injection
-
+HID Keystroke Injection
 · Basic keyboard keystroke injection
 · Enter key, Windows key, etc.
 · Enhanced: Suggests HFP pivot for HFP-enabled devices
 
-6. Ducky Script Injection
-
+Ducky Script Injection
 · Full DuckyScript execution via HID
 · Submenu with example scripts:
-  · Open Calculator
-  · Open CMD/Terminal
-  · WiFi Credentials
-  · Reverse Shell
-  · Rickroll
-  · Load from SD Card
+· Open Calculator
+· Open CMD/Terminal
+· WiFi Credentials
+· Reverse Shell
+· Rickroll
+· Load from SD Card
 · Enhanced: Smart HFP pivot suggestions
 
-7. PIN Brute Force
-
+PIN Brute Force
 · Tries common BLE PINs (0000, 1234, etc.)
 · Tests weak authentication
 
-8. Connection Flood DoS
-
+Connection Flood DoS
 · Rapid connection attempts to overwhelm target
 · Basic denial of service
 
-9. Advertising Spam
-
+Advertising Spam
 · Floods area with BLE advertisements
 · Can disrupt nearby BLE devices
 
-10. Quick Test (silent)
-
+Quick Test (silent)
 · Fast, quiet vulnerability check
 · No UI output during test
 
-11. Device Profiling
-
+Device Profiling
 · Comprehensive service enumeration
 · Lists all services and characteristics
 · Shows which are writable
 · New: Includes HFP service detection
 
-12. Test Write Access
-
+Test Write Access
 · Checks all characteristics for write permissions
 · Identifies potential attack surfaces
 
-13. Protocol Fuzzer
-
+Protocol Fuzzer
 · Sends random/malformed data to BLE services
 · Tests parsing vulnerabilities
 
-14. Jam & Connect Attack
-
+Jam & Connect Attack
 · Uses NRF24 module to jam BLE while connecting
 · Increases exploit success rate
 
-15. Test HID Services
-
+Test HID Services
 · Scans for HID keyboard/mouse services
 · Identifies potential HID injection targets
 
-16. Audio Control Test
-
+Audio Control Test
 · Submenu with 4 audio tests:
-  · Test AVRCP Service
-  · Test Media Control
-  · Test Telephony
-  · Test All Audio
+· Test AVRCP Service
+· Test Media Control
+· Test Telephony
+· Test All Audio
 
-17. Vulnerability Scan
-
+Vulnerability Scan
 · Comprehensive security assessment
 · Tests multiple vulnerability categories
 · Generates risk report
 · New: Includes HFP vulnerability testing
 
-18. Force HID Injection
-
+Force HID Injection
 · Aggressive HID connection + DuckyScript
 · Bypasses pairing requirements
 · Enhanced: Can use HFP as entry vector
 
-19. HID Connection Exploit
-
+HID Connection Exploit
 · Tests OS-specific HID connection methods
 · Shows which bypasses work
 · Enhanced: HFP bypass integration
 
-20. Advanced Ducky Injection
-
+Advanced Ducky Injection
 · Enhanced script injection menu
 · Pre-built complex payloads
 · Multi-stage attacks
 
-21. HID Vulnerability Test
-
+HID Vulnerability Test
 · Basic HID service detection
 · Checks if keystroke injection is possible
 
-22. HFP Vulnerability Test
-
+HFP Vulnerability Test
 · Tests for CVE-2025-36911 vulnerability
 · Checks HFP service accessibility
 · Reports potential microphone access risks
 
-23. HFP Attack Chain
-
+HFP Attack Chain
 · Full HFP exploitation pipeline
 · Tests vulnerability → establishes connection
 · Demonstrates HFP access capability
 
-24. HFP → HID Pivot Attack
-
+HFP → HID Pivot Attack
 · Complete attack chain:
-  1. Tests CVE-2025-36911
-  2. Establishes HFP connection via exploit
-  3. Automatically pivots to HID services
-  4. Executes DuckyScript payload
-  5. Uses OS-specific scripts (Windows CMD, Apple Calculator, etc.)
+
+Tests CVE-2025-36911
+Establishes HFP connection via exploit
+Automatically pivots to HID services
+Executes DuckyScript payload
+Uses OS-specific scripts (Windows CMD, Apple Calculator, etc.)
 · One-click multi-stage attack
 
----
+FastPair Device Scanner
+· Dedicated FastPair device discovery
+· Identifies device models (Samsung, Google, Sony, etc.)
+· Shows manufacturer and device type
+
+FastPair Vulnerability Test
+· Systematic FastPair security assessment
+· Tests service discovery, characteristic access, buffer overflows
+· Generates comprehensive vulnerability report
+
+FastPair Memory Corruption
+· Targets FastPair protocol with memory corruption attacks
+· Sends oversized packets to trigger buffer overflows
+
+FastPair State Confusion
+· Attempts to confuse FastPair protocol state machine
+· Invalid state transitions and rapid connection attempts
+
+FastPair Crypto Overflow
+· Cryptographic overflow attacks on FastPair
+· Malformed key exchanges and handshake faults
+
+FastPair Popup Spam (Regular)
+· Sends regular FastPair device advertisements
+· Uses real device models (Galaxy Buds, Pixel Buds, etc.)
+
+FastPair Popup Spam (Fun)
+· Sends entertaining FastPair popups
+· Tesla vehicle notifications
+· Novelty device advertisements
+
+FastPair Popup Spam (Prank)
+· Sends prank FastPair popups
+· FBI surveillance alerts
+· Government/authority notifications
+
+FastPair All Exploits
+· Executes complete FastPair attack suite
+· Memory corruption, state confusion, crypto overflow, rapid connection
+· Comprehensive testing in one operation
+
+FastPair → HID Chain Attack
+· FastPair exploitation followed by HID pivot
+· Uses successful FastPair connection to access HID services
+· Delivers keystroke injection or DuckyScript payloads
 
 Smart Integration Features
 
@@ -456,8 +465,7 @@ Context-Aware Payloads
 · Apple devices - Uses GUI/Calculator payloads
 · Android/Linux - Generic terminal commands
 · HFP-enabled - Prioritizes stealthy audio-based entry
-
----
+· FastPair devices - Device-specific targeting based on model ID
 
 Submenu Systems
 
@@ -466,29 +474,24 @@ Submenu Systems
 · Advanced Attacks - Protocol-specific exploit selection
 · Target Selection - Scrollable device picker with RSSI/sorting
 · HFP Integration - Smart suggestions for HFP-enabled targets
-
----
+· FastPair Popup Types - Regular, Fun, and Prank categories
 
 Workflow
 
-1. Scan → Find BLE devices (now detects HFP services)
-2. Select → Choose target from list (HFP devices marked)
-3. Profile → Optional reconnaissance (includes HFP detection)
-4. Attack → Pick appropriate exploit (HFP attacks suggested when relevant)
-5. Execute → Run attack with progress display (smart chains for HFP)
-6. Report → View success/failure results
-
----
-
+Scan → Find BLE devices (now detects HFP and FastPair services)
+Select → Choose target from list (HFP/FastPair devices marked)
+Profile → Optional reconnaissance (includes HFP/FastPair detection)
+Attack → Pick appropriate exploit (HFP/FastPair attacks available)
+Execute → Run attack with progress display (smart chains for HFP/FastPair)
+Report → View success/failure results
 Public Interfaces
 
 · BleSuiteMenu() - Main entry point
 · showAttackMenuWithTarget() - Direct attack menu
 · runHFPHIDPivotAttack() - Complete HFP → HID chain
-· runSmartHFPPivot() - Context-aware attack selection
-· Scanner data accessible via scannerData global (includes HFP detection)
-
----
+· runFastPairScan() - FastPair device discovery
+· runFastPairPopupSpam() - FastPair advertisement attacks
+· Scanner data accessible via scannerData global (includes HFP/FastPair detection)
 
 Tested Configurations (Examples)
 
@@ -499,6 +502,8 @@ Vulnerable to FastPair attacks:
 · Some older Android phones (pre-2020)
 · Certain Bluetooth speakers/headsets
 · Early IoT devices with FastPair support
+· Samsung Galaxy Buds (older models)
+· Google Pixel Buds (first generation)
 
 Susceptible to HID injection:
 
@@ -520,8 +525,7 @@ Resistant to most attacks:
 · Enterprise Windows 11 systems
 · Recent macOS versions
 · HFP-patched devices - Updated against CVE-2025-36911
-
----
+· FastPair-patched devices - Updated Google security patches
 
 Recent Additions (v2.0+)
 
@@ -532,20 +536,26 @@ HFP Exploitation Module
 · Smart pivot system - Auto-suggests HFP → HID attack chains
 · Integrated with existing attacks - Enhances HID/DuckyScript success rates
 
+FastPair Integration Module
+
+· Comprehensive FastPair attack suite - 10 new attack options
+· Device model database - Organized by manufacturer (Samsung, Google, Sony, etc.)
+· Popup spam categories - Regular, Fun, and Prank advertisement types
+· Vulnerability testing - Systematic FastPair security assessment
+· Chain attacks - FastPair → HID pivot capabilities
+
 Enhanced User Experience
 
 · Context-aware suggestions - Recommends best attack approach
-· Seamless integration - HFP detection in scanning phase
-· One-click attack chains - HFP → HID → DuckyScript automation
-· Improved device profiling - HFP service identification
+· Seamless integration - HFP/FastPair detection in scanning phase
+· One-click attack chains - HFP/FastPair → HID → DuckyScript automation
+· Improved device profiling - HFP/FastPair service identification
 
 Technical Improvements
 
-· Modular architecture - Separate HFP_Exploit module
+· Modular architecture - Separate HFP_Exploit and FastPair modules
 · Clean integration - Minimal changes to existing code
 · Backward compatibility - All existing features preserved
 · Professional tooling - Multi-stage attack pipelines
 
----
-
-Each menu item targets specific BLE vulnerabilities or attack vectors, with increasing complexity from basic (keystroke injection) to advanced (HFP protocol exploitation). The system adapts to target responses, employs multiple strategies, and now includes smart suggestions for HFP-enabled devices to maximize effectiveness in authorized testing scenarios.
+Each menu item targets specific BLE vulnerabilities or attack vectors, with increasing complexity from basic (keystroke injection) to advanced (HFP/FastPair protocol exploitation). The system adapts to target responses, employs multiple strategies, and now includes smart suggestions for HFP/FastPair-enabled devices to maximize effectiveness in authorized testing scenarios.
