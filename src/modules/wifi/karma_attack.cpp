@@ -2058,7 +2058,7 @@ void karma_setup() {
             }
             bool wasActive = broadcastAttack.isActive();
             std::vector<Option> options = {
-                Option{"Enhanced Stats", [=]() {
+                Option{"Enhanced Stats", [&]() {
                      drawMainBorderWithTitle("ADVANCED STATS");
                      int y = 40;
                      tft.setTextSize(1);
@@ -2116,29 +2116,29 @@ void karma_setup() {
                      }
                      redraw = true;
                  }},
-                Option{"Toggle Beaconing", [=]() {
+                Option{"Toggle Beaconing", [&]() {
                      attackConfig.enableBeaconing = !attackConfig.enableBeaconing;
                      displayTextLine(attackConfig.enableBeaconing ? 
                                     "Beaconing: ON" : "Beaconing: OFF");
                      delay(1000);
                  }},
-                Option{"Rotate BSSID Now", [=]() {
+                Option{"Rotate BSSID Now", [&]() {
                      generateRandomBSSID(currentBSSID);
                      displayTextLine("BSSID rotated");
                      delay(1000);
                  }},
-                Option{"Clear Blacklist", [=]() {
+                Option{"Clear Blacklist", [&]() {
                      macBlacklist.clear();
                      displayTextLine("MAC blacklist cleared");
                      delay(1000);
                  }},
-                Option{"Export Network List", [=]() {
+                Option{"Export Network List", [&]() {
                      if (is_LittleFS) saveNetworkHistory(LittleFS);
                      else saveNetworkHistory(SD);
                      displayTextLine("Network list saved!");
                      delay(1000);
                  }},
-                Option{"Karma Attack", [=]() {
+                Option{"Karma Attack", [&]() {
                      std::vector<ClientBehavior> vulnerable = getVulnerableClients();
                      std::vector<ProbeRequest> uniqueProbes = getUniqueProbes();
                      if (vulnerable.empty() && uniqueProbes.empty()) {
@@ -2151,7 +2151,7 @@ void karma_setup() {
                      for (const auto &client : vulnerable) {
                          if (!client.probedSSIDs.empty()) {
                              String itemText = client.mac.substring(9) + " (VULN)";
-                             karmaOptions.push_back(Option{itemText, [=, &client]() {
+                             karmaOptions.push_back(Option{itemText, [&, &client]() {
                                  launchManualEvilPortal(client.probedSSIDs[0], 
                                                        client.favoriteChannel, 
                                                        selectedTemplate.verifyPassword);
@@ -2164,13 +2164,13 @@ void karma_setup() {
                          if (itemText.length() > 40) {
                              itemText = itemText.substring(0, 37) + "...";
                          }
-                         karmaOptions.push_back(Option{itemText, [=, &probe]() {
+                         karmaOptions.push_back(Option{itemText, [&, &probe]() {
                              launchManualEvilPortal(probe.ssid, probe.channel, 
                                                    selectedTemplate.verifyPassword);
                              redraw = true;
                          }});
                      }
-                     karmaOptions.push_back(Option{"Back to Options", [=]() {}});
+                     karmaOptions.push_back(Option{"Back to Options", [&]() {}});
                      drawMainBorderWithTitle("KARMA TARGETS");
                      bool exitKarmaMenu = false;
                      int selectedIndex = 0;
@@ -2186,7 +2186,7 @@ void karma_setup() {
                                  tft.setTextColor(bruceConfig.priColor, bruceConfig.bgColor);
                                  tft.print("  ");
                              }
-                             String displayText = karmaOptions[i].text;
+                             String displayText = karmaOptions[i].label;
                              if (displayText.length() > 40) {
                                  displayText = displayText.substring(0, 37) + "...";
                              }
@@ -2197,7 +2197,7 @@ void karma_setup() {
                          tft.setTextColor(bruceConfig.priColor, bruceConfig.bgColor);
                          tft.print("Sel: Attack | Prev/Esc: Back");
                          if (check(SelPress)) {
-                             karmaOptions[selectedIndex].function();
+                             karmaOptions[selectedIndex].callback();
                              exitKarmaMenu = true;
                          } else if (check(PrevPress) || check(EscPress)) {
                              exitKarmaMenu = true;
@@ -2209,57 +2209,57 @@ void karma_setup() {
                      }
                      redraw = true;
                  }},
-                Option{"Select Template", [=]() {
+                Option{"Select Template", [&]() {
                      selectPortalTemplate(false);
                  }},
-                Option{"Attack Strategy", [=]() {
+                Option{"Attack Strategy", [&]() {
                      std::vector<Option> strategyOptions = {
                          Option{attackConfig.defaultTier == TIER_CLONE ? "* Clone Mode" : "- Clone Mode",
-                          [=]() {
+                          [&]() {
                               attackConfig.defaultTier = TIER_CLONE;
                               displayTextLine("Clone mode enabled");
                               delay(1000);
                           }},
                          Option{attackConfig.defaultTier == TIER_HIGH ? "* High Tier" : "- High Tier",
-                          [=]() {
+                          [&]() {
                               attackConfig.defaultTier = TIER_HIGH;
                               displayTextLine("High tier mode");
                               delay(1000);
                           }},
                          Option{attackConfig.defaultTier == TIER_MEDIUM ? "* Medium Tier" : "- Medium Tier",
-                          [=]() {
+                          [&]() {
                               attackConfig.defaultTier = TIER_MEDIUM;
                               displayTextLine("Medium tier mode");
                               delay(1000);
                           }},
                          Option{attackConfig.defaultTier == TIER_FAST ? "* Fast Tier" : "- Fast Tier",
-                          [=]() {
+                          [&]() {
                               attackConfig.defaultTier = TIER_FAST;
                               displayTextLine("Fast tier mode");
                               delay(1000);
                           }},
                          Option{attackConfig.enableCloneMode ? "* Clone Detection" : "- Clone Detection",
-                          [=]() {
+                          [&]() {
                               attackConfig.enableCloneMode = !attackConfig.enableCloneMode;
                               displayTextLine(attackConfig.enableCloneMode ? 
                                              "Clone detection ON" : "Clone detection OFF");
                               delay(1000);
                           }},
                          Option{attackConfig.enableTieredAttack ? "* Tiered Attack" : "- Tiered Attack",
-                          [=]() {
+                          [&]() {
                               attackConfig.enableTieredAttack = !attackConfig.enableTieredAttack;
                               displayTextLine(attackConfig.enableTieredAttack ? 
                                              "Tiered attack ON" : "Tiered attack OFF");
                               delay(1000);
                           }},
                          Option{attackConfig.enableBeaconing ? "* Beaconing" : "- Beaconing",
-                          [=]() {
+                          [&]() {
                               attackConfig.enableBeaconing = !attackConfig.enableBeaconing;
                               displayTextLine(attackConfig.enableBeaconing ? 
                                              "Beaconing ON" : "Beaconing OFF");
                               delay(1000);
                           }},
-                         Option{"Back", [=]() {}}
+                         Option{"Back", [&]() {}}
                      };
                      bool exitStrategyMenu = false;
                      int strategyIndex = 0;
@@ -2276,14 +2276,14 @@ void karma_setup() {
                                  tft.setTextColor(bruceConfig.priColor, bruceConfig.bgColor);
                                  tft.print("  ");
                              }
-                             String displayText = strategyOptions[i].text;
+                             String displayText = strategyOptions[i].label;
                              tft.print(displayText);
                              y += 15;
                          }
                          tft.setCursor(10, tftHeight - 20);
                          tft.print("Sel: Choose | Prev/Esc: Back");
                          if (check(SelPress)) {
-                             strategyOptions[strategyIndex].function();
+                             strategyOptions[strategyIndex].callback();
                              exitStrategyMenu = true;
                          } else if (check(PrevPress) || check(EscPress)) {
                              exitStrategyMenu = true;
@@ -2294,10 +2294,10 @@ void karma_setup() {
                          delay(50);
                      }
                  }},
-                Option{"Active Broadcast Attack", [=]() {
+                Option{"Active Broadcast Attack", [&]() {
                     std::vector<Option> broadcastOptions;
                     broadcastOptions.push_back(Option{broadcastAttack.isActive() ? 
-                        "* Stop Broadcast" : "Start Broadcast", [=]() {
+                        "* Stop Broadcast" : "Start Broadcast", [&]() {
                         if (broadcastAttack.isActive()) {
                             broadcastAttack.stop();
                             displayTextLine("Broadcast stopped");
@@ -2312,7 +2312,7 @@ void karma_setup() {
                         }
                         delay(1000);
                     }});
-                    broadcastOptions.push_back(Option{"Database Info", [=]() {
+                    broadcastOptions.push_back(Option{"Database Info", [&]() {
                         drawMainBorderWithTitle("SSID DATABASE");
                         int y = 40;
                         tft.setTextSize(1);
@@ -2339,9 +2339,9 @@ void karma_setup() {
                             delay(50);
                         }
                     }});
-                    broadcastOptions.push_back(Option{"Manage Database", [=]() {
+                    broadcastOptions.push_back(Option{"Manage Database", [&]() {
                         std::vector<Option> dbOptions = {
-                            Option{"Add Current Probes", [=]() {
+                            Option{"Add Current Probes", [&]() {
                                 std::vector<ProbeRequest> probes = getUniqueProbes();
                                 int added = 0;
                                 for (const auto& probe : probes) {
@@ -2363,7 +2363,7 @@ void karma_setup() {
                                 displayTextLine("Added " + String(added) + " SSIDs");
                                 delay(1000);
                             }},
-                            Option{"Export to File", [=]() {
+                            Option{"Export to File", [&]() {
                                 if (setupSdCard()) {
                                     String filename = "/ProbeData/ssid_database_" + String(millis()) + ".txt";
                                     File file = SD.open(filename, FILE_WRITE);
@@ -2382,12 +2382,12 @@ void karma_setup() {
                                 }
                                 delay(1000);
                             }},
-                            Option{"Clear Database", [=]() {
+                            Option{"Clear Database", [&]() {
                                 SSIDDatabase::clearCache();
                                 displayTextLine("Database cleared");
                                 delay(1000);
                             }},
-                            Option{"Reload from Disk", [=]() {
+                            Option{"Reload from Disk", [&]() {
                                 SSIDDatabase::clearCache();
                                 if (SSIDDatabase::reload()) {
                                     displayTextLine("Reloaded: " + String(SSIDDatabase::getCount()) + " SSIDs");
@@ -2396,7 +2396,7 @@ void karma_setup() {
                                 }
                                 delay(1000);
                             }},
-                            Option{"Back", [=]() {}}
+                            Option{"Back", [&]() {}}
                         };
                         bool exitDbMenu = false;
                         int dbIndex = 0;
@@ -2413,13 +2413,13 @@ void karma_setup() {
                                     tft.setTextColor(bruceConfig.priColor, bruceConfig.bgColor);
                                     tft.print("  ");
                                 }
-                                tft.print(dbOptions[i].text);
+                                tft.print(dbOptions[i].label);
                                 y += 15;
                             }
                             tft.setCursor(10, tftHeight - 20);
                             tft.print("Sel: Choose | Prev/Esc: Back");
                             if (check(SelPress)) {
-                                dbOptions[dbIndex].function();
+                                dbOptions[dbIndex].callback();
                                 exitDbMenu = true;
                             } else if (check(PrevPress) || check(EscPress)) {
                                 exitDbMenu = true;
@@ -2430,34 +2430,34 @@ void karma_setup() {
                             delay(50);
                         }
                     }});
-                    broadcastOptions.push_back(Option{"Set Speed", [=]() {
+                    broadcastOptions.push_back(Option{"Set Speed", [&]() {
                         std::vector<Option> speedOptions = {
-                            Option{"Very Fast (100ms)", [=]() { 
+                            Option{"Very Fast (100ms)", [&]() { 
                                 broadcastAttack.setBroadcastInterval(100);
                                 displayTextLine("Speed: Very Fast");
                                 delay(1000);
                             }},
-                            Option{"Fast (200ms)", [=]() { 
+                            Option{"Fast (200ms)", [&]() { 
                                 broadcastAttack.setBroadcastInterval(200);
                                 displayTextLine("Speed: Fast");
                                 delay(1000);
                             }},
-                            Option{"Normal (300ms)", [=]() { 
+                            Option{"Normal (300ms)", [&]() { 
                                 broadcastAttack.setBroadcastInterval(300);
                                 displayTextLine("Speed: Normal");
                                 delay(1000);
                             }},
-                            Option{"Slow (500ms)", [=]() { 
+                            Option{"Slow (500ms)", [&]() { 
                                 broadcastAttack.setBroadcastInterval(500);
                                 displayTextLine("Speed: Slow");
                                 delay(1000);
                             }},
-                            Option{"Very Slow (1000ms)", [=]() { 
+                            Option{"Very Slow (1000ms)", [&]() { 
                                 broadcastAttack.setBroadcastInterval(1000);
                                 displayTextLine("Speed: Very Slow");
                                 delay(1000);
                             }},
-                            Option{"Back", [=]() {}}
+                            Option{"Back", [&]() {}}
                         };
                         bool exitSpeedMenu = false;
                         int speedIndex = 0;
@@ -2474,13 +2474,13 @@ void karma_setup() {
                                     tft.setTextColor(bruceConfig.priColor, bruceConfig.bgColor);
                                     tft.print("  ");
                                 }
-                                tft.print(speedOptions[i].text);
+                                tft.print(speedOptions[i].label);
                                 y += 15;
                             }
                             tft.setCursor(10, tftHeight - 20);
                             tft.print("Sel: Choose | Prev/Esc: Back");
                             if (check(SelPress)) {
-                                speedOptions[speedIndex].function();
+                                speedOptions[speedIndex].callback();
                                 exitSpeedMenu = true;
                             } else if (check(PrevPress) || check(EscPress)) {
                                 exitSpeedMenu = true;
@@ -2491,7 +2491,7 @@ void karma_setup() {
                             delay(50);
                         }
                     }});
-                    broadcastOptions.push_back(Option{"Show Stats", [=]() {
+                    broadcastOptions.push_back(Option{"Show Stats", [&]() {
                         drawMainBorderWithTitle("BROADCAST STATS");
                         int y = 40;
                         tft.setTextSize(1);
@@ -2536,7 +2536,7 @@ void karma_setup() {
                             delay(50);
                         }
                     }});
-                    broadcastOptions.push_back(Option{"Back", [=]() {}});
+                    broadcastOptions.push_back(Option{"Back", [&]() {}});
                     bool exitBroadcastMenu = false;
                     int broadcastIndex = 0;
                     while (!exitBroadcastMenu) {
@@ -2552,13 +2552,13 @@ void karma_setup() {
                                 tft.setTextColor(bruceConfig.priColor, bruceConfig.bgColor);
                                 tft.print("  ");
                             }
-                            tft.print(broadcastOptions[i].text);
+                            tft.print(broadcastOptions[i].label);
                             y += 15;
                         }
                         tft.setCursor(10, tftHeight - 20);
                         tft.print("Sel: Choose | Prev/Esc: Back");
                         if (check(SelPress)) {
-                            broadcastOptions[broadcastIndex].function();
+                            broadcastOptions[broadcastIndex].callback();
                             exitBroadcastMenu = true;
                         } else if (check(PrevPress) || check(EscPress)) {
                             exitBroadcastMenu = true;
@@ -2569,22 +2569,22 @@ void karma_setup() {
                         delay(50);
                     }
                 }},
-                Option{"Save Probes", [=]() {
+                Option{"Save Probes", [&]() {
                      if (is_LittleFS) saveProbesToFile(LittleFS, true);
                      else saveProbesToFile(SD, true);
                      displayTextLine("Probes saved!");
                  }},
-                Option{"Clear Probes", [=]() {
+                Option{"Clear Probes", [&]() {
                      clearProbes();
                      displayTextLine("Probes cleared!");
                  }},
                 Option{karmaConfig.enableAutoKarma ? "* Auto Karma" : "- Auto Karma",
-                 [=]() {
+                 [&]() {
                      karmaConfig.enableAutoKarma = !karmaConfig.enableAutoKarma;
                      displayTextLine(karmaConfig.enableAutoKarma ? "Auto Karma: ON" : "Auto Karma: OFF");
                  }},
                 Option{karmaConfig.enableAutoPortal ? "* Auto Portal" : "- Auto Portal",
-                 [=]() {
+                 [&]() {
                      if (!templateSelected) {
                          displayTextLine("Select template first!");
                          delay(1000);
@@ -2594,29 +2594,29 @@ void karma_setup() {
                      displayTextLine(karmaConfig.enableAutoPortal ? "Auto Portal: ON" : "Auto Portal: OFF");
                  }},
                 Option{karmaConfig.enableDeauth ? "* Deauth" : "- Deauth",
-                 [=]() {
+                 [&]() {
                      karmaConfig.enableDeauth = !karmaConfig.enableDeauth;
                      displayTextLine(karmaConfig.enableDeauth ? "Deauth: ON" : "Deauth: OFF");
                  }},
                 Option{karmaConfig.enableSmartHop ? "* Smart Hop" : "- Smart Hop",
-                 [=]() {
+                 [&]() {
                      karmaConfig.enableSmartHop = !karmaConfig.enableSmartHop;
                      displayTextLine(karmaConfig.enableSmartHop ? "Smart Hop: ON" : "Smart Hop: OFF");
                  }},
                 Option{auto_hopping ? "* Auto Hop" : "- Auto Hop",
-                 [=]() {
+                 [&]() {
                      auto_hopping = !auto_hopping;
                      displayTextLine(auto_hopping ? "Auto Hop: ON" : "Auto Hop: OFF");
                  }},
                 Option{hop_interval == FAST_HOP_INTERVAL ? "* Fast Hop" : "- Fast Hop",
-                 [=]() {
+                 [&]() {
                      hop_interval =
                          (hop_interval == FAST_HOP_INTERVAL) ? DEFAULT_HOP_INTERVAL : FAST_HOP_INTERVAL;
                      displayTextLine(
                          hop_interval == FAST_HOP_INTERVAL ? "Fast Hop: ON" : "Fast Hop: OFF"
                      );
                  }},
-                Option{"Show Stats", [=]() {
+                Option{"Show Stats", [&]() {
                      drawMainBorderWithTitle("KARMA STATS");
                      int y = 40;
                      tft.setTextSize(1);
@@ -2669,7 +2669,7 @@ void karma_setup() {
                      }
                      redraw = true;
                  }},
-                Option{"Exit Karma", [=]() { 
+                Option{"Exit Karma", [&]() { 
                      returnToMenu = true; 
                  }},
             };
@@ -2688,14 +2688,14 @@ void karma_setup() {
                         tft.setTextColor(bruceConfig.priColor, bruceConfig.bgColor);
                         tft.print("  ");
                     }
-                    String displayText = options[i].text;
+                    String displayText = options[i].label;
                     tft.print(displayText);
                     y += 15;
                 }
                 tft.setCursor(10, tftHeight - 20);
                 tft.print("Sel: Choose | Prev/Esc: Back to Karma");
                 if (check(SelPress)) {
-                    options[selectedIndex].function();
+                    options[selectedIndex].callback();
                     selectedIndex = 0;
                 } else if (check(PrevPress) || check(EscPress)) {
                     exitOptionsMenu = true;
@@ -2730,7 +2730,7 @@ void karma_setup() {
                 }
                 bool wasActive = broadcastAttack.isActive();
                 std::vector<Option> options = {
-                    Option{"Enhanced Stats", [=]() {
+                    Option{"Enhanced Stats", [&]() {
                          drawMainBorderWithTitle("ADVANCED STATS");
                          int y = 40;
                          tft.setTextSize(1);
@@ -2788,29 +2788,29 @@ void karma_setup() {
                          }
                          redraw = true;
                      }},
-                    Option{"Toggle Beaconing", [=]() {
+                    Option{"Toggle Beaconing", [&]() {
                          attackConfig.enableBeaconing = !attackConfig.enableBeaconing;
                          displayTextLine(attackConfig.enableBeaconing ? 
                                         "Beaconing: ON" : "Beaconing: OFF");
                          delay(1000);
                      }},
-                    Option{"Rotate BSSID Now", [=]() {
+                    Option{"Rotate BSSID Now", [&]() {
                          generateRandomBSSID(currentBSSID);
                          displayTextLine("BSSID rotated");
                          delay(1000);
                      }},
-                    Option{"Clear Blacklist", [=]() {
+                    Option{"Clear Blacklist", [&]() {
                          macBlacklist.clear();
                          displayTextLine("MAC blacklist cleared");
                          delay(1000);
                      }},
-                    Option{"Export Network List", [=]() {
+                    Option{"Export Network List", [&]() {
                          if (is_LittleFS) saveNetworkHistory(LittleFS);
                          else saveNetworkHistory(SD);
                          displayTextLine("Network list saved!");
                          delay(1000);
                      }},
-                    Option{"Karma Attack", [=]() {
+                    Option{"Karma Attack", [&]() {
                          std::vector<ClientBehavior> vulnerable = getVulnerableClients();
                          std::vector<ProbeRequest> uniqueProbes = getUniqueProbes();
                          if (vulnerable.empty() && uniqueProbes.empty()) {
@@ -2823,7 +2823,7 @@ void karma_setup() {
                          for (const auto &client : vulnerable) {
                              if (!client.probedSSIDs.empty()) {
                                  String itemText = client.mac.substring(9) + " (VULN)";
-                                 karmaOptions.push_back(Option{itemText, [=, &client]() {
+                                 karmaOptions.push_back(Option{itemText, [&, &client]() {
                                      launchManualEvilPortal(client.probedSSIDs[0], 
                                                            client.favoriteChannel, 
                                                            selectedTemplate.verifyPassword);
@@ -2836,13 +2836,13 @@ void karma_setup() {
                              if (itemText.length() > 40) {
                                  itemText = itemText.substring(0, 37) + "...";
                              }
-                             karmaOptions.push_back(Option{itemText, [=, &probe]() {
+                             karmaOptions.push_back(Option{itemText, [&, &probe]() {
                                  launchManualEvilPortal(probe.ssid, probe.channel, 
                                                        selectedTemplate.verifyPassword);
                                  redraw = true;
                              }});
                          }
-                         karmaOptions.push_back(Option{"Back to Options", [=]() {}});
+                         karmaOptions.push_back(Option{"Back to Options", [&]() {}});
                          drawMainBorderWithTitle("KARMA TARGETS");
                          bool exitKarmaMenu = false;
                          int selectedIndex = 0;
@@ -2858,7 +2858,7 @@ void karma_setup() {
                                      tft.setTextColor(bruceConfig.priColor, bruceConfig.bgColor);
                                      tft.print("  ");
                                  }
-                                 String displayText = karmaOptions[i].text;
+                                 String displayText = karmaOptions[i].label;
                                  if (displayText.length() > 40) {
                                      displayText = displayText.substring(0, 37) + "...";
                                  }
@@ -2869,7 +2869,7 @@ void karma_setup() {
                          tft.setTextColor(bruceConfig.priColor, bruceConfig.bgColor);
                          tft.print("Sel: Attack | Prev/Esc: Back");
                          if (check(SelPress)) {
-                             karmaOptions[selectedIndex].function();
+                             karmaOptions[selectedIndex].callback();
                              exitKarmaMenu = true;
                          } else if (check(PrevPress) || check(EscPress)) {
                              exitKarmaMenu = true;
@@ -2881,57 +2881,57 @@ void karma_setup() {
                      }
                      redraw = true;
                  }},
-                Option{"Select Template", [=]() {
+                Option{"Select Template", [&]() {
                      selectPortalTemplate(false);
                  }},
-                Option{"Attack Strategy", [=]() {
+                Option{"Attack Strategy", [&]() {
                      std::vector<Option> strategyOptions = {
                          Option{attackConfig.defaultTier == TIER_CLONE ? "* Clone Mode" : "- Clone Mode",
-                          [=]() {
+                          [&]() {
                               attackConfig.defaultTier = TIER_CLONE;
                               displayTextLine("Clone mode enabled");
                               delay(1000);
                           }},
                          Option{attackConfig.defaultTier == TIER_HIGH ? "* High Tier" : "- High Tier",
-                          [=]() {
+                          [&]() {
                               attackConfig.defaultTier = TIER_HIGH;
                               displayTextLine("High tier mode");
                               delay(1000);
                           }},
                          Option{attackConfig.defaultTier == TIER_MEDIUM ? "* Medium Tier" : "- Medium Tier",
-                          [=]() {
+                          [&]() {
                               attackConfig.defaultTier = TIER_MEDIUM;
                               displayTextLine("Medium tier mode");
                               delay(1000);
                           }},
                          Option{attackConfig.defaultTier == TIER_FAST ? "* Fast Tier" : "- Fast Tier",
-                          [=]() {
+                          [&]() {
                               attackConfig.defaultTier = TIER_FAST;
                               displayTextLine("Fast tier mode");
                               delay(1000);
                           }},
                          Option{attackConfig.enableCloneMode ? "* Clone Detection" : "- Clone Detection",
-                          [=]() {
+                          [&]() {
                               attackConfig.enableCloneMode = !attackConfig.enableCloneMode;
                               displayTextLine(attackConfig.enableCloneMode ? 
                                              "Clone detection ON" : "Clone detection OFF");
                               delay(1000);
                           }},
                          Option{attackConfig.enableTieredAttack ? "* Tiered Attack" : "- Tiered Attack",
-                          [=]() {
+                          [&]() {
                               attackConfig.enableTieredAttack = !attackConfig.enableTieredAttack;
                               displayTextLine(attackConfig.enableTieredAttack ? 
                                              "Tiered attack ON" : "Tiered attack OFF");
                               delay(1000);
                           }},
                          Option{attackConfig.enableBeaconing ? "* Beaconing" : "- Beaconing",
-                          [=]() {
+                          [&]() {
                               attackConfig.enableBeaconing = !attackConfig.enableBeaconing;
                               displayTextLine(attackConfig.enableBeaconing ? 
                                              "Beaconing ON" : "Beaconing OFF");
                               delay(1000);
                           }},
-                         Option{"Back", [=]() {}}
+                         Option{"Back", [&]() {}}
                      };
                      bool exitStrategyMenu = false;
                      int strategyIndex = 0;
@@ -2948,14 +2948,14 @@ void karma_setup() {
                                  tft.setTextColor(bruceConfig.priColor, bruceConfig.bgColor);
                                  tft.print("  ");
                              }
-                             String displayText = strategyOptions[i].text;
+                             String displayText = strategyOptions[i].label;
                              tft.print(displayText);
                              y += 15;
                          }
                          tft.setCursor(10, tftHeight - 20);
                          tft.print("Sel: Choose | Prev/Esc: Back");
                          if (check(SelPress)) {
-                             strategyOptions[strategyIndex].function();
+                             strategyOptions[strategyIndex].callback();
                              exitStrategyMenu = true;
                          } else if (check(PrevPress) || check(EscPress)) {
                              exitStrategyMenu = true;
@@ -2966,10 +2966,10 @@ void karma_setup() {
                          delay(50);
                      }
                  }},
-                Option{"Active Broadcast Attack", [=]() {
+                Option{"Active Broadcast Attack", [&]() {
                     std::vector<Option> broadcastOptions;
                     broadcastOptions.push_back(Option{broadcastAttack.isActive() ? 
-                        "* Stop Broadcast" : "Start Broadcast", [=]() {
+                        "* Stop Broadcast" : "Start Broadcast", [&]() {
                         if (broadcastAttack.isActive()) {
                             broadcastAttack.stop();
                             displayTextLine("Broadcast stopped");
@@ -2984,7 +2984,7 @@ void karma_setup() {
                         }
                         delay(1000);
                     }});
-                    broadcastOptions.push_back(Option{"Database Info", [=]() {
+                    broadcastOptions.push_back(Option{"Database Info", [&]() {
                         drawMainBorderWithTitle("SSID DATABASE");
                         int y = 40;
                         tft.setTextSize(1);
@@ -3011,9 +3011,9 @@ void karma_setup() {
                             delay(50);
                         }
                     }});
-                    broadcastOptions.push_back(Option{"Manage Database", [=]() {
+                    broadcastOptions.push_back(Option{"Manage Database", [&]() {
                         std::vector<Option> dbOptions = {
-                            Option{"Add Current Probes", [=]() {
+                            Option{"Add Current Probes", [&]() {
                                 std::vector<ProbeRequest> probes = getUniqueProbes();
                                 int added = 0;
                                 for (const auto& probe : probes) {
@@ -3035,7 +3035,7 @@ void karma_setup() {
                                 displayTextLine("Added " + String(added) + " SSIDs");
                                 delay(1000);
                             }},
-                            Option{"Export to File", [=]() {
+                            Option{"Export to File", [&]() {
                                 if (setupSdCard()) {
                                     String filename = "/ProbeData/ssid_database_" + String(millis()) + ".txt";
                                     File file = SD.open(filename, FILE_WRITE);
@@ -3054,12 +3054,12 @@ void karma_setup() {
                                 }
                                 delay(1000);
                             }},
-                            Option{"Clear Database", [=]() {
+                            Option{"Clear Database", [&]() {
                                 SSIDDatabase::clearCache();
                                 displayTextLine("Database cleared");
                                 delay(1000);
                             }},
-                            Option{"Reload from Disk", [=]() {
+                            Option{"Reload from Disk", [&]() {
                                 SSIDDatabase::clearCache();
                                 if (SSIDDatabase::reload()) {
                                     displayTextLine("Reloaded: " + String(SSIDDatabase::getCount()) + " SSIDs");
@@ -3068,7 +3068,7 @@ void karma_setup() {
                                 }
                                 delay(1000);
                             }},
-                            Option{"Back", [=]() {}}
+                            Option{"Back", [&]() {}}
                         };
                         bool exitDbMenu = false;
                         int dbIndex = 0;
@@ -3085,13 +3085,13 @@ void karma_setup() {
                                     tft.setTextColor(bruceConfig.priColor, bruceConfig.bgColor);
                                     tft.print("  ");
                                 }
-                                tft.print(dbOptions[i].text);
+                                tft.print(dbOptions[i].label);
                                 y += 15;
                             }
                             tft.setCursor(10, tftHeight - 20);
                             tft.print("Sel: Choose | Prev/Esc: Back");
                             if (check(SelPress)) {
-                                dbOptions[dbIndex].function();
+                                dbOptions[dbIndex].callback();
                                 exitDbMenu = true;
                             } else if (check(PrevPress) || check(EscPress)) {
                                 exitDbMenu = true;
@@ -3102,34 +3102,34 @@ void karma_setup() {
                             delay(50);
                         }
                     }});
-                    broadcastOptions.push_back(Option{"Set Speed", [=]() {
+                    broadcastOptions.push_back(Option{"Set Speed", [&]() {
                         std::vector<Option> speedOptions = {
-                            Option{"Very Fast (100ms)", [=]() { 
+                            Option{"Very Fast (100ms)", [&]() { 
                                 broadcastAttack.setBroadcastInterval(100);
                                 displayTextLine("Speed: Very Fast");
                                 delay(1000);
                             }},
-                            Option{"Fast (200ms)", [=]() { 
+                            Option{"Fast (200ms)", [&]() { 
                                 broadcastAttack.setBroadcastInterval(200);
                                 displayTextLine("Speed: Fast");
                                 delay(1000);
                             }},
-                            Option{"Normal (300ms)", [=]() { 
+                            Option{"Normal (300ms)", [&]() { 
                                 broadcastAttack.setBroadcastInterval(300);
                                 displayTextLine("Speed: Normal");
                                 delay(1000);
                             }},
-                            Option{"Slow (500ms)", [=]() { 
+                            Option{"Slow (500ms)", [&]() { 
                                 broadcastAttack.setBroadcastInterval(500);
                                 displayTextLine("Speed: Slow");
                                 delay(1000);
                             }},
-                            Option{"Very Slow (1000ms)", [=]() { 
+                            Option{"Very Slow (1000ms)", [&]() { 
                                 broadcastAttack.setBroadcastInterval(1000);
                                 displayTextLine("Speed: Very Slow");
                                 delay(1000);
                             }},
-                            Option{"Back", [=]() {}}
+                            Option{"Back", [&]() {}}
                         };
                         bool exitSpeedMenu = false;
                         int speedIndex = 0;
@@ -3146,13 +3146,13 @@ void karma_setup() {
                                     tft.setTextColor(bruceConfig.priColor, bruceConfig.bgColor);
                                     tft.print("  ");
                                 }
-                                tft.print(speedOptions[i].text);
+                                tft.print(speedOptions[i].label);
                                 y += 15;
                             }
                             tft.setCursor(10, tftHeight - 20);
                             tft.print("Sel: Choose | Prev/Esc: Back");
                             if (check(SelPress)) {
-                                speedOptions[speedIndex].function();
+                                speedOptions[speedIndex].callback();
                                 exitSpeedMenu = true;
                             } else if (check(PrevPress) || check(EscPress)) {
                                 exitSpeedMenu = true;
@@ -3163,7 +3163,7 @@ void karma_setup() {
                             delay(50);
                         }
                     }});
-                    broadcastOptions.push_back(Option{"Show Stats", [=]() {
+                    broadcastOptions.push_back(Option{"Show Stats", [&]() {
                         drawMainBorderWithTitle("BROADCAST STATS");
                         int y = 40;
                         tft.setTextSize(1);
@@ -3208,7 +3208,7 @@ void karma_setup() {
                             delay(50);
                         }
                     }});
-                    broadcastOptions.push_back(Option{"Back", [=]() {}});
+                    broadcastOptions.push_back(Option{"Back", [&]() {}});
                     bool exitBroadcastMenu = false;
                     int broadcastIndex = 0;
                     while (!exitBroadcastMenu) {
@@ -3224,13 +3224,13 @@ void karma_setup() {
                                 tft.setTextColor(bruceConfig.priColor, bruceConfig.bgColor);
                                 tft.print("  ");
                             }
-                            tft.print(broadcastOptions[i].text);
+                            tft.print(broadcastOptions[i].label);
                             y += 15;
                         }
                         tft.setCursor(10, tftHeight - 20);
                         tft.print("Sel: Choose | Prev/Esc: Back");
                         if (check(SelPress)) {
-                            broadcastOptions[broadcastIndex].function();
+                            broadcastOptions[broadcastIndex].callback();
                             exitBroadcastMenu = true;
                         } else if (check(PrevPress) || check(EscPress)) {
                             exitBroadcastMenu = true;
@@ -3241,22 +3241,22 @@ void karma_setup() {
                         delay(50);
                     }
                 }},
-                Option{"Save Probes", [=]() {
+                Option{"Save Probes", [&]() {
                      if (is_LittleFS) saveProbesToFile(LittleFS, true);
                      else saveProbesToFile(SD, true);
                      displayTextLine("Probes saved!");
                  }},
-                Option{"Clear Probes", [=]() {
+                Option{"Clear Probes", [&]() {
                      clearProbes();
                      displayTextLine("Probes cleared!");
                  }},
                 Option{karmaConfig.enableAutoKarma ? "* Auto Karma" : "- Auto Karma",
-                 [=]() {
+                 [&]() {
                      karmaConfig.enableAutoKarma = !karmaConfig.enableAutoKarma;
                      displayTextLine(karmaConfig.enableAutoKarma ? "Auto Karma: ON" : "Auto Karma: OFF");
                  }},
                 Option{karmaConfig.enableAutoPortal ? "* Auto Portal" : "- Auto Portal",
-                 [=]() {
+                 [&]() {
                      if (!templateSelected) {
                          displayTextLine("Select template first!");
                          delay(1000);
@@ -3266,29 +3266,29 @@ void karma_setup() {
                      displayTextLine(karmaConfig.enableAutoPortal ? "Auto Portal: ON" : "Auto Portal: OFF");
                  }},
                 Option{karmaConfig.enableDeauth ? "* Deauth" : "- Deauth",
-                 [=]() {
+                 [&]() {
                      karmaConfig.enableDeauth = !karmaConfig.enableDeauth;
                      displayTextLine(karmaConfig.enableDeauth ? "Deauth: ON" : "Deauth: OFF");
                  }},
                 Option{karmaConfig.enableSmartHop ? "* Smart Hop" : "- Smart Hop",
-                 [=]() {
+                 [&]() {
                      karmaConfig.enableSmartHop = !karmaConfig.enableSmartHop;
                      displayTextLine(karmaConfig.enableSmartHop ? "Smart Hop: ON" : "Smart Hop: OFF");
                  }},
                 Option{auto_hopping ? "* Auto Hop" : "- Auto Hop",
-                 [=]() {
+                 [&]() {
                      auto_hopping = !auto_hopping;
                      displayTextLine(auto_hopping ? "Auto Hop: ON" : "Auto Hop: OFF");
                  }},
                 Option{hop_interval == FAST_HOP_INTERVAL ? "* Fast Hop" : "- Fast Hop",
-                 [=]() {
+                 [&]() {
                      hop_interval =
                          (hop_interval == FAST_HOP_INTERVAL) ? DEFAULT_HOP_INTERVAL : FAST_HOP_INTERVAL;
                      displayTextLine(
                          hop_interval == FAST_HOP_INTERVAL ? "Fast Hop: ON" : "Fast Hop: OFF"
                      );
                  }},
-                Option{"Show Stats", [=]() {
+                Option{"Show Stats", [&]() {
                      drawMainBorderWithTitle("KARMA STATS");
                      int y = 40;
                      tft.setTextSize(1);
@@ -3341,7 +3341,7 @@ void karma_setup() {
                      }
                      redraw = true;
                  }},
-                Option{"Exit Karma", [=]() { returnToMenu = true; }},
+                Option{"Exit Karma", [&]() { returnToMenu = true; }},
                 };
                 bool exitOptionsMenu = false;
                 int selectedIndex = 0;
@@ -3358,14 +3358,14 @@ void karma_setup() {
                             tft.setTextColor(bruceConfig.priColor, bruceConfig.bgColor);
                             tft.print("  ");
                         }
-                        String displayText = options[i].text;
+                        String displayText = options[i].label;
                         tft.print(displayText);
                         y += 15;
                     }
                     tft.setCursor(10, tftHeight - 20);
                     tft.print("Sel: Choose | Prev/Esc: Back to Karma");
                     if (check(SelPress)) {
-                        options[selectedIndex].function();
+                        options[selectedIndex].callback();
                         selectedIndex = 0;
                     } else if (check(PrevPress) || check(EscPress)) {
                         exitOptionsMenu = true;
