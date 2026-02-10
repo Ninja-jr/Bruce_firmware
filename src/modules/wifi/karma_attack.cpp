@@ -240,6 +240,10 @@ ActiveBroadcastAttack::ActiveBroadcastAttack()
     stats.startTime = millis();
 }
 
+String ActiveBroadcastAttack::getProgressString() const {
+    return String(ssidsProcessed) + "/" + String(totalSSIDsInFile);
+}
+
 void ActiveBroadcastAttack::start() {
     size_t total = SSIDDatabase::getCount();
     if (total == 0) {
@@ -360,10 +364,6 @@ size_t ActiveBroadcastAttack::getTotalSSIDs() const {
 
 size_t ActiveBroadcastAttack::getCurrentPosition() const {
     return ssidsProcessed;
-}
-
-String ActiveBroadcastAttack::getProgressString() const {
-    return String(ssidsProcessed) + "/" + String(totalSSIDsInFile);
 }
 
 float ActiveBroadcastAttack::getProgressPercent() const {
@@ -2871,484 +2871,484 @@ void karma_setup() {
                                  }
                                  tft.print(displayText);
                                  y += 15;
-                             }
-                             tft.setCursor(10, tftHeight - 30);
-                             tft.setTextColor(bruceConfig.priColor, bruceConfig.bgColor);
-                             tft.print("Sel: Attack | Prev/Esc: Back");
-                             if (check(SelPress)) {
-                                 karmaOptions[selectedIndex].callback();
-                                 exitKarmaMenu = true;
-                             } else if (check(PrevPress) || check(EscPress)) {
-                                 exitKarmaMenu = true;
-                             } else if (check(NextPress)) {
-                                 selectedIndex = (selectedIndex + 1) % karmaOptions.size();
-                                 delay(150);
-                             }
-                             delay(50);
                          }
-                         karmaRedrawNeeded = true;
-                     }},
-                    Option{"Select Template", [=]() {
-                         selectPortalTemplate(false);
-                     }},
-                    Option{"Attack Strategy", [=]() {
-                         std::vector<Option> strategyOptions = {
-                             Option{attackConfig.defaultTier == TIER_CLONE ? "* Clone Mode" : "- Clone Mode",
-                              [=]() {
-                                  attackConfig.defaultTier = TIER_CLONE;
-                                  displayTextLine("Clone mode enabled");
-                                  delay(1000);
-                              }},
-                             Option{attackConfig.defaultTier == TIER_HIGH ? "* High Tier" : "- High Tier",
-                              [=]() {
-                                  attackConfig.defaultTier = TIER_HIGH;
-                                  displayTextLine("High tier mode");
-                                  delay(1000);
-                              }},
-                             Option{attackConfig.defaultTier == TIER_MEDIUM ? "* Medium Tier" : "- Medium Tier",
-                              [=]() {
-                                  attackConfig.defaultTier = TIER_MEDIUM;
-                                  displayTextLine("Medium tier mode");
-                                  delay(1000);
-                              }},
-                             Option{attackConfig.defaultTier == TIER_FAST ? "* Fast Tier" : "- Fast Tier",
-                              [=]() {
-                                  attackConfig.defaultTier = TIER_FAST;
-                                  displayTextLine("Fast tier mode");
-                                  delay(1000);
-                              }},
-                             Option{attackConfig.enableCloneMode ? "* Clone Detection" : "- Clone Detection",
-                              [=]() {
-                                  attackConfig.enableCloneMode = !attackConfig.enableCloneMode;
-                                  displayTextLine(attackConfig.enableCloneMode ? 
-                                                 "Clone detection ON" : "Clone detection OFF");
-                                  delay(1000);
-                              }},
-                             Option{attackConfig.enableTieredAttack ? "* Tiered Attack" : "- Tiered Attack",
-                              [=]() {
-                                  attackConfig.enableTieredAttack = !attackConfig.enableTieredAttack;
-                                  displayTextLine(attackConfig.enableTieredAttack ? 
-                                                 "Tiered attack ON" : "Tiered attack OFF");
-                                  delay(1000);
-                              }},
-                             Option{attackConfig.enableBeaconing ? "* Beaconing" : "- Beaconing",
-                              [=]() {
-                                  attackConfig.enableBeaconing = !attackConfig.enableBeaconing;
-                                  displayTextLine(attackConfig.enableBeaconing ? 
-                                                 "Beaconing ON" : "Beaconing OFF");
-                                  delay(1000);
-                              }},
-                             Option{"Back", [=]() {}}
-                         };
-                         bool exitStrategyMenu = false;
-                         int strategyIndex = 0;
-                         while (!exitStrategyMenu) {
-                             drawMainBorderWithTitle("ATTACK STRATEGY");
-                             int y = 40;
-                             tft.setTextSize(1);
-                             for (size_t i = 0; i < strategyOptions.size(); i++) {
-                                 tft.setCursor(10, y);
-                                 if (i == strategyIndex) {
-                                     tft.setTextColor(bruceConfig.bgColor, bruceConfig.priColor);
-                                     tft.print("> ");
-                                 } else {
-                                     tft.setTextColor(bruceConfig.priColor, bruceConfig.bgColor);
-                                     tft.print("  ");
-                                 }
-                                 String displayText = strategyOptions[i].name;
-                                 tft.print(displayText);
-                                 y += 15;
-                             }
-                             tft.setCursor(10, tftHeight - 20);
-                             tft.print("Sel: Choose | Prev/Esc: Back");
-                             if (check(SelPress)) {
-                                 strategyOptions[strategyIndex].callback();
-                                 exitStrategyMenu = true;
-                             } else if (check(PrevPress) || check(EscPress)) {
-                                 exitStrategyMenu = true;
-                             } else if (check(NextPress)) {
-                                 strategyIndex = (strategyIndex + 1) % strategyOptions.size();
-                                 delay(150);
-                             }
-                             delay(50);
+                         tft.setCursor(10, tftHeight - 30);
+                         tft.setTextColor(bruceConfig.priColor, bruceConfig.bgColor);
+                         tft.print("Sel: Attack | Prev/Esc: Back");
+                         if (check(SelPress)) {
+                             karmaOptions[selectedIndex].callback();
+                             exitKarmaMenu = true;
+                         } else if (check(PrevPress) || check(EscPress)) {
+                             exitKarmaMenu = true;
+                         } else if (check(NextPress)) {
+                             selectedIndex = (selectedIndex + 1) % karmaOptions.size();
+                             delay(150);
                          }
-                     }},
-                    Option{"Active Broadcast Attack", [=]() {
-                        std::vector<Option> broadcastOptions;
-                        broadcastOptions.push_back(Option{broadcastAttack.isActive() ? 
-                            "* Stop Broadcast" : "Start Broadcast", [=]() {
-                            if (broadcastAttack.isActive()) {
-                                broadcastAttack.stop();
-                                displayTextLine("Broadcast stopped");
-                            } else {
-                                broadcastAttack.start();
-                                size_t totalSSIDs = SSIDDatabase::getCount();
-                                if (broadcastAttack.isActive()) {
-                                    displayTextLine(String(totalSSIDs) + " SSIDs loaded");
-                                } else {
-                                    displayTextLine("Failed to start broadcast");
-                                }
-                            }
-                            delay(1000);
-                        }});
-                        broadcastOptions.push_back(Option{"Database Info", [=]() {
-                            drawMainBorderWithTitle("SSID DATABASE");
-                            int y = 40;
-                            tft.setTextSize(1);
-                            size_t total = SSIDDatabase::getCount();
-                            std::vector<String> popular = SSIDDatabase::getAllSSIDs();
-                            if (popular.size() > 8) popular.resize(8);
-                            tft.setCursor(10, y); y += 15;
-                            tft.print("Total SSIDs: " + String(total));
-                            tft.setCursor(10, y); y += 15;
-                            tft.print("Top SSIDs:");
-                            y += 5;
-                            for (size_t i = 0; i < popular.size(); i++) {
-                                tft.setCursor(15, y); y += 12;
-                                String line = String(i+1) + ". " + popular[i];
-                                if (line.length() > 35) line = line.substring(0, 32) + "...";
-                                tft.print(line);
-                            }
-                            tft.setCursor(10, tftHeight - 20);
-                            tft.print("Sel: Back");
-                            while (!check(SelPress) && !check(EscPress)) {
-                                if (check(PrevPress)) {
-                                    break;
-                                }
-                                delay(50);
-                            }
-                        }});
-                        broadcastOptions.push_back(Option{"Manage Database", [=]() {
-                            std::vector<Option> dbOptions = {
-                                Option{"Add Current Probes", [=]() {
-                                    std::vector<ProbeRequest> probes = getUniqueProbes();
-                                    int added = 0;
-                                    for (const auto& probe : probes) {
-                                        if (!probe.ssid.isEmpty()) {
-                                            std::vector<String> current = SSIDDatabase::getAllSSIDs();
-                                            bool exists = false;
-                                            for (const auto& existing : current) {
-                                                if (existing == probe.ssid) {
-                                                    exists = true;
-                                                    break;
-                                                }
-                                            }
-                                            if (!exists) {
-                                                SSIDDatabase::reload();
-                                                added++;
-                                            }
-                                        }
-                                    }
-                                    displayTextLine("Added " + String(added) + " SSIDs");
-                                    delay(1000);
-                                }},
-                                Option{"Export to File", [=]() {
-                                    if (setupSdCard()) {
-                                        String filename = "/ProbeData/ssid_database_" + String(millis()) + ".txt";
-                                        File file = SD.open(filename, FILE_WRITE);
-                                        if (file) {
-                                            std::vector<String> ssids = SSIDDatabase::getAllSSIDs();
-                                            for (const auto& ssid : ssids) {
-                                                file.println(ssid);
-                                            }
-                                            file.close();
-                                            displayTextLine("Exported to SD");
-                                        } else {
-                                            displayTextLine("Export failed!");
-                                        }
-                                    } else {
-                                        displayTextLine("SD not available!");
-                                    }
-                                    delay(1000);
-                                }},
-                                Option{"Clear Database", [=]() {
-                                    SSIDDatabase::clearCache();
-                                    displayTextLine("Database cleared");
-                                    delay(1000);
-                                }},
-                                Option{"Reload from Disk", [=]() {
-                                    SSIDDatabase::clearCache();
-                                    if (SSIDDatabase::reload()) {
-                                        displayTextLine("Reloaded: " + String(SSIDDatabase::getCount()) + " SSIDs");
-                                    } else {
-                                        displayTextLine("Reload failed!");
-                                    }
-                                    delay(1000);
-                                }},
-                                Option{"Back", [=]() {}}
-                            };
-                            bool exitDbMenu = false;
-                            int dbIndex = 0;
-                            while (!exitDbMenu) {
-                                drawMainBorderWithTitle("MANAGE DATABASE");
-                                int y = 40;
-                                tft.setTextSize(1);
-                                for (size_t i = 0; i < dbOptions.size(); i++) {
-                                    tft.setCursor(10, y);
-                                    if (i == dbIndex) {
-                                        tft.setTextColor(bruceConfig.bgColor, bruceConfig.priColor);
-                                        tft.print("> ");
-                                    } else {
-                                        tft.setTextColor(bruceConfig.priColor, bruceConfig.bgColor);
-                                        tft.print("  ");
-                                    }
-                                    tft.print(dbOptions[i].name);
-                                    y += 15;
-                                }
-                                tft.setCursor(10, tftHeight - 20);
-                                tft.print("Sel: Choose | Prev/Esc: Back");
-                                if (check(SelPress)) {
-                                    dbOptions[dbIndex].callback();
-                                    exitDbMenu = true;
-                                } else if (check(PrevPress) || check(EscPress)) {
-                                    exitDbMenu = true;
-                                } else if (check(NextPress)) {
-                                    dbIndex = (dbIndex + 1) % dbOptions.size();
-                                    delay(150);
-                                }
-                                delay(50);
-                            }
-                        }});
-                        broadcastOptions.push_back(Option{"Set Speed", [=]() {
-                            std::vector<Option> speedOptions = {
-                                Option{"Very Fast (100ms)", [=]() { 
-                                    broadcastAttack.setBroadcastInterval(100);
-                                    displayTextLine("Speed: Very Fast");
-                                    delay(1000);
-                                }},
-                                Option{"Fast (200ms)", [=]() { 
-                                    broadcastAttack.setBroadcastInterval(200);
-                                    displayTextLine("Speed: Fast");
-                                    delay(1000);
-                                }},
-                                Option{"Normal (300ms)", [=]() { 
-                                    broadcastAttack.setBroadcastInterval(300);
-                                    displayTextLine("Speed: Normal");
-                                    delay(1000);
-                                }},
-                                Option{"Slow (500ms)", [=]() { 
-                                    broadcastAttack.setBroadcastInterval(500);
-                                    displayTextLine("Speed: Slow");
-                                    delay(1000);
-                                }},
-                                Option{"Very Slow (1000ms)", [=]() { 
-                                    broadcastAttack.setBroadcastInterval(1000);
-                                    displayTextLine("Speed: Very Slow");
-                                    delay(1000);
-                                }},
-                                Option{"Back", [=]() {}}
-                            };
-                            bool exitSpeedMenu = false;
-                            int speedIndex = 0;
-                            while (!exitSpeedMenu) {
-                                drawMainBorderWithTitle("SET BROADCAST SPEED");
-                                int y = 40;
-                                tft.setTextSize(1);
-                                for (size_t i = 0; i < speedOptions.size(); i++) {
-                                    tft.setCursor(10, y);
-                                    if (i == speedIndex) {
-                                        tft.setTextColor(bruceConfig.bgColor, bruceConfig.priColor);
-                                        tft.print("> ");
-                                    } else {
-                                        tft.setTextColor(bruceConfig.priColor, bruceConfig.bgColor);
-                                        tft.print("  ");
-                                    }
-                                    tft.print(speedOptions[i].name);
-                                    y += 15;
-                                }
-                                tft.setCursor(10, tftHeight - 20);
-                                tft.print("Sel: Choose | Prev/Esc: Back");
-                                if (check(SelPress)) {
-                                    speedOptions[speedIndex].callback();
-                                    exitSpeedMenu = true;
-                                } else if (check(PrevPress) || check(EscPress)) {
-                                    exitSpeedMenu = true;
-                                } else if (check(NextPress)) {
-                                    speedIndex = (speedIndex + 1) % speedOptions.size();
-                                    delay(150);
-                                }
-                                delay(50);
-                            }
-                        }});
-                        broadcastOptions.push_back(Option{"Show Stats", [=]() {
-                            drawMainBorderWithTitle("BROADCAST STATS");
-                            int y = 40;
-                            tft.setTextSize(1);
+                         delay(50);
+                     }
+                     karmaRedrawNeeded = true;
+                 }},
+                Option{"Select Template", [=]() {
+                     selectPortalTemplate(false);
+                 }},
+                Option{"Attack Strategy", [=]() {
+                     std::vector<Option> strategyOptions = {
+                         Option{attackConfig.defaultTier == TIER_CLONE ? "* Clone Mode" : "- Clone Mode",
+                          [=]() {
+                              attackConfig.defaultTier = TIER_CLONE;
+                              displayTextLine("Clone mode enabled");
+                              delay(1000);
+                          }},
+                         Option{attackConfig.defaultTier == TIER_HIGH ? "* High Tier" : "- High Tier",
+                          [=]() {
+                              attackConfig.defaultTier = TIER_HIGH;
+                              displayTextLine("High tier mode");
+                              delay(1000);
+                          }},
+                         Option{attackConfig.defaultTier == TIER_MEDIUM ? "* Medium Tier" : "- Medium Tier",
+                          [=]() {
+                              attackConfig.defaultTier = TIER_MEDIUM;
+                              displayTextLine("Medium tier mode");
+                              delay(1000);
+                          }},
+                         Option{attackConfig.defaultTier == TIER_FAST ? "* Fast Tier" : "- Fast Tier",
+                          [=]() {
+                              attackConfig.defaultTier = TIER_FAST;
+                              displayTextLine("Fast tier mode");
+                              delay(1000);
+                          }},
+                         Option{attackConfig.enableCloneMode ? "* Clone Detection" : "- Clone Detection",
+                          [=]() {
+                              attackConfig.enableCloneMode = !attackConfig.enableCloneMode;
+                              displayTextLine(attackConfig.enableCloneMode ? 
+                                             "Clone detection ON" : "Clone detection OFF");
+                              delay(1000);
+                          }},
+                         Option{attackConfig.enableTieredAttack ? "* Tiered Attack" : "- Tiered Attack",
+                          [=]() {
+                              attackConfig.enableTieredAttack = !attackConfig.enableTieredAttack;
+                              displayTextLine(attackConfig.enableTieredAttack ? 
+                                             "Tiered attack ON" : "Tiered attack OFF");
+                              delay(1000);
+                          }},
+                         Option{attackConfig.enableBeaconing ? "* Beaconing" : "- Beaconing",
+                          [=]() {
+                              attackConfig.enableBeaconing = !attackConfig.enableBeaconing;
+                              displayTextLine(attackConfig.enableBeaconing ? 
+                                             "Beaconing ON" : "Beaconing OFF");
+                              delay(1000);
+                          }},
+                         Option{"Back", [=]() {}}
+                     };
+                     bool exitStrategyMenu = false;
+                     int strategyIndex = 0;
+                     while (!exitStrategyMenu) {
+                         drawMainBorderWithTitle("ATTACK STRATEGY");
+                         int y = 40;
+                         tft.setTextSize(1);
+                         for (size_t i = 0; i < strategyOptions.size(); i++) {
+                             tft.setCursor(10, y);
+                             if (i == strategyIndex) {
+                                 tft.setTextColor(bruceConfig.bgColor, bruceConfig.priColor);
+                                 tft.print("> ");
+                             } else {
+                                 tft.setTextColor(bruceConfig.priColor, bruceConfig.bgColor);
+                                 tft.print("  ");
+                             }
+                             String displayText = strategyOptions[i].name;
+                             tft.print(displayText);
+                             y += 15;
+                         }
+                         tft.setCursor(10, tftHeight - 20);
+                         tft.print("Sel: Choose | Prev/Esc: Back");
+                         if (check(SelPress)) {
+                             strategyOptions[strategyIndex].callback();
+                             exitStrategyMenu = true;
+                         } else if (check(PrevPress) || check(EscPress)) {
+                             exitStrategyMenu = true;
+                         } else if (check(NextPress)) {
+                             strategyIndex = (strategyIndex + 1) % strategyOptions.size();
+                             delay(150);
+                         }
+                         delay(50);
+                     }
+                 }},
+                Option{"Active Broadcast Attack", [=]() {
+                    std::vector<Option> broadcastOptions;
+                    broadcastOptions.push_back(Option{broadcastAttack.isActive() ? 
+                        "* Stop Broadcast" : "Start Broadcast", [=]() {
+                        if (broadcastAttack.isActive()) {
+                            broadcastAttack.stop();
+                            displayTextLine("Broadcast stopped");
+                        } else {
+                            broadcastAttack.start();
                             size_t totalSSIDs = SSIDDatabase::getCount();
-                            size_t currentPos = broadcastAttack.getCurrentPosition();
-                            float progress = broadcastAttack.getProgressPercent();
-                            BroadcastStats stats = broadcastAttack.getStats();
-                            unsigned long runtime = millis() - stats.startTime;
-                            float broadcastsPerSec = stats.totalBroadcasts > 0 ? 
-                                (stats.totalBroadcasts * 1000.0) / runtime : 0;
-                            tft.setCursor(10, y); y += 15;
-                            tft.print("Total SSIDs: " + String(totalSSIDs));
-                            tft.setCursor(10, y); y += 15;
-                            tft.print("Progress: " + String(currentPos) + "/" + String(totalSSIDs));
-                            tft.setCursor(10, y); y += 15;
-                            tft.print("Percent: " + String(progress, 1) + "%");
-                            tft.setCursor(10, y); y += 15;
-                            tft.print("Broadcasts: " + String(stats.totalBroadcasts));
-                            tft.setCursor(10, y); y += 15;
-                            tft.print("Responses: " + String(stats.totalResponses));
-                            tft.setCursor(10, y); y += 15;
-                            tft.print("Rate: " + String(broadcastsPerSec, 1) + "/s");
-                            tft.setCursor(10, y); y += 15;
-                            tft.print("Status: " + String(broadcastAttack.isActive() ? "ACTIVE" : "INACTIVE"));
-                            auto topResponses = broadcastAttack.getTopResponses(3);
-                            if (!topResponses.empty()) {
-                                y += 10;
-                                tft.setCursor(10, y); y += 15;
-                                tft.print("Top responses:");
-                                for (const auto &response : topResponses) {
-                                    tft.setCursor(20, y); y += 12;
-                                    String line = response.first.substring(0, 15) + ": " + String(response.second);
-                                    tft.print(line);
-                                }
+                            if (broadcastAttack.isActive()) {
+                                displayTextLine(String(totalSSIDs) + " SSIDs loaded");
+                            } else {
+                                displayTextLine("Failed to start broadcast");
                             }
-                            tft.setCursor(10, tftHeight - 20);
-                            tft.print("Sel: Back");
-                            while (!check(SelPress) && !check(EscPress)) {
-                                if (check(PrevPress)) {
-                                    break;
-                                }
-                                delay(50);
+                        }
+                        delay(1000);
+                    }});
+                    broadcastOptions.push_back(Option{"Database Info", [=]() {
+                        drawMainBorderWithTitle("SSID DATABASE");
+                        int y = 40;
+                        tft.setTextSize(1);
+                        size_t total = SSIDDatabase::getCount();
+                        std::vector<String> popular = SSIDDatabase::getAllSSIDs();
+                        if (popular.size() > 8) popular.resize(8);
+                        tft.setCursor(10, y); y += 15;
+                        tft.print("Total SSIDs: " + String(total));
+                        tft.setCursor(10, y); y += 15;
+                        tft.print("Top SSIDs:");
+                        y += 5;
+                        for (size_t i = 0; i < popular.size(); i++) {
+                            tft.setCursor(15, y); y += 12;
+                            String line = String(i+1) + ". " + popular[i];
+                            if (line.length() > 35) line = line.substring(0, 32) + "...";
+                            tft.print(line);
+                        }
+                        tft.setCursor(10, tftHeight - 20);
+                        tft.print("Sel: Back");
+                        while (!check(SelPress) && !check(EscPress)) {
+                            if (check(PrevPress)) {
+                                break;
                             }
-                        }});
-                        broadcastOptions.push_back(Option{"Back", [=]() {}});
-                        bool exitBroadcastMenu = false;
-                        int broadcastIndex = 0;
-                        while (!exitBroadcastMenu) {
-                            drawMainBorderWithTitle("ACTIVE BROADCAST");
+                            delay(50);
+                        }
+                    }});
+                    broadcastOptions.push_back(Option{"Manage Database", [=]() {
+                        std::vector<Option> dbOptions = {
+                            Option{"Add Current Probes", [=]() {
+                                std::vector<ProbeRequest> probes = getUniqueProbes();
+                                int added = 0;
+                                for (const auto& probe : probes) {
+                                    if (!probe.ssid.isEmpty()) {
+                                        std::vector<String> current = SSIDDatabase::getAllSSIDs();
+                                        bool exists = false;
+                                        for (const auto& existing : current) {
+                                            if (existing == probe.ssid) {
+                                                exists = true;
+                                                break;
+                                            }
+                                        }
+                                        if (!exists) {
+                                            SSIDDatabase::reload();
+                                            added++;
+                                        }
+                                    }
+                                }
+                                displayTextLine("Added " + String(added) + " SSIDs");
+                                delay(1000);
+                            }},
+                            Option{"Export to File", [=]() {
+                                if (setupSdCard()) {
+                                    String filename = "/ProbeData/ssid_database_" + String(millis()) + ".txt";
+                                    File file = SD.open(filename, FILE_WRITE);
+                                    if (file) {
+                                        std::vector<String> ssids = SSIDDatabase::getAllSSIDs();
+                                        for (const auto& ssid : ssids) {
+                                            file.println(ssid);
+                                        }
+                                        file.close();
+                                        displayTextLine("Exported to SD");
+                                    } else {
+                                        displayTextLine("Export failed!");
+                                    }
+                                } else {
+                                    displayTextLine("SD not available!");
+                                }
+                                delay(1000);
+                            }},
+                            Option{"Clear Database", [=]() {
+                                SSIDDatabase::clearCache();
+                                displayTextLine("Database cleared");
+                                delay(1000);
+                            }},
+                            Option{"Reload from Disk", [=]() {
+                                SSIDDatabase::clearCache();
+                                if (SSIDDatabase::reload()) {
+                                    displayTextLine("Reloaded: " + String(SSIDDatabase::getCount()) + " SSIDs");
+                                } else {
+                                    displayTextLine("Reload failed!");
+                                }
+                                delay(1000);
+                            }},
+                            Option{"Back", [=]() {}}
+                        };
+                        bool exitDbMenu = false;
+                        int dbIndex = 0;
+                        while (!exitDbMenu) {
+                            drawMainBorderWithTitle("MANAGE DATABASE");
                             int y = 40;
                             tft.setTextSize(1);
-                            for (size_t i = 0; i < broadcastOptions.size(); i++) {
+                            for (size_t i = 0; i < dbOptions.size(); i++) {
                                 tft.setCursor(10, y);
-                                if (i == broadcastIndex) {
+                                if (i == dbIndex) {
                                     tft.setTextColor(bruceConfig.bgColor, bruceConfig.priColor);
                                     tft.print("> ");
                                 } else {
                                     tft.setTextColor(bruceConfig.priColor, bruceConfig.bgColor);
                                     tft.print("  ");
                                 }
-                                tft.print(broadcastOptions[i].name);
+                                tft.print(dbOptions[i].name);
                                 y += 15;
                             }
                             tft.setCursor(10, tftHeight - 20);
                             tft.print("Sel: Choose | Prev/Esc: Back");
                             if (check(SelPress)) {
-                                broadcastOptions[broadcastIndex].callback();
-                                exitBroadcastMenu = true;
+                                dbOptions[dbIndex].callback();
+                                exitDbMenu = true;
                             } else if (check(PrevPress) || check(EscPress)) {
-                                exitBroadcastMenu = true;
+                                exitDbMenu = true;
                             } else if (check(NextPress)) {
-                                broadcastIndex = (broadcastIndex + 1) % broadcastOptions.size();
+                                dbIndex = (dbIndex + 1) % dbOptions.size();
                                 delay(150);
                             }
                             delay(50);
                         }
-                    }},
-                    Option{"Save Probes", [=]() {
-                         if (is_LittleFS) saveProbesToFile(LittleFS, true);
-                         else saveProbesToFile(SD, true);
-                         displayTextLine("Probes saved!");
-                     }},
-                    Option{"Clear Probes", [=]() {
-                         clearProbes();
-                         displayTextLine("Probes cleared!");
-                     }},
-                    Option{karmaConfig.enableAutoKarma ? "* Auto Karma" : "- Auto Karma",
-                     [=]() {
-                         karmaConfig.enableAutoKarma = !karmaConfig.enableAutoKarma;
-                         displayTextLine(karmaConfig.enableAutoKarma ? "Auto Karma: ON" : "Auto Karma: OFF");
-                     }},
-                    Option{karmaConfig.enableAutoPortal ? "* Auto Portal" : "- Auto Portal",
-                     [=]() {
-                         if (!templateSelected) {
-                             displayTextLine("Select template first!");
-                             delay(1000);
-                             return;
+                    }});
+                    broadcastOptions.push_back(Option{"Set Speed", [=]() {
+                        std::vector<Option> speedOptions = {
+                            Option{"Very Fast (100ms)", [=]() { 
+                                broadcastAttack.setBroadcastInterval(100);
+                                displayTextLine("Speed: Very Fast");
+                                delay(1000);
+                            }},
+                            Option{"Fast (200ms)", [=]() { 
+                                broadcastAttack.setBroadcastInterval(200);
+                                displayTextLine("Speed: Fast");
+                                delay(1000);
+                            }},
+                            Option{"Normal (300ms)", [=]() { 
+                                broadcastAttack.setBroadcastInterval(300);
+                                displayTextLine("Speed: Normal");
+                                delay(1000);
+                            }},
+                            Option{"Slow (500ms)", [=]() { 
+                                broadcastAttack.setBroadcastInterval(500);
+                                displayTextLine("Speed: Slow");
+                                delay(1000);
+                            }},
+                            Option{"Very Slow (1000ms)", [=]() { 
+                                broadcastAttack.setBroadcastInterval(1000);
+                                displayTextLine("Speed: Very Slow");
+                                delay(1000);
+                            }},
+                            Option{"Back", [=]() {}}
+                        };
+                        bool exitSpeedMenu = false;
+                        int speedIndex = 0;
+                        while (!exitSpeedMenu) {
+                            drawMainBorderWithTitle("SET BROADCAST SPEED");
+                            int y = 40;
+                            tft.setTextSize(1);
+                            for (size_t i = 0; i < speedOptions.size(); i++) {
+                                tft.setCursor(10, y);
+                                if (i == speedIndex) {
+                                    tft.setTextColor(bruceConfig.bgColor, bruceConfig.priColor);
+                                    tft.print("> ");
+                                } else {
+                                    tft.setTextColor(bruceConfig.priColor, bruceConfig.bgColor);
+                                    tft.print("  ");
+                                }
+                                tft.print(speedOptions[i].name);
+                                y += 15;
+                            }
+                            tft.setCursor(10, tftHeight - 20);
+                            tft.print("Sel: Choose | Prev/Esc: Back");
+                            if (check(SelPress)) {
+                                speedOptions[speedIndex].callback();
+                                exitSpeedMenu = true;
+                            } else if (check(PrevPress) || check(EscPress)) {
+                                exitSpeedMenu = true;
+                            } else if (check(NextPress)) {
+                                speedIndex = (speedIndex + 1) % speedOptions.size();
+                                delay(150);
+                            }
+                            delay(50);
+                        }
+                    }});
+                    broadcastOptions.push_back(Option{"Show Stats", [=]() {
+                        drawMainBorderWithTitle("BROADCAST STATS");
+                        int y = 40;
+                        tft.setTextSize(1);
+                        size_t totalSSIDs = SSIDDatabase::getCount();
+                        size_t currentPos = broadcastAttack.getCurrentPosition();
+                        float progress = broadcastAttack.getProgressPercent();
+                        BroadcastStats stats = broadcastAttack.getStats();
+                        unsigned long runtime = millis() - stats.startTime;
+                        float broadcastsPerSec = stats.totalBroadcasts > 0 ? 
+                            (stats.totalBroadcasts * 1000.0) / runtime : 0;
+                        tft.setCursor(10, y); y += 15;
+                        tft.print("Total SSIDs: " + String(totalSSIDs));
+                        tft.setCursor(10, y); y += 15;
+                        tft.print("Progress: " + String(currentPos) + "/" + String(totalSSIDs));
+                        tft.setCursor(10, y); y += 15;
+                        tft.print("Percent: " + String(progress, 1) + "%");
+                        tft.setCursor(10, y); y += 15;
+                        tft.print("Broadcasts: " + String(stats.totalBroadcasts));
+                        tft.setCursor(10, y); y += 15;
+                        tft.print("Responses: " + String(stats.totalResponses));
+                        tft.setCursor(10, y); y += 15;
+                        tft.print("Rate: " + String(broadcastsPerSec, 1) + "/s");
+                        tft.setCursor(10, y); y += 15;
+                        tft.print("Status: " + String(broadcastAttack.isActive() ? "ACTIVE" : "INACTIVE"));
+                        auto topResponses = broadcastAttack.getTopResponses(3);
+                        if (!topResponses.empty()) {
+                            y += 10;
+                            tft.setCursor(10, y); y += 15;
+                            tft.print("Top responses:");
+                            for (const auto &response : topResponses) {
+                                tft.setCursor(20, y); y += 12;
+                                String line = response.first.substring(0, 15) + ": " + String(response.second);
+                                tft.print(line);
+                            }
+                        }
+                        tft.setCursor(10, tftHeight - 20);
+                        tft.print("Sel: Back");
+                        while (!check(SelPress) && !check(EscPress)) {
+                            if (check(PrevPress)) {
+                                break;
+                            }
+                            delay(50);
+                        }
+                    }});
+                    broadcastOptions.push_back(Option{"Back", [=]() {}});
+                    bool exitBroadcastMenu = false;
+                    int broadcastIndex = 0;
+                    while (!exitBroadcastMenu) {
+                        drawMainBorderWithTitle("ACTIVE BROADCAST");
+                        int y = 40;
+                        tft.setTextSize(1);
+                        for (size_t i = 0; i < broadcastOptions.size(); i++) {
+                            tft.setCursor(10, y);
+                            if (i == broadcastIndex) {
+                                tft.setTextColor(bruceConfig.bgColor, bruceConfig.priColor);
+                                tft.print("> ");
+                            } else {
+                                tft.setTextColor(bruceConfig.priColor, bruceConfig.bgColor);
+                                tft.print("  ");
+                            }
+                            tft.print(broadcastOptions[i].name);
+                            y += 15;
+                        }
+                        tft.setCursor(10, tftHeight - 20);
+                        tft.print("Sel: Choose | Prev/Esc: Back");
+                        if (check(SelPress)) {
+                            broadcastOptions[broadcastIndex].callback();
+                            exitBroadcastMenu = true;
+                        } else if (check(PrevPress) || check(EscPress)) {
+                            exitBroadcastMenu = true;
+                        } else if (check(NextPress)) {
+                            broadcastIndex = (broadcastIndex + 1) % broadcastOptions.size();
+                            delay(150);
+                        }
+                        delay(50);
+                    }
+                }},
+                Option{"Save Probes", [=]() {
+                     if (is_LittleFS) saveProbesToFile(LittleFS, true);
+                     else saveProbesToFile(SD, true);
+                     displayTextLine("Probes saved!");
+                 }},
+                Option{"Clear Probes", [=]() {
+                     clearProbes();
+                     displayTextLine("Probes cleared!");
+                 }},
+                Option{karmaConfig.enableAutoKarma ? "* Auto Karma" : "- Auto Karma",
+                 [=]() {
+                     karmaConfig.enableAutoKarma = !karmaConfig.enableAutoKarma;
+                     displayTextLine(karmaConfig.enableAutoKarma ? "Auto Karma: ON" : "Auto Karma: OFF");
+                 }},
+                Option{karmaConfig.enableAutoPortal ? "* Auto Portal" : "- Auto Portal",
+                 [=]() {
+                     if (!templateSelected) {
+                         displayTextLine("Select template first!");
+                         delay(1000);
+                         return;
+                     }
+                     karmaConfig.enableAutoPortal = !karmaConfig.enableAutoPortal;
+                     displayTextLine(karmaConfig.enableAutoPortal ? "Auto Portal: ON" : "Auto Portal: OFF");
+                 }},
+                Option{karmaConfig.enableDeauth ? "* Deauth" : "- Deauth",
+                 [=]() {
+                     karmaConfig.enableDeauth = !karmaConfig.enableDeauth;
+                     displayTextLine(karmaConfig.enableDeauth ? "Deauth: ON" : "Deauth: OFF");
+                 }},
+                Option{karmaConfig.enableSmartHop ? "* Smart Hop" : "- Smart Hop",
+                 [=]() {
+                     karmaConfig.enableSmartHop = !karmaConfig.enableSmartHop;
+                     displayTextLine(karmaConfig.enableSmartHop ? "Smart Hop: ON" : "Smart Hop: OFF");
+                 }},
+                Option{auto_hopping ? "* Auto Hop" : "- Auto Hop",
+                 [=]() {
+                     auto_hopping = !auto_hopping;
+                     displayTextLine(auto_hopping ? "Auto Hop: ON" : "Auto Hop: OFF");
+                 }},
+                Option{hop_interval == FAST_HOP_INTERVAL ? "* Fast Hop" : "- Fast Hop",
+                 [=]() {
+                     hop_interval =
+                         (hop_interval == FAST_HOP_INTERVAL) ? DEFAULT_HOP_INTERVAL : FAST_HOP_INTERVAL;
+                     displayTextLine(
+                         hop_interval == FAST_HOP_INTERVAL ? "Fast Hop: ON" : "Fast Hop: OFF"
+                     );
+                 }},
+                Option{"Show Stats", [=]() {
+                     drawMainBorderWithTitle("KARMA STATS");
+                     int y = 40;
+                     tft.setTextSize(1);
+                     tft.setCursor(10, y); y += 15;
+                     tft.print("Total Probes: " + String(totalProbes));
+                     tft.setCursor(10, y); y += 15;
+                     tft.print("Unique Clients: " + String(uniqueClients));
+                     tft.setCursor(10, y); y += 15;
+                     tft.print("Karma Responses: " + String(karmaResponsesSent));
+                     tft.setCursor(10, y); y += 15;
+                     tft.print("Auto Portals: " + String(autoPortalsLaunched));
+                     tft.setCursor(10, y); y += 15;
+                     tft.print("Clone Attacks: " + String(cloneAttacksLaunched));
+                     tft.setCursor(10, y); y += 15;
+                     tft.print("Deauth Packets: " + String(deauthPacketsSent));
+                     tft.setCursor(10, y); y += 15;
+                     int vulnCount = 0;
+                     for (const auto &clientPair : clientBehaviors) {
+                         if (clientPair.second.isVulnerable) vulnCount++;
+                     }
+                     tft.print("Vulnerable: " + String(vulnCount));
+                     tft.setCursor(10, y); y += 15;
+                     tft.print("Pending Attacks: " + String(pendingPortals.size()));
+                     tft.setCursor(10, y); y += 15;
+                     tft.print("Best Channel: " + String(getBestChannel()));
+                     tft.setCursor(10, y); y += 15;
+                     if (templateSelected) {
+                         tft.print("Template: " + selectedTemplate.name);
+                     } else {
+                         tft.print("Template: None");
+                     }
+                     tft.setCursor(10, y); y += 15;
+                     String tierName = "";
+                     switch(attackConfig.defaultTier) {
+                         case TIER_CLONE: tierName = "Clone"; break;
+                         case TIER_HIGH: tierName = "High"; break;
+                         case TIER_MEDIUM: tierName = "Medium"; break;
+                         case TIER_FAST: tierName = "Fast"; break;
+                         case TIER_NONE: tierName = "None"; break;
+                         default: tierName = "Unknown"; break;
+                     }
+                     tft.print("Attack Tier: " + tierName);
+                     tft.setCursor(10, tftHeight - 20);
+                     tft.print("Sel: Back");
+                     while (!check(SelPress) && !check(EscPress)) {
+                         if (check(PrevPress)) {
+                             break;
                          }
-                         karmaConfig.enableAutoPortal = !karmaConfig.enableAutoPortal;
-                         displayTextLine(karmaConfig.enableAutoPortal ? "Auto Portal: ON" : "Auto Portal: OFF");
-                     }},
-                    Option{karmaConfig.enableDeauth ? "* Deauth" : "- Deauth",
-                     [=]() {
-                         karmaConfig.enableDeauth = !karmaConfig.enableDeauth;
-                         displayTextLine(karmaConfig.enableDeauth ? "Deauth: ON" : "Deauth: OFF");
-                     }},
-                    Option{karmaConfig.enableSmartHop ? "* Smart Hop" : "- Smart Hop",
-                     [=]() {
-                         karmaConfig.enableSmartHop = !karmaConfig.enableSmartHop;
-                         displayTextLine(karmaConfig.enableSmartHop ? "Smart Hop: ON" : "Smart Hop: OFF");
-                     }},
-                    Option{auto_hopping ? "* Auto Hop" : "- Auto Hop",
-                     [=]() {
-                         auto_hopping = !auto_hopping;
-                         displayTextLine(auto_hopping ? "Auto Hop: ON" : "Auto Hop: OFF");
-                     }},
-                    Option{hop_interval == FAST_HOP_INTERVAL ? "* Fast Hop" : "- Fast Hop",
-                     [=]() {
-                         hop_interval =
-                             (hop_interval == FAST_HOP_INTERVAL) ? DEFAULT_HOP_INTERVAL : FAST_HOP_INTERVAL;
-                         displayTextLine(
-                             hop_interval == FAST_HOP_INTERVAL ? "Fast Hop: ON" : "Fast Hop: OFF"
-                         );
-                     }},
-                    Option{"Show Stats", [=]() {
-                         drawMainBorderWithTitle("KARMA STATS");
-                         int y = 40;
-                         tft.setTextSize(1);
-                         tft.setCursor(10, y); y += 15;
-                         tft.print("Total Probes: " + String(totalProbes));
-                         tft.setCursor(10, y); y += 15;
-                         tft.print("Unique Clients: " + String(uniqueClients));
-                         tft.setCursor(10, y); y += 15;
-                         tft.print("Karma Responses: " + String(karmaResponsesSent));
-                         tft.setCursor(10, y); y += 15;
-                         tft.print("Auto Portals: " + String(autoPortalsLaunched));
-                         tft.setCursor(10, y); y += 15;
-                         tft.print("Clone Attacks: " + String(cloneAttacksLaunched));
-                         tft.setCursor(10, y); y += 15;
-                         tft.print("Deauth Packets: " + String(deauthPacketsSent));
-                         tft.setCursor(10, y); y += 15;
-                         int vulnCount = 0;
-                         for (const auto &clientPair : clientBehaviors) {
-                             if (clientPair.second.isVulnerable) vulnCount++;
-                         }
-                         tft.print("Vulnerable: " + String(vulnCount));
-                         tft.setCursor(10, y); y += 15;
-                         tft.print("Pending Attacks: " + String(pendingPortals.size()));
-                         tft.setCursor(10, y); y += 15;
-                         tft.print("Best Channel: " + String(getBestChannel()));
-                         tft.setCursor(10, y); y += 15;
-                         if (templateSelected) {
-                             tft.print("Template: " + selectedTemplate.name);
-                         } else {
-                             tft.print("Template: None");
-                         }
-                         tft.setCursor(10, y); y += 15;
-                         String tierName = "";
-                         switch(attackConfig.defaultTier) {
-                             case TIER_CLONE: tierName = "Clone"; break;
-                             case TIER_HIGH: tierName = "High"; break;
-                             case TIER_MEDIUM: tierName = "Medium"; break;
-                             case TIER_FAST: tierName = "Fast"; break;
-                             case TIER_NONE: tierName = "None"; break;
-                             default: tierName = "Unknown"; break;
-                         }
-                         tft.print("Attack Tier: " + tierName);
-                         tft.setCursor(10, tftHeight - 20);
-                         tft.print("Sel: Back");
-                         while (!check(SelPress) && !check(EscPress)) {
-                             if (check(PrevPress)) {
-                                 break;
-                             }
-                             delay(50);
-                         }
-                         karmaRedrawNeeded = true;
-                     }},
-                    Option{"Exit Karma", [=]() { returnToMenu = true; }},
+                         delay(50);
+                     }
+                     karmaRedrawNeeded = true;
+                 }},
+                Option{"Exit Karma", [=]() { returnToMenu = true; }},
                 };
                 bool exitOptionsMenu = false;
                 int selectedIndex = 0;
