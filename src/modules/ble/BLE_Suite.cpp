@@ -5263,10 +5263,6 @@ String selectTargetFromScan(const char* title) {
     tft.setCursor(20, 120);
     tft.print("Active scan (15s)...");
 
-#if __has_include(<NimBLEExtAdvertising.h>)
-    #define NIMBLE_V2_PLUS 1
-#endif
-
 #ifdef NIMBLE_V2_PLUS
     pBLEScan->start(ACTIVE_SCAN_TIME, false);
     NimBLEScanResults results = pBLEScan->getResults();
