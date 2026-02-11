@@ -2565,10 +2565,12 @@ void karma_setup() {
                      if (is_LittleFS) saveProbesToFile(LittleFS, true);
                      else saveProbesToFile(SD, true);
                      displayTextLine("Probes saved!");
+                     delay(1000);
                  }},
                 Option{"Clear Probes", [&]() {
                      clearProbes();
                      displayTextLine("Probes cleared!");
+                     delay(1000);
                  }},
                 Option{karmaConfig.enableAutoKarma ? "* Auto Karma" : "- Auto Karma",
                  [&]() {
@@ -3243,10 +3245,12 @@ void karma_setup() {
                          if (is_LittleFS) saveProbesToFile(LittleFS, true);
                          else saveProbesToFile(SD, true);
                          displayTextLine("Probes saved!");
+                         delay(1000);
                      }},
                     Option{"Clear Probes", [&]() {
                          clearProbes();
                          displayTextLine("Probes cleared!");
+                         delay(1000);
                      }},
                     Option{karmaConfig.enableAutoKarma ? "* Auto Karma" : "- Auto Karma",
                      [&]() {
