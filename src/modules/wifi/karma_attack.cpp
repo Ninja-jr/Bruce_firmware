@@ -2151,7 +2151,7 @@ void karma_setup() {
                      for (const auto &client : vulnerable) {
                          if (!client.probedSSIDs.empty()) {
                              String itemText = client.mac.substring(9) + " (VULN)";
-                             karmaOptions.push_back(Option{itemText, [&, &client]() {
+                             karmaOptions.push_back(Option{itemText, [&]() {
                                  launchManualEvilPortal(client.probedSSIDs[0], 
                                                        client.favoriteChannel, 
                                                        selectedTemplate.verifyPassword);
@@ -2164,7 +2164,7 @@ void karma_setup() {
                          if (itemText.length() > 40) {
                              itemText = itemText.substring(0, 37) + "...";
                          }
-                         karmaOptions.push_back(Option{itemText, [&, &probe]() {
+                         karmaOptions.push_back(Option{itemText, [&]() {
                              launchManualEvilPortal(probe.ssid, probe.channel, 
                                                    selectedTemplate.verifyPassword);
                              redraw = true;
@@ -2823,7 +2823,7 @@ void karma_setup() {
                          for (const auto &client : vulnerable) {
                              if (!client.probedSSIDs.empty()) {
                                  String itemText = client.mac.substring(9) + " (VULN)";
-                                 karmaOptions.push_back(Option{itemText, [&, &client]() {
+                                 karmaOptions.push_back(Option{itemText, [&]() {
                                      launchManualEvilPortal(client.probedSSIDs[0], 
                                                            client.favoriteChannel, 
                                                            selectedTemplate.verifyPassword);
@@ -2836,7 +2836,7 @@ void karma_setup() {
                              if (itemText.length() > 40) {
                                  itemText = itemText.substring(0, 37) + "...";
                              }
-                             karmaOptions.push_back(Option{itemText, [&, &probe]() {
+                             karmaOptions.push_back(Option{itemText, [&]() {
                                  launchManualEvilPortal(probe.ssid, probe.channel, 
                                                        selectedTemplate.verifyPassword);
                                  redraw = true;
