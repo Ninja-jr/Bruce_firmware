@@ -2196,7 +2196,7 @@ void karma_setup() {
                          tft.setTextColor(bruceConfig.priColor, bruceConfig.bgColor);
                          tft.print("Sel: Attack | Prev/Esc: Back");
                          if (check(SelPress)) {
-                             karmaOptions[selectedIndex]();
+                             karmaOptions[selectedIndex].action();
                              exitKarmaMenu = true;
                          } else if (check(PrevPress) || check(EscPress)) {
                              exitKarmaMenu = true;
@@ -2282,7 +2282,7 @@ void karma_setup() {
                          tft.setCursor(10, tftHeight - 20);
                          tft.print("Sel: Choose | Prev/Esc: Back");
                          if (check(SelPress)) {
-                             strategyOptions[strategyIndex]();
+                             strategyOptions[strategyIndex].action();
                              exitStrategyMenu = true;
                          } else if (check(PrevPress) || check(EscPress)) {
                              exitStrategyMenu = true;
@@ -2418,7 +2418,7 @@ void karma_setup() {
                             tft.setCursor(10, tftHeight - 20);
                             tft.print("Sel: Choose | Prev/Esc: Back");
                             if (check(SelPress)) {
-                                dbOptions[dbIndex]();
+                                dbOptions[dbIndex].action();
                                 exitDbMenu = true;
                             } else if (check(PrevPress) || check(EscPress)) {
                                 exitDbMenu = true;
@@ -2479,7 +2479,7 @@ void karma_setup() {
                             tft.setCursor(10, tftHeight - 20);
                             tft.print("Sel: Choose | Prev/Esc: Back");
                             if (check(SelPress)) {
-                                speedOptions[speedIndex]();
+                                speedOptions[speedIndex].action();
                                 exitSpeedMenu = true;
                             } else if (check(PrevPress) || check(EscPress)) {
                                 exitSpeedMenu = true;
@@ -2557,7 +2557,7 @@ void karma_setup() {
                         tft.setCursor(10, tftHeight - 20);
                         tft.print("Sel: Choose | Prev/Esc: Back");
                         if (check(SelPress)) {
-                            broadcastOptions[broadcastIndex]();
+                            broadcastOptions[broadcastIndex].action();
                             exitBroadcastMenu = true;
                         } else if (check(PrevPress) || check(EscPress)) {
                             exitBroadcastMenu = true;
@@ -2694,7 +2694,7 @@ void karma_setup() {
                 tft.setCursor(10, tftHeight - 20);
                 tft.print("Sel: Choose | Prev/Esc: Back to Karma");
                 if (check(SelPress)) {
-                    options[selectedIndex]();
+                    options[selectedIndex].action();
                     selectedIndex = 0;
                 } else if (check(PrevPress) || check(EscPress)) {
                     exitOptionsMenu = true;
@@ -2868,7 +2868,7 @@ void karma_setup() {
                          tft.setTextColor(bruceConfig.priColor, bruceConfig.bgColor);
                          tft.print("Sel: Attack | Prev/Esc: Back");
                          if (check(SelPress)) {
-                             karmaOptions[selectedIndex]();
+                             karmaOptions[selectedIndex].action();
                              exitKarmaMenu = true;
                          } else if (check(PrevPress) || check(EscPress)) {
                              exitKarmaMenu = true;
@@ -2954,7 +2954,7 @@ void karma_setup() {
                          tft.setCursor(10, tftHeight - 20);
                          tft.print("Sel: Choose | Prev/Esc: Back");
                          if (check(SelPress)) {
-                             strategyOptions[strategyIndex]();
+                             strategyOptions[strategyIndex].action();
                              exitStrategyMenu = true;
                          } else if (check(PrevPress) || check(EscPress)) {
                              exitStrategyMenu = true;
@@ -3090,7 +3090,7 @@ void karma_setup() {
                             tft.setCursor(10, tftHeight - 20);
                             tft.print("Sel: Choose | Prev/Esc: Back");
                             if (check(SelPress)) {
-                                dbOptions[dbIndex]();
+                                dbOptions[dbIndex].action();
                                 exitDbMenu = true;
                             } else if (check(PrevPress) || check(EscPress)) {
                                 exitDbMenu = true;
@@ -3151,7 +3151,7 @@ void karma_setup() {
                             tft.setCursor(10, tftHeight - 20);
                             tft.print("Sel: Choose | Prev/Esc: Back");
                             if (check(SelPress)) {
-                                speedOptions[speedIndex]();
+                                speedOptions[speedIndex].action();
                                 exitSpeedMenu = true;
                             } else if (check(PrevPress) || check(EscPress)) {
                                 exitSpeedMenu = true;
@@ -3229,7 +3229,7 @@ void karma_setup() {
                         tft.setCursor(10, tftHeight - 20);
                         tft.print("Sel: Choose | Prev/Esc: Back");
                         if (check(SelPress)) {
-                            broadcastOptions[broadcastIndex]();
+                            broadcastOptions[broadcastIndex].action();
                             exitBroadcastMenu = true;
                         } else if (check(PrevPress) || check(EscPress)) {
                             exitBroadcastMenu = true;
@@ -3364,7 +3364,7 @@ void karma_setup() {
                     tft.setCursor(10, tftHeight - 20);
                     tft.print("Sel: Choose | Prev/Esc: Back to Karma");
                     if (check(SelPress)) {
-                        options[selectedIndex]();
+                        options[selectedIndex].action();
                         selectedIndex = 0;
                     } else if (check(PrevPress) || check(EscPress)) {
                         exitOptionsMenu = true;
