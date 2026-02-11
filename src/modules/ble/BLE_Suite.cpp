@@ -296,12 +296,8 @@ public:
         pScan->setInterval(97);
         pScan->setWindow(67);
         
-#ifdef NIMBLE_V2_PLUS
         pScan->start(duration, false);
         NimBLEScanResults results = pScan->getResults();
-#else
-        NimBLEScanResults results = pScan->start(duration, false);
-#endif
         
         for(int i = 0; i < results.getCount(); i++) {
             const NimBLEAdvertisedDevice* device = results.getDevice(i);
@@ -5263,23 +5259,15 @@ String selectTargetFromScan(const char* title) {
     tft.setCursor(20, 120);
     tft.print("Active scan (15s)...");
 
-#ifdef NIMBLE_V2_PLUS
     pBLEScan->start(ACTIVE_SCAN_TIME, false);
     NimBLEScanResults results = pBLEScan->getResults();
-#else
-    NimBLEScanResults results = pBLEScan->start(ACTIVE_SCAN_TIME, false);
-#endif
 
     tft.setCursor(20, 140);
     tft.print("Passive scan (15s)...");
     pBLEScan->setActiveScan(false);
 
-#ifdef NIMBLE_V2_PLUS
     pBLEScan->start(PASSIVE_SCAN_TIME, false);
     results = pBLEScan->getResults();
-#else
-    results = pBLEScan->start(PASSIVE_SCAN_TIME, false);
-#endif
 
     if(results.getCount() == 0) {
         pBLEScan->stop();
