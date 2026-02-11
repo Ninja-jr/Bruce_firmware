@@ -947,7 +947,7 @@ size_t buildBeaconFrame(uint8_t *buffer, const String &ssid,
                 0x01, 0x00,
                 0x00, 0x0F, 0xAC, 0x04,
                 0x01, 0x00,
-                0x00, 0x0F, 0AC, 0x04,
+                0x00, 0x0F, 0xAC, 0x04,
                 0x01, 0x00,
                 0x00, 0x0F, 0xAC, 0x02,
                 0x00, 0x00,
@@ -1375,11 +1375,11 @@ bool selectPortalTemplate(bool isInitialSetup) {
         );
     }
     templateOptions.push_back(Option{"Load Custom File", [=]() {
-        display_clear();
+        tft.fillScreen(bruceConfig.bgColor);
         drawMainBorderWithTitle("LOAD FROM");
         std::vector<Option> directOptions = {
             Option{"SD Card", [=]() {
-                display_clear();
+                tft.fillScreen(bruceConfig.bgColor);
                 drawMainBorderWithTitle("BROWSE SD");
                 if (setupSdCard()) {
                     SD.begin();
@@ -1403,12 +1403,12 @@ bool selectPortalTemplate(bool isInitialSetup) {
                         templateSelected = true;
                         portalTemplates.push_back(customTmpl);
                         SD.end();
-                        display_clear();
+                        tft.fillScreen(bruceConfig.bgColor);
                         drawMainBorderWithTitle("SELECTED");
                         displayTextLine(customTmpl.name);
                         delay(1500);
                         if (isInitialSetup) {
-                            display_clear();
+                            tft.fillScreen(bruceConfig.bgColor);
                             drawMainBorderWithTitle("KARMA SETUP");
                             displayTextLine("Selected: " + customTmpl.name);
                             delay(1000);
@@ -1424,7 +1424,7 @@ bool selectPortalTemplate(bool isInitialSetup) {
                 }
             }},
             Option{"LittleFS", [=]() {
-                display_clear();
+                tft.fillScreen(bruceConfig.bgColor);
                 drawMainBorderWithTitle("BROWSE LITTLEFS");
                 if (LittleFS.begin()) {
                     String templateFile = loopSD(LittleFS, true, "HTML");
@@ -1447,12 +1447,12 @@ bool selectPortalTemplate(bool isInitialSetup) {
                         templateSelected = true;
                         portalTemplates.push_back(customTmpl);
                         LittleFS.end();
-                        display_clear();
+                        tft.fillScreen(bruceConfig.bgColor);
                         drawMainBorderWithTitle("SELECTED");
                         displayTextLine(customTmpl.name);
                         delay(1500);
                         if (isInitialSetup) {
-                            display_clear();
+                            tft.fillScreen(bruceConfig.bgColor);
                             drawMainBorderWithTitle("KARMA SETUP");
                             displayTextLine("Selected: " + customTmpl.name);
                             delay(1000);
@@ -1494,7 +1494,6 @@ void launchTieredEvilPortal(PendingPortal &portal) {
     EvilPortal portalInstance(portal.ssid, portal.channel, 
                             karmaConfig.enableDeauth, portal.verifyPassword, true);
     unsigned long portalStart = millis();
-    bool portalExited = false;
     while (millis() - portalStart < portal.duration) {
         if (check(EscPress)) {
             Serial.println("[PORTAL] Early exit requested");
@@ -1929,7 +1928,7 @@ void karma_setup() {
     }
     generateRandomBSSID(currentBSSID);
     lastMACRotation = millis();
-    display_clear();
+    tft.fillScreen(bruceConfig.bgColor);
     drawMainBorderWithTitle("MODERN KARMA ATTACK");
     displayTextLine("Enhanced Karma v2.0");
     delay(500);
@@ -2002,7 +2001,7 @@ void karma_setup() {
             while (!responseQueue.empty()) {
                 responseQueue.pop();
             }
-            display_clear();
+            tft.fillScreen(bruceConfig.bgColor);
             tft.setTextSize(1);
             tft.setTextColor(bruceConfig.priColor, bruceConfig.bgColor);
             Serial.printf("[KARMA] Exit complete. Heap: %lu\n", ESP.getFreeHeap());
@@ -2575,6 +2574,7 @@ void karma_setup() {
                  [&]() {
                      karmaConfig.enableAutoKarma = !karmaConfig.enableAutoKarma;
                      displayTextLine(karmaConfig.enableAutoKarma ? "Auto Karma: ON" : "Auto Karma: OFF");
+                     delay(1000);
                  }},
                 Option{karmaConfig.enableAutoPortal ? "* Auto Portal" : "- Auto Portal",
                  [&]() {
@@ -2585,21 +2585,25 @@ void karma_setup() {
                      }
                      karmaConfig.enableAutoPortal = !karmaConfig.enableAutoPortal;
                      displayTextLine(karmaConfig.enableAutoPortal ? "Auto Portal: ON" : "Auto Portal: OFF");
+                     delay(1000);
                  }},
                 Option{karmaConfig.enableDeauth ? "* Deauth" : "- Deauth",
                  [&]() {
                      karmaConfig.enableDeauth = !karmaConfig.enableDeauth;
                      displayTextLine(karmaConfig.enableDeauth ? "Deauth: ON" : "Deauth: OFF");
+                     delay(1000);
                  }},
                 Option{karmaConfig.enableSmartHop ? "* Smart Hop" : "- Smart Hop",
                  [&]() {
                      karmaConfig.enableSmartHop = !karmaConfig.enableSmartHop;
                      displayTextLine(karmaConfig.enableSmartHop ? "Smart Hop: ON" : "Smart Hop: OFF");
+                     delay(1000);
                  }},
                 Option{auto_hopping ? "* Auto Hop" : "- Auto Hop",
                  [&]() {
                      auto_hopping = !auto_hopping;
                      displayTextLine(auto_hopping ? "Auto Hop: ON" : "Auto Hop: OFF");
+                     delay(1000);
                  }},
                 Option{hop_interval == FAST_HOP_INTERVAL ? "* Fast Hop" : "- Fast Hop",
                  [&]() {
@@ -2608,6 +2612,7 @@ void karma_setup() {
                      displayTextLine(
                          hop_interval == FAST_HOP_INTERVAL ? "Fast Hop: ON" : "Fast Hop: OFF"
                      );
+                     delay(1000);
                  }},
                 Option{"Show Stats", [&]() {
                      drawMainBorderWithTitle("KARMA STATS");
@@ -3247,6 +3252,7 @@ void karma_setup() {
                      [&]() {
                          karmaConfig.enableAutoKarma = !karmaConfig.enableAutoKarma;
                          displayTextLine(karmaConfig.enableAutoKarma ? "Auto Karma: ON" : "Auto Karma: OFF");
+                         delay(1000);
                      }},
                     Option{karmaConfig.enableAutoPortal ? "* Auto Portal" : "- Auto Portal",
                      [&]() {
@@ -3257,21 +3263,25 @@ void karma_setup() {
                          }
                          karmaConfig.enableAutoPortal = !karmaConfig.enableAutoPortal;
                          displayTextLine(karmaConfig.enableAutoPortal ? "Auto Portal: ON" : "Auto Portal: OFF");
+                         delay(1000);
                      }},
                     Option{karmaConfig.enableDeauth ? "* Deauth" : "- Deauth",
                      [&]() {
                          karmaConfig.enableDeauth = !karmaConfig.enableDeauth;
                          displayTextLine(karmaConfig.enableDeauth ? "Deauth: ON" : "Deauth: OFF");
+                         delay(1000);
                      }},
                     Option{karmaConfig.enableSmartHop ? "* Smart Hop" : "- Smart Hop",
                      [&]() {
                          karmaConfig.enableSmartHop = !karmaConfig.enableSmartHop;
                          displayTextLine(karmaConfig.enableSmartHop ? "Smart Hop: ON" : "Smart Hop: OFF");
+                         delay(1000);
                      }},
                     Option{auto_hopping ? "* Auto Hop" : "- Auto Hop",
                      [&]() {
                          auto_hopping = !auto_hopping;
                          displayTextLine(auto_hopping ? "Auto Hop: ON" : "Auto Hop: OFF");
+                         delay(1000);
                      }},
                     Option{hop_interval == FAST_HOP_INTERVAL ? "* Fast Hop" : "- Fast Hop",
                      [&]() {
@@ -3280,6 +3290,7 @@ void karma_setup() {
                          displayTextLine(
                              hop_interval == FAST_HOP_INTERVAL ? "Fast Hop: ON" : "Fast Hop: OFF"
                          );
+                         delay(1000);
                      }},
                     Option{"Show Stats", [&]() {
                          drawMainBorderWithTitle("KARMA STATS");
