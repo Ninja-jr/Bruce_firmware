@@ -2178,7 +2178,7 @@ void karma_setup() {
                                  tft.setTextColor(bruceConfig.priColor, bruceConfig.bgColor);
                                  tft.print("  ");
                              }
-                             String displayText = karmaOptions[i].name;
+                             String displayText = karmaOptions[i].text;
                              if (displayText.length() > 40) {
                                  displayText = displayText.substring(0, 37) + "...";
                              }
@@ -2189,7 +2189,7 @@ void karma_setup() {
                          tft.setTextColor(bruceConfig.priColor, bruceConfig.bgColor);
                          tft.print("Sel: Attack | Prev/Esc: Back");
                          if (check(SelPress)) {
-                             karmaOptions[selectedIndex].function();
+                             karmaOptions[selectedIndex].cmd();
                              exitKarmaMenu = true;
                          } else if (check(PrevPress) || check(EscPress)) {
                              exitKarmaMenu = true;
@@ -2268,14 +2268,14 @@ void karma_setup() {
                                  tft.setTextColor(bruceConfig.priColor, bruceConfig.bgColor);
                                  tft.print("  ");
                              }
-                             String displayText = strategyOptions[i].name;
+                             String displayText = strategyOptions[i].text;
                              tft.print(displayText);
                              y += 15;
                          }
                          tft.setCursor(10, tftHeight - 20);
                          tft.print("Sel: Choose | Prev/Esc: Back");
                          if (check(SelPress)) {
-                             strategyOptions[strategyIndex].function();
+                             strategyOptions[strategyIndex].cmd();
                              exitStrategyMenu = true;
                          } else if (check(PrevPress) || check(EscPress)) {
                              exitStrategyMenu = true;
@@ -2405,13 +2405,13 @@ void karma_setup() {
                                     tft.setTextColor(bruceConfig.priColor, bruceConfig.bgColor);
                                     tft.print("  ");
                                 }
-                                tft.print(dbOptions[i].name);
+                                tft.print(dbOptions[i].text);
                                 y += 15;
                             }
                             tft.setCursor(10, tftHeight - 20);
                             tft.print("Sel: Choose | Prev/Esc: Back");
                             if (check(SelPress)) {
-                                dbOptions[dbIndex].function();
+                                dbOptions[dbIndex].cmd();
                                 exitDbMenu = true;
                             } else if (check(PrevPress) || check(EscPress)) {
                                 exitDbMenu = true;
@@ -2466,13 +2466,13 @@ void karma_setup() {
                                     tft.setTextColor(bruceConfig.priColor, bruceConfig.bgColor);
                                     tft.print("  ");
                                 }
-                                tft.print(speedOptions[i].name);
+                                tft.print(speedOptions[i].text);
                                 y += 15;
                             }
                             tft.setCursor(10, tftHeight - 20);
                             tft.print("Sel: Choose | Prev/Esc: Back");
                             if (check(SelPress)) {
-                                speedOptions[speedIndex].function();
+                                speedOptions[speedIndex].cmd();
                                 exitSpeedMenu = true;
                             } else if (check(PrevPress) || check(EscPress)) {
                                 exitSpeedMenu = true;
@@ -2544,13 +2544,13 @@ void karma_setup() {
                                 tft.setTextColor(bruceConfig.priColor, bruceConfig.bgColor);
                                 tft.print("  ");
                             }
-                            tft.print(broadcastOptions[i].name);
+                            tft.print(broadcastOptions[i].text);
                             y += 15;
                         }
                         tft.setCursor(10, tftHeight - 20);
                         tft.print("Sel: Choose | Prev/Esc: Back");
                         if (check(SelPress)) {
-                            broadcastOptions[broadcastIndex].function();
+                            broadcastOptions[broadcastIndex].cmd();
                             exitBroadcastMenu = true;
                         } else if (check(PrevPress) || check(EscPress)) {
                             exitBroadcastMenu = true;
@@ -2688,14 +2688,14 @@ void karma_setup() {
                         tft.setTextColor(bruceConfig.priColor, bruceConfig.bgColor);
                         tft.print("  ");
                     }
-                    String displayText = options[i].name;
+                    String displayText = options[i].text;
                     tft.print(displayText);
                     y += 15;
                 }
                 tft.setCursor(10, tftHeight - 20);
                 tft.print("Sel: Choose | Prev/Esc: Back to Karma");
                 if (check(SelPress)) {
-                    options[selectedIndex].function();
+                    options[selectedIndex].cmd();
                     selectedIndex = 0;
                 } else if (check(PrevPress) || check(EscPress)) {
                     exitOptionsMenu = true;
@@ -2858,7 +2858,7 @@ void karma_setup() {
                                      tft.setTextColor(bruceConfig.priColor, bruceConfig.bgColor);
                                      tft.print("  ");
                                  }
-                                 String displayText = karmaOptions[i].name;
+                                 String displayText = karmaOptions[i].text;
                                  if (displayText.length() > 40) {
                                      displayText = displayText.substring(0, 37) + "...";
                                  }
@@ -2869,7 +2869,7 @@ void karma_setup() {
                              tft.setTextColor(bruceConfig.priColor, bruceConfig.bgColor);
                              tft.print("Sel: Attack | Prev/Esc: Back");
                              if (check(SelPress)) {
-                                 karmaOptions[selectedIndex].function();
+                                 karmaOptions[selectedIndex].cmd();
                                  exitKarmaMenu = true;
                              } else if (check(PrevPress) || check(EscPress)) {
                                  exitKarmaMenu = true;
@@ -2948,14 +2948,14 @@ void karma_setup() {
                                      tft.setTextColor(bruceConfig.priColor, bruceConfig.bgColor);
                                      tft.print("  ");
                                  }
-                                 String displayText = strategyOptions[i].name;
+                                 String displayText = strategyOptions[i].text;
                                  tft.print(displayText);
                                  y += 15;
                              }
                              tft.setCursor(10, tftHeight - 20);
                              tft.print("Sel: Choose | Prev/Esc: Back");
                              if (check(SelPress)) {
-                                 strategyOptions[strategyIndex].function();
+                                 strategyOptions[strategyIndex].cmd();
                                  exitStrategyMenu = true;
                              } else if (check(PrevPress) || check(EscPress)) {
                                  exitStrategyMenu = true;
@@ -3085,13 +3085,13 @@ void karma_setup() {
                                         tft.setTextColor(bruceConfig.priColor, bruceConfig.bgColor);
                                         tft.print("  ");
                                     }
-                                    tft.print(dbOptions[i].name);
+                                    tft.print(dbOptions[i].text);
                                     y += 15;
                                 }
                                 tft.setCursor(10, tftHeight - 20);
                                 tft.print("Sel: Choose | Prev/Esc: Back");
                                 if (check(SelPress)) {
-                                    dbOptions[dbIndex].function();
+                                    dbOptions[dbIndex].cmd();
                                     exitDbMenu = true;
                                 } else if (check(PrevPress) || check(EscPress)) {
                                     exitDbMenu = true;
@@ -3146,13 +3146,13 @@ void karma_setup() {
                                         tft.setTextColor(bruceConfig.priColor, bruceConfig.bgColor);
                                         tft.print("  ");
                                     }
-                                    tft.print(speedOptions[i].name);
+                                    tft.print(speedOptions[i].text);
                                     y += 15;
                                 }
                                 tft.setCursor(10, tftHeight - 20);
                                 tft.print("Sel: Choose | Prev/Esc: Back");
                                 if (check(SelPress)) {
-                                    speedOptions[speedIndex].function();
+                                    speedOptions[speedIndex].cmd();
                                     exitSpeedMenu = true;
                                 } else if (check(PrevPress) || check(EscPress)) {
                                     exitSpeedMenu = true;
@@ -3224,13 +3224,13 @@ void karma_setup() {
                                     tft.setTextColor(bruceConfig.priColor, bruceConfig.bgColor);
                                     tft.print("  ");
                                 }
-                                tft.print(broadcastOptions[i].name);
+                                tft.print(broadcastOptions[i].text);
                                 y += 15;
                             }
                             tft.setCursor(10, tftHeight - 20);
                             tft.print("Sel: Choose | Prev/Esc: Back");
                             if (check(SelPress)) {
-                                broadcastOptions[broadcastIndex].function();
+                                broadcastOptions[broadcastIndex].cmd();
                                 exitBroadcastMenu = true;
                             } else if (check(PrevPress) || check(EscPress)) {
                                 exitBroadcastMenu = true;
@@ -3366,14 +3366,14 @@ void karma_setup() {
                             tft.setTextColor(bruceConfig.priColor, bruceConfig.bgColor);
                             tft.print("  ");
                         }
-                        String displayText = options[i].name;
+                        String displayText = options[i].text;
                         tft.print(displayText);
                         y += 15;
                     }
                     tft.setCursor(10, tftHeight - 20);
                     tft.print("Sel: Choose | Prev/Esc: Back to Karma");
                     if (check(SelPress)) {
-                        options[selectedIndex].function();
+                        options[selectedIndex].cmd();
                         selectedIndex = 0;
                     } else if (check(PrevPress) || check(EscPress)) {
                         exitOptionsMenu = true;
