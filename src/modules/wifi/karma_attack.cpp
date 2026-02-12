@@ -2153,10 +2153,8 @@ void karma_setup() {
                     std::vector<Option> karmaOptions;
                     for (const auto &client : vulnerable) {
                         if (!client.probedSSIDs.empty()) {
-                            char itemText[50];
-                            String macShort = client.mac.substring(9);
-                            snprintf(itemText, sizeof(itemText), "%s (VULN)", macShort.c_str());
-                            karmaOptions.push_back({itemText, [=, &client]() {
+                            String itemText = client.mac.substring(9) + " (VULN)";
+                            karmaOptions.push_back({itemText.c_str(), [=, &client]() {
                                 launchManualEvilPortal(client.probedSSIDs[0], 
                                                       client.favoriteChannel, 
                                                       selectedTemplate.verifyPassword);
@@ -2165,19 +2163,15 @@ void karma_setup() {
                         }
                     }
                     for (const auto &probe : uniqueProbes) {
-                        char itemText[50];
-                        snprintf(itemText, sizeof(itemText), "%s (%d|ch %d)", 
-                                probe.ssid.c_str(), probe.rssi, probe.channel);
-                        if (strlen(itemText) > 40) {
-                            snprintf(itemText, sizeof(itemText), "%.37s...", probe.ssid.c_str());
-                        }
-                        karmaOptions.push_back({itemText, [=, &probe]() {
+                        String itemText = probe.ssid + " (" + String(probe.rssi) + "|ch " + String(probe.channel) + ")";
+                        if (itemText.length() > 40) itemText = itemText.substring(0, 37) + "...";
+                        karmaOptions.push_back({itemText.c_str(), [=, &probe]() {
                             launchManualEvilPortal(probe.ssid, probe.channel, 
                                                   selectedTemplate.verifyPassword);
                             screenNeedsRedraw = true;
                         }});
                     }
-                    karmaOptions.push_back({"Back to Options", [&]() {}});
+                    karmaOptions.push_back({"Back", [&]() {}});
                     loopOptions(karmaOptions);
                     screenNeedsRedraw = true;
                 }},
@@ -2465,6 +2459,7 @@ void karma_setup() {
                 {"Exit Karma", [&]() { returnToMenu = true; }},
             };
             loopOptions(options);
+            
             if (wasActive && !broadcastAttack.isActive() && !returnToMenu) broadcastAttack.start();
             if (wasPromiscuous && !returnToMenu) {
                 esp_wifi_set_promiscuous(true);
