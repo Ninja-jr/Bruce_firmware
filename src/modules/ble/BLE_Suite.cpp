@@ -3284,6 +3284,12 @@ String selectTargetFromScan(const char* title) {
         }
         xSemaphoreGive(scannerData.mutex);
     }
+    if(deviceCount == 0) {
+        showErrorMessage("No BLE devices found!");
+        BLEStateManager::deinitBLE(true);
+        scannerData.clear();
+        return "";
+    }
     int maxVisibleDevices = 3;
     int deviceItemHeight = 30;
     int menuStartY = 60;
