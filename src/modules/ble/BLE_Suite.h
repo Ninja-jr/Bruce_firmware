@@ -60,6 +60,22 @@ enum {
     BLE_NEXT_PRESS = 3
 };
 
+enum FastPairPopupType {
+    FP_POPUP_REGULAR = 0,
+    FP_POPUP_FUN,
+    FP_POPUP_PRANK,
+    FP_POPUP_CUSTOM
+};
+
+enum FastPairExploitType {
+    FP_EXPLOIT_MEMORY_CORRUPTION = 0,
+    FP_EXPLOIT_STATE_CONFUSION,
+    FP_EXPLOIT_CRYPTO_OVERFLOW,
+    FP_EXPLOIT_HANDSHAKE_FAULT,
+    FP_EXPLOIT_RAPID_CONNECTION,
+    FP_EXPLOIT_ALL
+};
+
 struct CharacteristicInfo {
     String uuid;
     bool canRead;
@@ -182,23 +198,23 @@ class AutoCleanup {
 private:
     std::function<void()> cleanupFunc;
     bool enabled;
-    
+
 public:
     AutoCleanup(std::function<void()> func, bool enable = true) 
         : cleanupFunc(func), enabled(enable) {}
-    
+
     ~AutoCleanup() { 
         if(enabled && cleanupFunc) {
             cleanupFunc(); 
         }
     }
-    
+
     void disable() { enabled = false; }
     void enable() { enabled = true; }
-    
+
     AutoCleanup(const AutoCleanup&) = delete;
     AutoCleanup& operator=(const AutoCleanup&) = delete;
-    
+
     AutoCleanup(AutoCleanup&& other) noexcept 
         : cleanupFunc(std::move(other.cleanupFunc)), enabled(other.enabled) {
         other.cleanupFunc = nullptr;
@@ -211,7 +227,7 @@ private:
     static bool bleInitialized;
     static std::vector<NimBLEClient*> activeClients;
     static String currentDeviceName;
-    
+
 public:
     static bool initBLE(const String& name, int powerLevel = ESP_PWR_LVL_P9);
     static void deinitBLE(bool immediate = false);
@@ -402,10 +418,10 @@ private:
         unsigned long timestamp;
         String label;
     };
-    
+
     static std::vector<HeapSnapshot> snapshots;
     static size_t initialHeap;
-    
+
 public:
     static void takeSnapshot(const String& label);
     static void printReport();
@@ -478,5 +494,16 @@ void runHFPVulnerabilityTest(NimBLEAddress target);
 void runHFPAttackChain(NimBLEAddress target);
 void runHFPHIDPivotAttack(NimBLEAddress target);
 void runSmartHFPPivot(NimBLEAddress target, String deviceName, int rssi);
+void runFastPairScan(NimBLEAddress target);
+void runFastPairVulnerabilityTest(NimBLEAddress target);
+void runFastPairMemoryCorruption(NimBLEAddress target);
+void runFastPairStateConfusion(NimBLEAddress target);
+void runFastPairCryptoOverflow(NimBLEAddress target);
+void runFastPairPopupSpam(NimBLEAddress target, FastPairPopupType type);
+void runFastPairAllExploits(NimBLEAddress target);
+void runFastPairHIDChain(NimBLEAddress target);
+void runUniversalAttack(NimBLEAddress target);
+String selectFileFromSD();
+bool loadScriptFromSD(String filename);
 
 #endif
