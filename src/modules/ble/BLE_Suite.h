@@ -53,6 +53,8 @@ extern BruceConfig bruceConfig;
 
 bool check(int key);
 
+static void simpleScanCallback(NimBLEAdvertisedDevice* advertisedDevice);
+
 enum {
     BLE_ESC_PRESS = 0,
     BLE_SEL_PRESS = 1,
