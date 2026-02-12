@@ -21,6 +21,18 @@ bool BLEStateManager::bleInitialized = false;
 std::vector<NimBLEClient*> BLEStateManager::activeClients;
 String BLEStateManager::currentDeviceName = "";
 
+struct SimpleScanResult {
+    String address;
+    String name;
+    int rssi;
+    bool hasFastPair;
+    bool hasHFP;
+    uint8_t deviceType;
+};
+
+static std::vector<SimpleScanResult> scanCache;
+static SemaphoreHandle_t scanMutex = NULL;
+
 bool BLEStateManager::initBLE(const String& name, int powerLevel) {
     if(bleInitialized) {
         deinitBLE(true);
@@ -86,10 +98,7 @@ NimBLEClient* attemptConnectionWithStrategies(NimBLEAddress target, String& conn
 void runUniversalAttack(NimBLEAddress target);
 
 bool isBLEInitialized() {
-    return BLEStateManager::isBLEActive() || 
-           NimBLEDevice::getAdvertising() != nullptr || 
-           NimBLEDevice::getScan() != nullptr || 
-           NimBLEDevice::getServer() != nullptr;
+    return BLEStateManager::isBLEActive();
 }
 
 void BLEAttackManager::prepareForConnection() {
@@ -754,14 +763,14 @@ NimBLEClient* attemptConnectionWithStrategies(NimBLEAddress target, String& conn
         NimBLEDevice::deleteClient(pClient);
     }
     bool hasHFP = false;
-    if(xSemaphoreTake(scannerData.mutex, portMAX_DELAY)) {
-        for(size_t i = 0; i < scannerData.deviceAddresses.size(); i++) {
-            if(scannerData.deviceAddresses[i] == target.toString().c_str()) {
-                hasHFP = scannerData.deviceHasHFP[i];
+    if(scanMutex && xSemaphoreTake(scanMutex, portMAX_DELAY)) {
+        for(size_t i = 0; i < scanCache.size(); i++) {
+            if(scanCache[i].address == target.toString().c_str()) {
+                hasHFP = scanCache[i].hasHFP;
                 break;
             }
         }
-        xSemaphoreGive(scannerData.mutex);
+        xSemaphoreGive(scanMutex);
     }
     if(hasHFP) {
         showAttackProgress("Trying HFP exploit connection...", TFT_CYAN);
@@ -2067,15 +2076,15 @@ bool HIDDuckyService::injectDuckyScript(NimBLEAddress target, String script) {
     if(!duckyEngine.loadFromString(script)) return false;
     bool hasHFP = false;
     String deviceName = "";
-    if(xSemaphoreTake(scannerData.mutex, portMAX_DELAY)) {
-        for(size_t i = 0; i < scannerData.deviceAddresses.size(); i++) {
-            if(scannerData.deviceAddresses[i] == target.toString().c_str()) {
-                deviceName = scannerData.deviceNames[i];
-                hasHFP = scannerData.deviceHasHFP[i];
+    if(scanMutex && xSemaphoreTake(scanMutex, portMAX_DELAY)) {
+        for(size_t i = 0; i < scanCache.size(); i++) {
+            if(scanCache[i].address == target.toString().c_str()) {
+                deviceName = scanCache[i].name;
+                hasHFP = scanCache[i].hasHFP;
                 break;
             }
         }
-        xSemaphoreGive(scannerData.mutex);
+        xSemaphoreGive(scanMutex);
     }
     if(hasHFP && !deviceName.isEmpty()) {
         showAttackProgress("Device has HFP, testing vulnerability...", TFT_CYAN);
@@ -2642,15 +2651,15 @@ bool HIDAttackServiceClass::injectKeystrokes(NimBLEAddress target) {
     if(!confirmAttack("Attempt HID keystroke injection?")) return false;
     bool hasHFP = false;
     String deviceName = "";
-    if(xSemaphoreTake(scannerData.mutex, portMAX_DELAY)) {
-        for(size_t i = 0; i < scannerData.deviceAddresses.size(); i++) {
-            if(scannerData.deviceAddresses[i] == target.toString().c_str()) {
-                deviceName = scannerData.deviceNames[i];
-                hasHFP = scannerData.deviceHasHFP[i];
+    if(scanMutex && xSemaphoreTake(scanMutex, portMAX_DELAY)) {
+        for(size_t i = 0; i < scanCache.size(); i++) {
+            if(scanCache[i].address == target.toString().c_str()) {
+                deviceName = scanCache[i].name;
+                hasHFP = scanCache[i].hasHFP;
                 break;
             }
         }
-        xSemaphoreGive(scannerData.mutex);
+        xSemaphoreGive(scanMutex);
     }
     if(hasHFP && !deviceName.isEmpty()) {
         showAttackProgress("Trying HFP exploit first...", TFT_CYAN);
@@ -3151,8 +3160,51 @@ String getScriptFromUser() {
     return "";
 }
 
+static void simpleScanCallback(NimBLEAdvertisedDevice* advertisedDevice) {
+    if(!advertisedDevice) return;
+    SimpleScanResult result;
+    result.address = String(advertisedDevice->getAddress().toString().c_str());
+    result.name = String(advertisedDevice->getName().c_str());
+    if(result.name.isEmpty() || result.name == "(null)" || result.name == "null") {
+        result.name = "Unknown";
+    }
+    result.rssi = advertisedDevice->getRSSI();
+    result.hasFastPair = false;
+    result.hasHFP = false;
+    result.deviceType = 0;
+    if(advertisedDevice->haveServiceUUID()) {
+        NimBLEUUID uuid = advertisedDevice->getServiceUUID();
+        std::string uuidStr = uuid.toString();
+        if(uuidStr.find("fe2c") != std::string::npos) result.hasFastPair = true;
+        if(uuidStr.find("111e") != std::string::npos || uuidStr.find("111f") != std::string::npos) result.hasHFP = true;
+        if(uuidStr.find("110e") != std::string::npos || uuidStr.find("110f") != std::string::npos) result.deviceType |= 0x01;
+        if(uuidStr.find("1812") != std::string::npos) result.deviceType |= 0x02;
+    }
+    if(scanMutex && xSemaphoreTake(scanMutex, portMAX_DELAY)) {
+        bool found = false;
+        for(auto& existing : scanCache) {
+            if(existing.address == result.address) {
+                existing.rssi = result.rssi;
+                if(!result.name.isEmpty() && result.name != "Unknown") existing.name = result.name;
+                existing.hasFastPair |= result.hasFastPair;
+                existing.hasHFP |= result.hasHFP;
+                existing.deviceType |= result.deviceType;
+                found = true;
+                break;
+            }
+        }
+        if(!found) {
+            scanCache.push_back(result);
+        }
+        xSemaphoreGive(scanMutex);
+    }
+}
+
 String selectTargetFromScan(const char* title) {
-    scannerData.clear();
+    if(!scanMutex) {
+        scanMutex = xSemaphoreCreateMutex();
+    }
+    scanCache.clear();
     tft.fillScreen(TFT_GRAY);
     tft.setTextSize(3);
     tft.setTextColor(TFT_PURPLE, TFT_GRAY);
@@ -3189,108 +3241,63 @@ String selectTargetFromScan(const char* title) {
         BLEStateManager::deinitBLE(true);
         return "";
     }
+    pBLEScan->setAdvertisedDeviceCallbacks(simpleScanCallback, true);
     pBLEScan->setActiveScan(true);
     pBLEScan->setInterval(97);
     pBLEScan->setWindow(67);
     pBLEScan->setDuplicateFilter(false);
     tft.setCursor(20, 100);
-    tft.print("Scanning for devices...");
-    const int ACTIVE_SCAN_TIME = 15;
-    const int PASSIVE_SCAN_TIME = 15;
+    tft.print("Scanning for devices (20s)...");
     tft.setCursor(20, 120);
-    tft.print("Active scan (15s)...");
-    bool scanCancelled = false;
+    tft.print("Press ESC to cancel");
     unsigned long scanStart = millis();
-    pBLEScan->start(ACTIVE_SCAN_TIME, false);
-    while(millis() - scanStart < ACTIVE_SCAN_TIME * 1000) {
+    pBLEScan->start(20, false);
+    while(millis() - scanStart < 20000) {
         if(check(EscPress) || check(PrevPress)) {
             pBLEScan->stop();
-            scanCancelled = true;
             showErrorMessage("Scan cancelled!");
             BLEStateManager::deinitBLE(true);
+            scanCache.clear();
             return "";
         }
-        delay(100);
-    }
-    pBLEScan->stop();
-    NimBLEScanResults results = pBLEScan->getResults();
-    if(scanCancelled) {
-        BLEStateManager::deinitBLE(true);
-        return "";
-    }
-    tft.setCursor(20, 140);
-    tft.print("Passive scan (15s)...");
-    pBLEScan->setActiveScan(false);
-    scanStart = millis();
-    pBLEScan->start(PASSIVE_SCAN_TIME, false);
-    while(millis() - scanStart < PASSIVE_SCAN_TIME * 1000) {
-        if(check(EscPress) || check(PrevPress)) {
-            pBLEScan->stop();
-            scanCancelled = true;
-            showErrorMessage("Scan cancelled!");
-            BLEStateManager::deinitBLE(true);
-            return "";
+        tft.fillRect(20, 140, 200, 20, bruceConfig.bgColor);
+        tft.setCursor(20, 140);
+        tft.print("Found: ");
+        if(scanMutex && xSemaphoreTake(scanMutex, portMAX_DELAY)) {
+            tft.print(scanCache.size());
+            tft.print(" devices");
+            xSemaphoreGive(scanMutex);
         }
-        delay(100);
-    }
-    if(scanCancelled) {
-        BLEStateManager::deinitBLE(true);
-        return "";
-    }
-    for(int i = 0; i < results.getCount(); i++) {
-        const NimBLEAdvertisedDevice* device = results.getDevice(i);
-        String address = String(device->getAddress().toString().c_str());
-        String name = String(device->getName().c_str());
-        if(name.isEmpty() || name == "(null)" || name == "null" || name == "NULL") {
-            name = "Unknown";
-        }
-        int rssi = device->getRSSI();
-        if(rssi == 0) rssi = -100;
-        bool fastPair = false;
-        bool hasHFP = false;
-        uint8_t deviceType = 0;
-        if(device->haveServiceUUID()) {
-            NimBLEUUID uuid = device->getServiceUUID();
-            std::string uuidStr = uuid.toString();
-            if(uuidStr.find("fe2c") != std::string::npos) fastPair = true;
-            if(uuidStr.find("111e") != std::string::npos || uuidStr.find("111f") != std::string::npos) hasHFP = true;
-            if(uuidStr.find("110e") != std::string::npos || uuidStr.find("110f") != std::string::npos) deviceType |= 0x01;
-            if(uuidStr.find("1812") != std::string::npos) deviceType |= 0x02;
-        }
-        scannerData.addDevice(name, address, rssi, fastPair, hasHFP, deviceType);
+        delay(200);
     }
     pBLEScan->stop();
     pBLEScan->clearResults();
-    size_t deviceCount = scannerData.size();
-    if(xSemaphoreTake(scannerData.mutex, portMAX_DELAY)) {
-        for(size_t i = 0; i < scannerData.deviceAddresses.size() - 1; i++) {
-            for(size_t j = i + 1; j < scannerData.deviceAddresses.size(); j++) {
-                bool swapNeeded = false;
-                if(scannerData.deviceFastPair[j] && !scannerData.deviceFastPair[i]) swapNeeded = true;
-                else if(scannerData.deviceFastPair[j] == scannerData.deviceFastPair[i] && scannerData.deviceRssi[j] > scannerData.deviceRssi[i]) swapNeeded = true;
-                if(swapNeeded) {
-                    std::swap(scannerData.deviceNames[i], scannerData.deviceNames[j]);
-                    std::swap(scannerData.deviceAddresses[i], scannerData.deviceAddresses[j]);
-                    std::swap(scannerData.deviceRssi[i], scannerData.deviceRssi[j]);
-                    bool tempFastPair = scannerData.deviceFastPair[i];
-                    scannerData.deviceFastPair[i] = scannerData.deviceFastPair[j];
-                    scannerData.deviceFastPair[j] = tempFastPair;
-                    bool tempHFP = scannerData.deviceHasHFP[i];
-                    scannerData.deviceHasHFP[i] = scannerData.deviceHasHFP[j];
-                    scannerData.deviceHasHFP[j] = tempHFP;
-                    std::swap(scannerData.deviceTypes[i], scannerData.deviceTypes[j]);
-                }
-            }
-        }
-        xSemaphoreGive(scannerData.mutex);
+    size_t deviceCount = 0;
+    if(scanMutex && xSemaphoreTake(scanMutex, portMAX_DELAY)) {
+        deviceCount = scanCache.size();
+        xSemaphoreGive(scanMutex);
     }
     if(deviceCount == 0) {
         showErrorMessage("No BLE devices found!");
         BLEStateManager::deinitBLE(true);
-        scannerData.clear();
+        scanCache.clear();
         return "";
     }
-    int maxVisibleDevices = 3;
+    if(scanMutex && xSemaphoreTake(scanMutex, portMAX_DELAY)) {
+        for(size_t i = 0; i < scanCache.size() - 1; i++) {
+            for(size_t j = i + 1; j < scanCache.size(); j++) {
+                bool swapNeeded = false;
+                if(scanCache[j].rssi > scanCache[i].rssi) {
+                    swapNeeded = true;
+                }
+                if(swapNeeded) {
+                    std::swap(scanCache[i], scanCache[j]);
+                }
+            }
+        }
+        xSemaphoreGive(scanMutex);
+    }
+    int maxVisibleDevices = 4;
     int deviceItemHeight = 30;
     int menuStartY = 60;
     int selectedIdx = 0;
@@ -3309,47 +3316,31 @@ String selectTargetFromScan(const char* title) {
         tft.print("Found: ");
         tft.print(deviceCount);
         tft.print(" devices");
-        for(int i = 0; i < maxVisibleDevices && (scrollOffset + i) < deviceCount; i++) {
-            String displayName;
-            String address;
-            int rssi = 0;
-            bool fastPair = false;
-            bool hasHFP = false;
-            uint8_t deviceType = 0;
-            if(xSemaphoreTake(scannerData.mutex, portMAX_DELAY)) {
+        if(scanMutex && xSemaphoreTake(scanMutex, portMAX_DELAY)) {
+            for(int i = 0; i < maxVisibleDevices && (scrollOffset + i) < scanCache.size(); i++) {
                 int deviceIndex = scrollOffset + i;
-                if(deviceIndex < scannerData.deviceNames.size()) {
-                    displayName = scannerData.deviceNames[deviceIndex];
-                    address = scannerData.deviceAddresses[deviceIndex];
-                    rssi = scannerData.deviceRssi[deviceIndex];
-                    fastPair = scannerData.deviceFastPair[deviceIndex];
-                    hasHFP = scannerData.deviceHasHFP[deviceIndex];
-                    deviceType = scannerData.deviceTypes[deviceIndex];
+                SimpleScanResult result = scanCache[deviceIndex];
+                String displayText = result.name;
+                if(displayText.length() > 16) displayText = displayText.substring(0, 13) + "...";
+                displayText += " (" + String(result.rssi) + "dB)";
+                if(result.hasFastPair) displayText += " [FP]";
+                if(result.hasHFP) displayText += " [HFP]";
+                int yPos = menuStartY + (i * deviceItemHeight);
+                if(yPos + deviceItemHeight > tftHeight - 45) break;
+                if(i == selectedIdx - scrollOffset) {
+                    tft.fillRect(15, yPos, tftWidth - 30, deviceItemHeight - 5, TFT_WHITE);
+                    tft.setTextColor(TFT_BLACK, TFT_WHITE);
+                    tft.setCursor(20, yPos + 10);
+                    tft.print("> ");
+                } else {
+                    tft.fillRect(15, yPos, tftWidth - 30, deviceItemHeight - 5, bruceConfig.bgColor);
+                    tft.setTextColor(TFT_WHITE, bruceConfig.bgColor);
+                    tft.setCursor(20, yPos + 10);
+                    tft.print("  ");
                 }
-                xSemaphoreGive(scannerData.mutex);
+                tft.print(displayText);
             }
-            if(displayName.isEmpty()) continue;
-            String displayText = displayName;
-            if(displayText.length() > 18) displayText = displayText.substring(0, 15) + "...";
-            displayText += " (" + String(rssi) + "dB)";
-            if(fastPair) displayText += " [FP]";
-            if(hasHFP) displayText += " [HFP]";
-            if(deviceType & 0x01) displayText += " [AUDIO]";
-            if(deviceType & 0x02) displayText += " [HID]";
-            int yPos = menuStartY + (i * deviceItemHeight);
-            if(yPos + deviceItemHeight > tftHeight - 45) break;
-            if(i == selectedIdx - scrollOffset) {
-                tft.fillRect(15, yPos, tftWidth - 30, deviceItemHeight - 5, TFT_WHITE);
-                tft.setTextColor(TFT_BLACK, TFT_WHITE);
-                tft.setCursor(20, yPos + 10);
-                tft.print("> ");
-            } else {
-                tft.fillRect(15, yPos, tftWidth - 30, deviceItemHeight - 5, bruceConfig.bgColor);
-                tft.setTextColor(TFT_WHITE, bruceConfig.bgColor);
-                tft.setCursor(20, yPos + 10);
-                tft.print("  ");
-            }
-            tft.print(displayText);
+            xSemaphoreGive(scanMutex);
         }
         if(deviceCount > maxVisibleDevices) {
             tft.setTextColor(TFT_CYAN, bruceConfig.bgColor);
@@ -3388,18 +3379,24 @@ String selectTargetFromScan(const char* title) {
                 gotInput = true;
             } else if(check(SelPress)) {
                 String selectedMAC = "";
-                String selectedName = "";
-                if(xSemaphoreTake(scannerData.mutex, portMAX_DELAY)) {
-                    if(selectedIdx < scannerData.deviceAddresses.size()) {
-                        selectedMAC = scannerData.deviceAddresses[selectedIdx];
-                        selectedName = scannerData.deviceNames[selectedIdx];
+                if(scanMutex && xSemaphoreTake(scanMutex, portMAX_DELAY)) {
+                    if(selectedIdx < scanCache.size()) {
+                        selectedMAC = scanCache[selectedIdx].address;
+                        scannerData.addDevice(
+                            scanCache[selectedIdx].name,
+                            scanCache[selectedIdx].address,
+                            scanCache[selectedIdx].rssi,
+                            scanCache[selectedIdx].hasFastPair,
+                            scanCache[selectedIdx].hasHFP,
+                            scanCache[selectedIdx].deviceType
+                        );
                     }
-                    xSemaphoreGive(scannerData.mutex);
+                    xSemaphoreGive(scanMutex);
                 }
                 if(!selectedMAC.isEmpty()) {
                     BLEStateManager::deinitBLE(true);
-                    scannerData.clear();
-                    return selectedMAC + ":0";
+                    scanCache.clear();
+                    return selectedMAC;
                 }
                 gotInput = true;
             }
@@ -3407,7 +3404,7 @@ String selectTargetFromScan(const char* title) {
         }
     }
     BLEStateManager::deinitBLE(true);
-    scannerData.clear();
+    scanCache.clear();
     return "";
 }
 
@@ -3598,17 +3595,17 @@ void runUniversalAttack(NimBLEAddress target) {
     int rssi = -60;
     bool hasHFP = false;
     bool hasFastPair = false;
-    if(xSemaphoreTake(scannerData.mutex, portMAX_DELAY)) {
-        for(size_t i = 0; i < scannerData.deviceAddresses.size(); i++) {
-            if(scannerData.deviceAddresses[i] == target.toString().c_str()) {
-                deviceName = scannerData.deviceNames[i];
-                rssi = scannerData.deviceRssi[i];
-                hasHFP = scannerData.deviceHasHFP[i];
-                hasFastPair = scannerData.deviceFastPair[i];
+    if(scanMutex && xSemaphoreTake(scanMutex, portMAX_DELAY)) {
+        for(size_t i = 0; i < scanCache.size(); i++) {
+            if(scanCache[i].address == target.toString().c_str()) {
+                deviceName = scanCache[i].name;
+                rssi = scanCache[i].rssi;
+                hasHFP = scanCache[i].hasHFP;
+                hasFastPair = scanCache[i].hasFastPair;
                 break;
             }
         }
-        xSemaphoreGive(scannerData.mutex);
+        xSemaphoreGive(scanMutex);
     }
     std::vector<String> lines;
     lines.push_back("UNIVERSAL ATTACK CHAIN");
@@ -3651,14 +3648,14 @@ void runWhisperPairAttack(NimBLEAddress target) {
         BLEStateManager::deinitBLE(true);
     });
     bool hasHFP = false;
-    if(xSemaphoreTake(scannerData.mutex, portMAX_DELAY)) {
-        for(size_t i = 0; i < scannerData.deviceAddresses.size(); i++) {
-            if(scannerData.deviceAddresses[i] == target.toString().c_str()) {
-                hasHFP = scannerData.deviceHasHFP[i];
+    if(scanMutex && xSemaphoreTake(scanMutex, portMAX_DELAY)) {
+        for(size_t i = 0; i < scanCache.size(); i++) {
+            if(scanCache[i].address == target.toString().c_str()) {
+                hasHFP = scanCache[i].hasHFP;
                 break;
             }
         }
-        xSemaphoreGive(scannerData.mutex);
+        xSemaphoreGive(scanMutex);
     }
     if(hasHFP) {
         showAttackProgress("Device has HFP, testing first...", TFT_CYAN);
@@ -3828,16 +3825,16 @@ void runHIDInjection(NimBLEAddress target) {
     String deviceName = "";
     int rssi = -60;
     bool hasHFP = false;
-    if(xSemaphoreTake(scannerData.mutex, portMAX_DELAY)) {
-        for(size_t i = 0; i < scannerData.deviceAddresses.size(); i++) {
-            if(scannerData.deviceAddresses[i] == target.toString().c_str()) {
-                deviceName = scannerData.deviceNames[i];
-                rssi = scannerData.deviceRssi[i];
-                hasHFP = scannerData.deviceHasHFP[i];
+    if(scanMutex && xSemaphoreTake(scanMutex, portMAX_DELAY)) {
+        for(size_t i = 0; i < scanCache.size(); i++) {
+            if(scanCache[i].address == target.toString().c_str()) {
+                deviceName = scanCache[i].name;
+                rssi = scanCache[i].rssi;
+                hasHFP = scanCache[i].hasHFP;
                 break;
             }
         }
-        xSemaphoreGive(scannerData.mutex);
+        xSemaphoreGive(scanMutex);
     }
     if(hasHFP && deviceName.length() > 0) {
         int choice = showAdaptiveMessage("Device has HFP service", 
@@ -3879,16 +3876,16 @@ void runDuckyScriptAttack(NimBLEAddress target) {
     String deviceName = "";
     int rssi = -60;
     bool hasHFP = false;
-    if(xSemaphoreTake(scannerData.mutex, portMAX_DELAY)) {
-        for(size_t i = 0; i < scannerData.deviceAddresses.size(); i++) {
-            if(scannerData.deviceAddresses[i] == target.toString().c_str()) {
-                deviceName = scannerData.deviceNames[i];
-                rssi = scannerData.deviceRssi[i];
-                hasHFP = scannerData.deviceHasHFP[i];
+    if(scanMutex && xSemaphoreTake(scanMutex, portMAX_DELAY)) {
+        for(size_t i = 0; i < scanCache.size(); i++) {
+            if(scanCache[i].address == target.toString().c_str()) {
+                deviceName = scanCache[i].name;
+                rssi = scanCache[i].rssi;
+                hasHFP = scanCache[i].hasHFP;
                 break;
             }
         }
-        xSemaphoreGive(scannerData.mutex);
+        xSemaphoreGive(scanMutex);
     }
     String script = getScriptFromUser();
     if(script.isEmpty()) return;
@@ -3953,14 +3950,14 @@ void runQuickTest(NimBLEAddress target) {
     });
     showAttackProgress("Quick testing (HFP + FastPair)...", TFT_WHITE);
     bool hasHFP = false;
-    if(xSemaphoreTake(scannerData.mutex, portMAX_DELAY)) {
-        for(size_t i = 0; i < scannerData.deviceAddresses.size(); i++) {
-            if(scannerData.deviceAddresses[i] == target.toString().c_str()) {
-                hasHFP = scannerData.deviceHasHFP[i];
+    if(scanMutex && xSemaphoreTake(scanMutex, portMAX_DELAY)) {
+        for(size_t i = 0; i < scanCache.size(); i++) {
+            if(scanCache[i].address == target.toString().c_str()) {
+                hasHFP = scanCache[i].hasHFP;
                 break;
             }
         }
-        xSemaphoreGive(scannerData.mutex);
+        xSemaphoreGive(scanMutex);
     }
     std::vector<String> results;
     if(hasHFP) {
@@ -4321,16 +4318,16 @@ void runForceHIDInjection(NimBLEAddress target) {
     String name = "";
     int rssi = -60;
     bool hasHFP = false;
-    if(xSemaphoreTake(scannerData.mutex, portMAX_DELAY)) {
-        for(size_t i = 0; i < scannerData.deviceAddresses.size(); i++) {
-            if(scannerData.deviceAddresses[i] == target.toString().c_str()) {
-                name = scannerData.deviceNames[i];
-                rssi = scannerData.deviceRssi[i];
-                hasHFP = scannerData.deviceHasHFP[i];
+    if(scanMutex && xSemaphoreTake(scanMutex, portMAX_DELAY)) {
+        for(size_t i = 0; i < scanCache.size(); i++) {
+            if(scanCache[i].address == target.toString().c_str()) {
+                name = scanCache[i].name;
+                rssi = scanCache[i].rssi;
+                hasHFP = scanCache[i].hasHFP;
                 break;
             }
         }
-        xSemaphoreGive(scannerData.mutex);
+        xSemaphoreGive(scanMutex);
     }
     String script = getScriptFromUser();
     if(script.isEmpty()) return;
@@ -4369,16 +4366,16 @@ void runHIDConnectionExploit(NimBLEAddress target) {
     String name = "";
     int rssi = -60;
     bool hasHFP = false;
-    if(xSemaphoreTake(scannerData.mutex, portMAX_DELAY)) {
-        for(size_t i = 0; i < scannerData.deviceAddresses.size(); i++) {
-            if(scannerData.deviceAddresses[i] == target.toString().c_str()) {
-                name = scannerData.deviceNames[i];
-                rssi = scannerData.deviceRssi[i];
-                hasHFP = scannerData.deviceHasHFP[i];
+    if(scanMutex && xSemaphoreTake(scanMutex, portMAX_DELAY)) {
+        for(size_t i = 0; i < scanCache.size(); i++) {
+            if(scanCache[i].address == target.toString().c_str()) {
+                name = scanCache[i].name;
+                rssi = scanCache[i].rssi;
+                hasHFP = scanCache[i].hasHFP;
                 break;
             }
         }
-        xSemaphoreGive(scannerData.mutex);
+        xSemaphoreGive(scanMutex);
     }
     if(hasHFP && !name.isEmpty()) {
         int choice = showAdaptiveMessage("Device has HFP", 
