@@ -49,6 +49,9 @@ typedef struct {
     unsigned long timestamp;
     uint8_t channel;
     uint8_t encryption_type;
+    uint8_t frame[256];
+    uint16_t frame_len;
+    uint32_t microseconds;
 } ProbeRequest;
 
 typedef struct {
@@ -65,6 +68,7 @@ typedef struct {
 
 typedef struct {
     String ssid;
+    String bssid;
     uint8_t channel;
     RSNInfo rsn;
     unsigned long lastActivity;
@@ -80,6 +84,7 @@ typedef struct {
 
 typedef struct {
     String ssid;
+    String bssid;
     String targetMAC;
     uint8_t channel;
     RSNInfo rsn;
