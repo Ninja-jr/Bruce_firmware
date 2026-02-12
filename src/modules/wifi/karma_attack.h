@@ -5,6 +5,7 @@
 #include <vector>
 #include <map>
 #include <queue>
+#include <FS.h>
 
 enum AttackTier {
     TIER_NONE = 0,
@@ -206,7 +207,6 @@ public:
 };
 
 void karma_setup();
-void enhanced_karma_setup();
 void clearProbes();
 void saveProbesToFile(FS &fs, bool compressed);
 void sendProbeResponse(const String &ssid, const String &mac, uint8_t channel);
@@ -229,6 +229,8 @@ void sendBeaconFrames();
 void checkForAssociations();
 void saveNetworkHistory(FS &fs);
 void sendBeaconFrameHelper(const String &ssid, uint8_t channel);
+void saveCredentialsToFile(String ssid, String password);
+void saveProbesToPCAP(FS &fs);
 
 extern std::map<String, ClientBehavior> clientBehaviors;
 extern ProbeRequest probeBuffer[1000];
@@ -237,5 +239,8 @@ extern bool bufferWrapped;
 extern KarmaConfig karmaConfig;
 extern AttackConfig attackConfig;
 extern ActiveBroadcastAttack broadcastAttack;
+extern bool screenNeedsRedraw;
+extern uint32_t pmkidCaptured;
+extern uint32_t assocBlocked;
 
 #endif
