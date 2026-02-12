@@ -33,6 +33,8 @@ struct SimpleScanResult {
 static std::vector<SimpleScanResult> scanCache;
 static SemaphoreHandle_t scanMutex = NULL;
 
+static void simpleScanCallback(NimBLEAdvertisedDevice* advertisedDevice);
+
 bool BLEStateManager::initBLE(const String& name, int powerLevel) {
     if(bleInitialized) {
         deinitBLE(true);
@@ -192,22 +194,6 @@ struct FastPairModel {
     const char* deviceType;
     uint8_t bleAdvData[31];
     uint16_t bleAdvDataLen;
-};
-
-enum FastPairPopupType {
-    FP_POPUP_REGULAR = 0,
-    FP_POPUP_FUN,
-    FP_POPUP_PRANK,
-    FP_POPUP_CUSTOM
-};
-
-enum FastPairExploitType {
-    FP_EXPLOIT_MEMORY_CORRUPTION = 0,
-    FP_EXPLOIT_STATE_CONFUSION,
-    FP_EXPLOIT_CRYPTO_OVERFLOW,
-    FP_EXPLOIT_HANDSHAKE_FAULT,
-    FP_EXPLOIT_RAPID_CONNECTION,
-    FP_EXPLOIT_ALL
 };
 
 static const FastPairModel fastpair_models[] = {
@@ -3245,7 +3231,7 @@ String selectTargetFromScan(const char* title) {
     tft.print("Scanning for devices (20s)...");
     tft.setCursor(20, 120);
     tft.print("Press ESC to cancel");
-    pBLEScan->start(20, &simpleScanCallback, false);
+    pBLEScan->start(20, simpleScanCallback, false);
     unsigned long scanStart = millis();
     while(millis() - scanStart < 20000) {
         if(check(EscPress) || check(PrevPress)) {
