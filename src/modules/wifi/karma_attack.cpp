@@ -405,6 +405,7 @@ unsigned long lastFrequencyReset = 0;
 unsigned long lastBeaconTime = 0;
 unsigned long lastMACRotation = 0;
 uint8_t channl = 0;
+uint8_t current_channel = 1;
 bool flOpen = false;
 bool is_LittleFS = true;
 uint32_t pkt_counter = 0;
@@ -1000,10 +1001,11 @@ void smartChannelHop() {
     if (now - last_ChannelChange < hop_interval) return;
     if (channelActivity[channl] > 20) { hop_interval = DEFAULT_HOP_INTERVAL * 3; return; }
     currentPriorityChannel = (currentPriorityChannel + 1) % NUM_PRIORITY_CHANNELS;
-    channl = pgm_read_byte(&priorityChannels[currentPriorityChannel]) - 1;
+    uint8_t channel = pgm_read_byte(&priorityChannels[currentPriorityChannel]);
+    channl = channel - 1;
     esp_wifi_set_promiscuous(false);
     wifi_second_chan_t secondCh = (wifi_second_chan_t)NULL;
-    esp_wifi_set_channel(pgm_read_byte(&priorityChannels[currentPriorityChannel]), secondCh);
+    esp_wifi_set_channel(channel, secondCh);
     delay(50);
     esp_wifi_set_promiscuous(true);
     last_ChannelChange = now;
@@ -1189,10 +1191,6 @@ bool selectPortalTemplate(bool isInitialSetup) {
                             displayTextLine("Selected: " + customTmpl.name);
                             delay(1000);
                         }
-                    } else {
-                        displayTextLine("No file selected");
-                        delay(1000);
-                        SD.end();
                     }
                 } else {
                     displayTextLine("SD Card failed!");
@@ -1233,11 +1231,8 @@ bool selectPortalTemplate(bool isInitialSetup) {
                             displayTextLine("Selected: " + customTmpl.name);
                             delay(1000);
                         }
-                    } else {
-                        displayTextLine("No file selected");
-                        delay(1000);
-                        LittleFS.end();
                     }
+                    LittleFS.end();
                 } else {
                     displayTextLine("LittleFS error!");
                     delay(1000);
@@ -1832,7 +1827,6 @@ void karma_setup() {
             esp_wifi_set_promiscuous(false);
             esp_wifi_set_promiscuous_rx_cb(nullptr);
             while (!responseQueue.empty()) responseQueue.pop();
-            tft.fillScreen(bruceConfig.bgColor);
             returnToMenu = false;
             isInitialized = false;
             return;
@@ -1862,9 +1856,10 @@ void karma_setup() {
             esp_wifi_set_promiscuous(true);
             esp_wifi_set_promiscuous_rx_cb(probe_sniffer);
         }
-        if (check(PrevPress) || check(EscPress)) {
+        if (check(PrevPress) || check(EscPress) || check(SelPress)) {
             if (check(PrevPress)) check(PrevPress);
             if (check(EscPress)) check(EscPress);
+            if (check(SelPress)) check(SelPress);
             bool wasPromiscuous = false;
             if (esp_wifi_get_promiscuous(&wasPromiscuous) == ESP_OK && wasPromiscuous)
                 esp_wifi_set_promiscuous(false);
