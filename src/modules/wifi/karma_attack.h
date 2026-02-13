@@ -235,7 +235,7 @@ void saveCredentialsToFile(String ssid, String password);
 void saveProbesToPCAP(FS &fs);
 
 extern std::map<String, ClientBehavior> clientBehaviors;
-extern ProbeRequest probeBuffer[200];
+extern ProbeRequest probeBuffer[500];
 extern uint16_t probeBufferIndex;
 extern bool bufferWrapped;
 extern KarmaConfig karmaConfig;
