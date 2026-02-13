@@ -33,14 +33,77 @@ struct SimpleScanResult {
 static std::vector<SimpleScanResult> scanCache;
 static SemaphoreHandle_t scanMutex = NULL;
 
-static void simpleScanCallback(NimBLEAdvertisedDevice* advertisedDevice);
+class AdvertisedDeviceCallbacks : public NimBLEAdvertisedDeviceCallbacks {
+    void onResult(NimBLEAdvertisedDevice* advertisedDevice) {
+        if(!advertisedDevice) return;
+        
+        SimpleScanResult result;
+        result.address = String(advertisedDevice->getAddress().toString().c_str());
+        
+        String name = String(advertisedDevice->getName().c_str());
+        if(name.isEmpty() || name == "(null)" || name == "null") {
+            if(advertisedDevice->haveManufacturerData()) {
+                std::string manufData = advertisedDevice->getManufacturerData();
+                if(manufData.length() > 4) {
+                    String extracted = "";
+                    for(size_t i = 4; i < manufData.length() && i < 20; i++) {
+                        char c = manufData[i];
+                        if(c >= 32 && c <= 126) extracted += c;
+                        else break;
+                    }
+                    if(extracted.length() >= 3) name = extracted;
+                }
+            }
+            if(name.isEmpty() || name == "(null)" || name == "null") {
+                String shortMac = result.address.substring(result.address.length() - 5);
+                name = "Device " + shortMac;
+            }
+        }
+        result.name = name;
+        result.rssi = advertisedDevice->getRSSI();
+        
+        result.hasFastPair = false;
+        result.hasHFP = false;
+        result.deviceType = 0;
+        
+        if(advertisedDevice->haveServiceUUID()) {
+            for(int i = 0; i < advertisedDevice->getServiceUUIDCount(); i++) {
+                NimBLEUUID uuid = advertisedDevice->getServiceUUID(i);
+                std::string uuidStr = uuid.toString();
+                
+                if(uuidStr.find("fe2c") != std::string::npos) result.hasFastPair = true;
+                if(uuidStr.find("111e") != std::string::npos || uuidStr.find("111f") != std::string::npos) result.hasHFP = true;
+                if(uuidStr.find("110e") != std::string::npos || uuidStr.find("110f") != std::string::npos) result.deviceType |= 0x01;
+                if(uuidStr.find("1812") != std::string::npos) result.deviceType |= 0x02;
+            }
+        }
+        
+        if(scanMutex && xSemaphoreTake(scanMutex, portMAX_DELAY)) {
+            bool found = false;
+            for(auto& existing : scanCache) {
+                if(existing.address == result.address) {
+                    existing.rssi = result.rssi;
+                    if(!result.name.isEmpty() && result.name != "Device ") existing.name = result.name;
+                    existing.hasFastPair |= result.hasFastPair;
+                    existing.hasHFP |= result.hasHFP;
+                    existing.deviceType |= result.deviceType;
+                    found = true;
+                    break;
+                }
+            }
+            if(!found) {
+                scanCache.push_back(result);
+            }
+            xSemaphoreGive(scanMutex);
+        }
+    }
+};
 
 bool BLEStateManager::initBLE(const String& name, int powerLevel) {
     if(bleInitialized) {
         deinitBLE(true);
     }
-    std::string nameStr = name.c_str();
-    NimBLEDevice::init(nameStr);
+    NimBLEDevice::init(name.c_str());
     NimBLEDevice::setPower((esp_power_level_t)powerLevel);
     currentDeviceName = name;
     bleInitialized = true;
@@ -3152,71 +3215,6 @@ String getScriptFromUser() {
     return "";
 }
 
-static void simpleScanCallback(NimBLEAdvertisedDevice* advertisedDevice) {
-    if(!advertisedDevice) return;
-    
-    SimpleScanResult result;
-    
-    result.address = String(advertisedDevice->getAddress().toString().c_str());
-    
-    String name = String(advertisedDevice->getName().c_str());
-    if(name.isEmpty() || name == "(null)" || name == "null") {
-        if(advertisedDevice->haveManufacturerData()) {
-            std::string manufData = advertisedDevice->getManufacturerData();
-            if(manufData.length() > 4) {
-                String extracted = "";
-                for(size_t i = 4; i < manufData.length() && i < 20; i++) {
-                    char c = manufData[i];
-                    if(c >= 32 && c <= 126) extracted += c;
-                    else break;
-                }
-                if(extracted.length() >= 3) name = extracted;
-            }
-        }
-        if(name.isEmpty() || name == "(null)" || name == "null") {
-            String shortMac = result.address.substring(result.address.length() - 5);
-            name = "Device " + shortMac;
-        }
-    }
-    result.name = name;
-    result.rssi = advertisedDevice->getRSSI();
-    
-    result.hasFastPair = false;
-    result.hasHFP = false;
-    result.deviceType = 0;
-    
-    if(advertisedDevice->haveServiceUUID()) {
-        for(int i = 0; i < advertisedDevice->getServiceUUIDCount(); i++) {
-            NimBLEUUID uuid = advertisedDevice->getServiceUUID(i);
-            std::string uuidStr = uuid.toString();
-            
-            if(uuidStr.find("fe2c") != std::string::npos) result.hasFastPair = true;
-            if(uuidStr.find("111e") != std::string::npos || uuidStr.find("111f") != std::string::npos) result.hasHFP = true;
-            if(uuidStr.find("110e") != std::string::npos || uuidStr.find("110f") != std::string::npos) result.deviceType |= 0x01;
-            if(uuidStr.find("1812") != std::string::npos) result.deviceType |= 0x02;
-        }
-    }
-    
-    if(scanMutex && xSemaphoreTake(scanMutex, portMAX_DELAY)) {
-        bool found = false;
-        for(auto& existing : scanCache) {
-            if(existing.address == result.address) {
-                existing.rssi = result.rssi;
-                if(!result.name.isEmpty() && result.name != "Device ") existing.name = result.name;
-                existing.hasFastPair |= result.hasFastPair;
-                existing.hasHFP |= result.hasHFP;
-                existing.deviceType |= result.deviceType;
-                found = true;
-                break;
-            }
-        }
-        if(!found) {
-            scanCache.push_back(result);
-        }
-        xSemaphoreGive(scanMutex);
-    }
-}
-
 String selectTargetFromScan(const char* title) {
     if(!scanMutex) {
         scanMutex = xSemaphoreCreateMutex();
@@ -3247,10 +3245,11 @@ String selectTargetFromScan(const char* title) {
         return "";
     }
     
-    pBLEScan->setDuplicateFilter(false);
+    AdvertisedDeviceCallbacks* callbacks = new AdvertisedDeviceCallbacks();
+    pBLEScan->setAdvertisedDeviceCallbacks(callbacks, true);
+    pBLEScan->setActiveScan(true);
     pBLEScan->setInterval(100);
     pBLEScan->setWindow(99);
-    pBLEScan->clearResults();
     
     tft.fillRect(20, 100, 200, 40, bruceConfig.bgColor);
     tft.setCursor(20, 100);
@@ -3258,21 +3257,21 @@ String selectTargetFromScan(const char* title) {
     tft.setCursor(20, 120);
     tft.print("Found: 0");
     
-    pBLEScan->setActiveScan(true);
-    pBLEScan->start(15, simpleScanCallback, false);
+    pBLEScan->start(15, false);
     
     unsigned long startTime = millis();
     while(millis() - startTime < 15000) {
         if(check(EscPress)) {
             pBLEScan->stop();
             BLEStateManager::deinitBLE(true);
+            delete callbacks;
             scanCache.clear();
             return "";
         }
         
         if((millis() - startTime) % 1000 < 50) {
             int remaining = 15 - ((millis() - startTime) / 1000);
-            tft.fillRect(20, 100, 120, 20, bruceConfig.bgColor);
+            tft.fillRect(20, 100, 130, 20, bruceConfig.bgColor);
             tft.setCursor(20, 100);
             tft.print("ACTIVE: " + String(remaining) + "s");
             
@@ -3292,13 +3291,14 @@ String selectTargetFromScan(const char* title) {
     tft.print("PASSIVE: 15s");
     
     pBLEScan->setActiveScan(false);
-    pBLEScan->start(15, simpleScanCallback, false);
+    pBLEScan->start(15, false);
     
     startTime = millis();
     while(millis() - startTime < 15000) {
         if(check(EscPress)) {
             pBLEScan->stop();
             BLEStateManager::deinitBLE(true);
+            delete callbacks;
             scanCache.clear();
             return "";
         }
@@ -3320,6 +3320,7 @@ String selectTargetFromScan(const char* title) {
     }
     pBLEScan->stop();
     pBLEScan->clearResults();
+    delete callbacks;
     
     size_t deviceCount = 0;
     if(scanMutex && xSemaphoreTake(scanMutex, portMAX_DELAY)) {
@@ -3462,6 +3463,7 @@ String selectTargetFromScan(const char* title) {
 }
 
 void BleSuiteMenu() {
+    displaySplashScreen();
     String targetInfo = selectTargetFromScan("SELECT TARGET");
     if(targetInfo.isEmpty()) return;
     NimBLEAddress target = parseAddress(targetInfo);
@@ -3471,6 +3473,32 @@ void BleSuiteMenu() {
     });
     showAttackMenuWithTarget(target);
     cleanup.disable();
+}
+
+void displaySplashScreen() {
+    tft.fillScreen(bruceConfig.bgColor);
+    tft.drawRect(5, 5, tftWidth - 10, tftHeight - 10, TFT_WHITE);
+    tft.setTextColor(TFT_WHITE, bruceConfig.bgColor);
+    tft.setTextSize(3);
+    tft.setCursor((tftWidth - strlen("BLE SUITE") * 18) / 2, tftHeight / 2 - 40);
+    tft.print("BLE SUITE");
+    tft.setTextSize(1);
+    tft.setTextColor(TFT_CYAN, bruceConfig.bgColor);
+    tft.setCursor((tftWidth - strlen("Advanced Bluetooth Exploitation") * 6) / 2, tftHeight / 2);
+    tft.print("Advanced Bluetooth Exploitation");
+    tft.setTextColor(TFT_GREEN, bruceConfig.bgColor);
+    tft.setCursor((tftWidth - strlen("Version 2.0") * 6) / 2, tftHeight / 2 + 30);
+    tft.print("Version 2.0");
+    tft.setTextColor(TFT_YELLOW, bruceConfig.bgColor);
+    tft.setCursor((tftWidth - strlen("Press any key to start...") * 6) / 2, tftHeight / 2 + 70);
+    tft.print("Press any key to start...");
+    while(true) {
+        if(check(EscPress) || check(SelPress) || check(PrevPress) || check(NextPress)) {
+            delay(200);
+            break;
+        }
+        delay(50);
+    }
 }
 
 void showAttackMenuWithTarget(NimBLEAddress target) {
