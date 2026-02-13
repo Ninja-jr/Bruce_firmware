@@ -414,7 +414,6 @@ unsigned long lastFrequencyReset = 0;
 unsigned long lastBeaconTime = 0;
 unsigned long lastMACRotation = 0;
 uint8_t channl = 0;
-uint8_t current_channel = 1;
 bool flOpen = false;
 bool is_LittleFS = true;
 uint32_t pkt_counter = 0;
