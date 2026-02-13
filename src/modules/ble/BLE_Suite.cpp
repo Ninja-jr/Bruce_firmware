@@ -33,6 +33,7 @@ struct SimpleScanResult {
 static std::vector<SimpleScanResult> scanCache;
 static SemaphoreHandle_t scanMutex = NULL;
 
+// Fixed callback class definition
 class AdvertisedDeviceCallbacks : public NimBLEAdvertisedDeviceCallbacks {
     void onResult(NimBLEAdvertisedDevice* advertisedDevice) {
         if(!advertisedDevice) return;
@@ -89,7 +90,7 @@ class AdvertisedDeviceCallbacks : public NimBLEAdvertisedDeviceCallbacks {
                     existing.deviceType |= result.deviceType;
                     found = true;
                     break;
-            }
+                }
             }
             if(!found) {
                 scanCache.push_back(result);
@@ -3245,8 +3246,9 @@ String selectTargetFromScan(const char* title) {
         return "";
     }
     
-    // Fixed: Use the correct method name
-    pBLEScan->setAdvertisedDeviceCallbacks(new AdvertisedDeviceCallbacks(), false);
+    // Create a static callback object that will persist
+    static AdvertisedDeviceCallbacks callbacks;
+    pBLEScan->setAdvertisedDeviceCallbacks(&callbacks, false);
     pBLEScan->setActiveScan(true);
     pBLEScan->setInterval(100);
     pBLEScan->setWindow(99);
