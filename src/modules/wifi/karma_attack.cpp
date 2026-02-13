@@ -1324,7 +1324,6 @@ void launchTieredEvilPortal(PendingPortal &portal) {
     Serial.printf("[TIER-%d] Launching portal for %s\n", portal.tier, portal.ssid.c_str());
     isPortalActive = true;
     esp_wifi_set_promiscuous(false);
-    esp_wifi_stop();
     delay(500);
     EvilPortal portalInstance(portal.ssid, portal.channel, false, portal.verifyPassword, true);
     String capturedSSID = "";
@@ -1344,6 +1343,8 @@ void launchTieredEvilPortal(PendingPortal &portal) {
     isPortalActive = false;
     activePortalChannel = 0;
     auto_hopping = true;
+    esp_wifi_set_promiscuous(true);
+    esp_wifi_set_promiscuous_rx_cb(probe_sniffer);
     if (portal.isCloneAttack) cloneAttacksLaunched++;
     else autoPortalsLaunched++;
     screenNeedsRedraw = true;
@@ -1431,12 +1432,13 @@ void launchManualEvilPortal(const String &ssid, uint8_t channel, bool verifyPwd)
     Serial.printf("[MANUAL] Launching Evil Portal for %s (ch%d)\n", ssid.c_str(), channel);
     isPortalActive = true;
     esp_wifi_set_promiscuous(false);
-    esp_wifi_stop();
     delay(500);
     EvilPortal portalInstance(ssid, channel, false, verifyPwd, false);
     isPortalActive = false;
     activePortalChannel = 0;
     auto_hopping = true;
+    esp_wifi_set_promiscuous(true);
+    esp_wifi_set_promiscuous_rx_cb(probe_sniffer);
     restartKarmaAfterPortal = true;
 }
 
@@ -1864,8 +1866,8 @@ void karma_setup() {
     attackConfig.cloneDuration = 90000;
     attackConfig.maxCloneNetworks = 2;
     
-    esp_wifi_set_mode(WIFI_MODE_NULL);
-    esp_wifi_start();
+    ensureWifiPlatform();
+    
     esp_wifi_set_promiscuous(true);
     esp_wifi_set_promiscuous_rx_cb(probe_sniffer);
     wifi_second_chan_t secondCh = (wifi_second_chan_t)NULL;
@@ -1878,9 +1880,6 @@ void karma_setup() {
         if (restartKarmaAfterPortal) {
             restartKarmaAfterPortal = false;
             activePortalChannel = 0;
-            esp_wifi_set_promiscuous(false);
-            esp_wifi_set_promiscuous_rx_cb(nullptr);
-            esp_wifi_start();
             esp_wifi_set_promiscuous(true);
             esp_wifi_set_promiscuous_rx_cb(probe_sniffer);
             auto_hopping = true;
