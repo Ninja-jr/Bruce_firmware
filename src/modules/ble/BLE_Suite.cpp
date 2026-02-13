@@ -3247,7 +3247,7 @@ String selectTargetFromScan(const char* title) {
         return "";
     }
     
-    pBLEScan->setAdvertisedDeviceCallbacks(simpleScanCallback, false);
+    pBLEScan->setScanCallbacks(simpleScanCallback, false);
     pBLEScan->setActiveScan(true);
     pBLEScan->setInterval(100);
     pBLEScan->setWindow(99);
