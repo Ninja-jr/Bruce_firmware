@@ -89,7 +89,7 @@ class AdvertisedDeviceCallbacks : public NimBLEAdvertisedDeviceCallbacks {
                     existing.deviceType |= result.deviceType;
                     found = true;
                     break;
-                }
+            }
             }
             if(!found) {
                 scanCache.push_back(result);
@@ -3245,8 +3245,8 @@ String selectTargetFromScan(const char* title) {
         return "";
     }
     
-    AdvertisedDeviceCallbacks* callbacks = new AdvertisedDeviceCallbacks();
-    pBLEScan->setAdvertisedDeviceCallbacks(callbacks, true);
+    // Fixed: Use the correct method name
+    pBLEScan->setAdvertisedDeviceCallbacks(new AdvertisedDeviceCallbacks(), false);
     pBLEScan->setActiveScan(true);
     pBLEScan->setInterval(100);
     pBLEScan->setWindow(99);
@@ -3264,7 +3264,6 @@ String selectTargetFromScan(const char* title) {
         if(check(EscPress)) {
             pBLEScan->stop();
             BLEStateManager::deinitBLE(true);
-            delete callbacks;
             scanCache.clear();
             return "";
         }
@@ -3298,7 +3297,6 @@ String selectTargetFromScan(const char* title) {
         if(check(EscPress)) {
             pBLEScan->stop();
             BLEStateManager::deinitBLE(true);
-            delete callbacks;
             scanCache.clear();
             return "";
         }
@@ -3320,7 +3318,6 @@ String selectTargetFromScan(const char* title) {
     }
     pBLEScan->stop();
     pBLEScan->clearResults();
-    delete callbacks;
     
     size_t deviceCount = 0;
     if(scanMutex && xSemaphoreTake(scanMutex, portMAX_DELAY)) {
@@ -3463,7 +3460,7 @@ String selectTargetFromScan(const char* title) {
 }
 
 void BleSuiteMenu() {
-    displaySplashScreen();
+    // Removed splash screen call
     String targetInfo = selectTargetFromScan("SELECT TARGET");
     if(targetInfo.isEmpty()) return;
     NimBLEAddress target = parseAddress(targetInfo);
@@ -3473,32 +3470,6 @@ void BleSuiteMenu() {
     });
     showAttackMenuWithTarget(target);
     cleanup.disable();
-}
-
-void displaySplashScreen() {
-    tft.fillScreen(bruceConfig.bgColor);
-    tft.drawRect(5, 5, tftWidth - 10, tftHeight - 10, TFT_WHITE);
-    tft.setTextColor(TFT_WHITE, bruceConfig.bgColor);
-    tft.setTextSize(3);
-    tft.setCursor((tftWidth - strlen("BLE SUITE") * 18) / 2, tftHeight / 2 - 40);
-    tft.print("BLE SUITE");
-    tft.setTextSize(1);
-    tft.setTextColor(TFT_CYAN, bruceConfig.bgColor);
-    tft.setCursor((tftWidth - strlen("Advanced Bluetooth Exploitation") * 6) / 2, tftHeight / 2);
-    tft.print("Advanced Bluetooth Exploitation");
-    tft.setTextColor(TFT_GREEN, bruceConfig.bgColor);
-    tft.setCursor((tftWidth - strlen("Version 2.0") * 6) / 2, tftHeight / 2 + 30);
-    tft.print("Version 2.0");
-    tft.setTextColor(TFT_YELLOW, bruceConfig.bgColor);
-    tft.setCursor((tftWidth - strlen("Press any key to start...") * 6) / 2, tftHeight / 2 + 70);
-    tft.print("Press any key to start...");
-    while(true) {
-        if(check(EscPress) || check(SelPress) || check(PrevPress) || check(NextPress)) {
-            delay(200);
-            break;
-        }
-        delay(50);
-    }
 }
 
 void showAttackMenuWithTarget(NimBLEAddress target) {
