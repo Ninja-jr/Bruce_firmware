@@ -33,70 +33,90 @@ struct SimpleScanResult {
 static std::vector<SimpleScanResult> scanCache;
 static SemaphoreHandle_t scanMutex = NULL;
 
-// Fixed callback class definition
+// Simple callback function for scanning (used as fallback or for simple scans)
+void simpleScanCallback(NimBLEAdvertisedDevice* advertisedDevice) {
+    if(!advertisedDevice) return;
+    
+    if(!scanMutex) {
+        scanMutex = xSemaphoreCreateMutex();
+    }
+    
+    SimpleScanResult result;
+    result.address = String(advertisedDevice->getAddress().toString().c_str());
+    
+    // Get device name
+    String name = String(advertisedDevice->getName().c_str());
+    if(name.isEmpty() || name == "(null)" || name == "null") {
+        // Try to extract name from manufacturer data
+        if(advertisedDevice->haveManufacturerData()) {
+            std::string manufData = advertisedDevice->getManufacturerData();
+            if(manufData.length() > 4) {
+                String extracted = "";
+                // Look for ASCII characters after the manufacturer ID
+                for(size_t i = 4; i < manufData.length() && i < 20; i++) {
+                    char c = manufData[i];
+                    if(c >= 32 && c <= 126) extracted += c;
+                    else break;
+                }
+                if(extracted.length() >= 3) name = extracted;
+            }
+        }
+        // If still no name, create one from MAC
+        if(name.isEmpty() || name == "(null)" || name == "null") {
+            String shortMac = result.address.substring(result.address.length() - 5);
+            name = "Device " + shortMac;
+        }
+    }
+    result.name = name;
+    result.rssi = advertisedDevice->getRSSI();
+    
+    // Check for specific services
+    result.hasFastPair = false;
+    result.hasHFP = false;
+    result.deviceType = 0;
+    
+    if(advertisedDevice->haveServiceUUID()) {
+        for(int i = 0; i < advertisedDevice->getServiceUUIDCount(); i++) {
+            NimBLEUUID uuid = advertisedDevice->getServiceUUID(i);
+            std::string uuidStr = uuid.toString();
+            
+            // FastPair service UUID
+            if(uuidStr.find("fe2c") != std::string::npos) result.hasFastPair = true;
+            // HFP service UUIDs
+            if(uuidStr.find("111e") != std::string::npos || uuidStr.find("111f") != std::string::npos) result.hasHFP = true;
+            // AVRCP
+            if(uuidStr.find("110e") != std::string::npos || uuidStr.find("110f") != std::string::npos) result.deviceType |= 0x01;
+            // HID
+            if(uuidStr.find("1812") != std::string::npos) result.deviceType |= 0x02;
+        }
+    }
+    
+    // Store result in cache (thread-safe)
+    if(scanMutex && xSemaphoreTake(scanMutex, portMAX_DELAY)) {
+        bool found = false;
+        for(auto& existing : scanCache) {
+            if(existing.address == result.address) {
+                // Update existing device
+                existing.rssi = result.rssi; // Update RSSI
+                if(!result.name.isEmpty() && result.name != "Device ") existing.name = result.name;
+                existing.hasFastPair |= result.hasFastPair;
+                existing.hasHFP |= result.hasHFP;
+                existing.deviceType |= result.deviceType;
+                found = true;
+                break;
+            }
+        }
+        if(!found) {
+            scanCache.push_back(result);
+        }
+        xSemaphoreGive(scanMutex);
+    }
+}
+
 class AdvertisedDeviceCallbacks : public NimBLEAdvertisedDeviceCallbacks {
     void onResult(NimBLEAdvertisedDevice* advertisedDevice) {
-        if(!advertisedDevice) return;
-        
-        SimpleScanResult result;
-        result.address = String(advertisedDevice->getAddress().toString().c_str());
-        
-        String name = String(advertisedDevice->getName().c_str());
-        if(name.isEmpty() || name == "(null)" || name == "null") {
-            if(advertisedDevice->haveManufacturerData()) {
-                std::string manufData = advertisedDevice->getManufacturerData();
-                if(manufData.length() > 4) {
-                    String extracted = "";
-                    for(size_t i = 4; i < manufData.length() && i < 20; i++) {
-                        char c = manufData[i];
-                        if(c >= 32 && c <= 126) extracted += c;
-                        else break;
-                    }
-                    if(extracted.length() >= 3) name = extracted;
-                }
-            }
-            if(name.isEmpty() || name == "(null)" || name == "null") {
-                String shortMac = result.address.substring(result.address.length() - 5);
-                name = "Device " + shortMac;
-            }
-        }
-        result.name = name;
-        result.rssi = advertisedDevice->getRSSI();
-        
-        result.hasFastPair = false;
-        result.hasHFP = false;
-        result.deviceType = 0;
-        
-        if(advertisedDevice->haveServiceUUID()) {
-            for(int i = 0; i < advertisedDevice->getServiceUUIDCount(); i++) {
-                NimBLEUUID uuid = advertisedDevice->getServiceUUID(i);
-                std::string uuidStr = uuid.toString();
-                
-                if(uuidStr.find("fe2c") != std::string::npos) result.hasFastPair = true;
-                if(uuidStr.find("111e") != std::string::npos || uuidStr.find("111f") != std::string::npos) result.hasHFP = true;
-                if(uuidStr.find("110e") != std::string::npos || uuidStr.find("110f") != std::string::npos) result.deviceType |= 0x01;
-                if(uuidStr.find("1812") != std::string::npos) result.deviceType |= 0x02;
-            }
-        }
-        
-        if(scanMutex && xSemaphoreTake(scanMutex, portMAX_DELAY)) {
-            bool found = false;
-            for(auto& existing : scanCache) {
-                if(existing.address == result.address) {
-                    existing.rssi = result.rssi;
-                    if(!result.name.isEmpty() && result.name != "Device ") existing.name = result.name;
-                    existing.hasFastPair |= result.hasFastPair;
-                    existing.hasHFP |= result.hasHFP;
-                    existing.deviceType |= result.deviceType;
-                    found = true;
-                    break;
-                }
-            }
-            if(!found) {
-                scanCache.push_back(result);
-            }
-            xSemaphoreGive(scanMutex);
-        }
+        // Call the simple callback for compatibility
+        simpleScanCallback(advertisedDevice);
     }
 };
 
@@ -3246,7 +3266,7 @@ String selectTargetFromScan(const char* title) {
         return "";
     }
     
-    // Create a static callback object that will persist
+    // Use the static callback class that calls simpleScanCallback
     static AdvertisedDeviceCallbacks callbacks;
     pBLEScan->setAdvertisedDeviceCallbacks(&callbacks, false);
     pBLEScan->setActiveScan(true);
