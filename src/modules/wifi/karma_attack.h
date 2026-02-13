@@ -48,10 +48,8 @@ typedef struct {
     int rssi;
     unsigned long timestamp;
     uint8_t channel;
-    uint8_t encryption_type;
-    uint8_t frame[256];
+    uint8_t frame[128];
     uint16_t frame_len;
-    uint32_t microseconds;
 } ProbeRequest;
 
 typedef struct {
@@ -84,7 +82,6 @@ typedef struct {
 
 typedef struct {
     String ssid;
-    String bssid;
     String targetMAC;
     uint8_t channel;
     RSNInfo rsn;
@@ -238,7 +235,7 @@ void saveCredentialsToFile(String ssid, String password);
 void saveProbesToPCAP(FS &fs);
 
 extern std::map<String, ClientBehavior> clientBehaviors;
-extern ProbeRequest probeBuffer[1000];
+extern ProbeRequest probeBuffer[200];
 extern uint16_t probeBufferIndex;
 extern bool bufferWrapped;
 extern KarmaConfig karmaConfig;
