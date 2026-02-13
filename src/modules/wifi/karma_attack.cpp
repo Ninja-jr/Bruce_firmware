@@ -23,6 +23,9 @@
 #include "karma_attack.h"
 #include <globals.h>
 
+// Forward declaration
+void probe_sniffer(void *buf, wifi_promiscuous_pkt_type_t type);
+
 #ifndef KARMA_CHANNELS
 #define KARMA_CHANNELS
 const uint8_t karma_channels[] PROGMEM = {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14};
