@@ -953,7 +953,6 @@ void processResponseQueue() {
             if (!found && activeNetworks.size() < MAX_CONCURRENT_SSIDS) {
                 ActiveNetwork net;
                 net.ssid = task.ssid;
-                net.bssid = task.bssid;
                 net.channel = task.channel;
                 net.rsn = task.rsn;
                 net.lastActivity = now;
@@ -973,7 +972,6 @@ void queueProbeResponse(const ProbeRequest &probe, const RSNInfo &rsn) {
     if (responseQueue.size() >= 10) return;
     ProbeResponseTask task;
     task.ssid = probe.ssid;
-    task.bssid = "";
     task.targetMAC = probe.mac;
     task.channel = probe.channel;
     task.rsn = rsn;
