@@ -33,9 +33,9 @@ const uint8_t karma_channels[] PROGMEM = {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12,
 
 #define FILENAME "probe_capture_"
 #define SAVE_INTERVAL 10
-#define MAX_PROBE_BUFFER 500
-#define MAC_CACHE_SIZE 200
-#define MAX_CLIENT_TRACK 50
+#define MAX_PROBE_BUFFER 200
+#define MAC_CACHE_SIZE 100
+#define MAX_CLIENT_TRACK 30
 #define FAST_HOP_INTERVAL 250
 #define DEFAULT_HOP_INTERVAL 3000
 #define DEAUTH_INTERVAL 30000
@@ -1200,8 +1200,10 @@ bool selectPortalTemplate(bool isInitialSetup) {
             {"SD Card", [=]() {
                 tft.fillScreen(bruceConfig.bgColor);
                 drawMainBorderWithTitle("BROWSE SD");
+                FS *fs = nullptr;
                 if (setupSdCard()) {
-                    String templateFile = loopSD(SD, true, "HTML");
+                    fs = &SD;
+                    String templateFile = loopSD(*fs, true, "HTML");
                     if (templateFile.length() > 0) {
                         PortalTemplate customTmpl;
                         customTmpl.name = "[SD] " + templateFile;
@@ -1220,7 +1222,6 @@ bool selectPortalTemplate(bool isInitialSetup) {
                         selectedTemplate = customTmpl;
                         templateSelected = true;
                         if (portalTemplates.size() < MAX_PORTAL_TEMPLATES) portalTemplates.push_back(customTmpl);
-                        SD.end();
                         tft.fillScreen(bruceConfig.bgColor);
                         drawMainBorderWithTitle("SELECTED");
                         displayTextLine(customTmpl.name);
@@ -1232,6 +1233,7 @@ bool selectPortalTemplate(bool isInitialSetup) {
                             delay(1000);
                         }
                     }
+                    SD.end();
                 } else {
                     displayTextLine("SD Card failed!");
                     delay(1000);
@@ -1240,8 +1242,10 @@ bool selectPortalTemplate(bool isInitialSetup) {
             {"LittleFS", [=]() {
                 tft.fillScreen(bruceConfig.bgColor);
                 drawMainBorderWithTitle("BROWSE LITTLEFS");
+                FS *fs = nullptr;
                 if (LittleFS.begin()) {
-                    String templateFile = loopSD(LittleFS, true, "HTML");
+                    fs = &LittleFS;
+                    String templateFile = loopSD(*fs, true, "HTML");
                     if (templateFile.length() > 0) {
                         PortalTemplate customTmpl;
                         customTmpl.name = "[FS] " + templateFile;
@@ -1260,7 +1264,6 @@ bool selectPortalTemplate(bool isInitialSetup) {
                         selectedTemplate = customTmpl;
                         templateSelected = true;
                         if (portalTemplates.size() < MAX_PORTAL_TEMPLATES) portalTemplates.push_back(customTmpl);
-                        LittleFS.end();
                         tft.fillScreen(bruceConfig.bgColor);
                         drawMainBorderWithTitle("SELECTED");
                         displayTextLine(customTmpl.name);
