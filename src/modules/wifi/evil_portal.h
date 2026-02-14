@@ -23,7 +23,7 @@ public:
     /////////////////////////////////////////////////////////////////////////////////////
     // Constructor
     /////////////////////////////////////////////////////////////////////////////////////
-    EvilPortal(String tssid = "", uint8_t channel = 6, bool deauth = false, bool verifyPwd = false);
+    EvilPortal(String tssid = "", uint8_t channel = 6, bool deauth = false, bool verifyPwd = false, bool autoMode = false);
     ~EvilPortal();
 
     /////////////////////////////////////////////////////////////////////////////////////
@@ -40,6 +40,7 @@ private:
     bool _deauth;
     bool isDeauthHeld = false;
     bool _verifyPwd; // From PR branch
+    bool _autoMode;  // Added for karma auto-portal
     AsyncWebServer webServer;
 
     DNSServer dnsServer;
