@@ -23,6 +23,12 @@
 #include "karma_attack.h"
 #include <globals.h>
 
+#ifndef display_clear
+void display_clear() {
+    tft.fillScreen(bruceConfig.bgColor);
+}
+#endif
+
 void probe_sniffer(void *buf, wifi_promiscuous_pkt_type_t type);
 
 #ifndef KARMA_CHANNELS
