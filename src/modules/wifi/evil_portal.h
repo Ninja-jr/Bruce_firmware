@@ -25,7 +25,7 @@ public:
     void beginAP(void);
     void setupRoutes(void);
     void loop(void);
-    
+
     // Karma Integration Methods
     bool hasCredentials();
     String getCapturedSSID();
@@ -55,7 +55,7 @@ private:
     int previousTotalCapturedCredentials = -1;
     String capturedCredentialsHtml = "";
     bool verifyPass = false;
-    
+
     // Track handler for cleanup
     CaptiveRequestHandler* _captiveHandler = nullptr;
 
