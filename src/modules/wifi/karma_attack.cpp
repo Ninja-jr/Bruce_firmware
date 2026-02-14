@@ -23,12 +23,6 @@
 #include "karma_attack.h"
 #include <globals.h>
 
-#ifndef display_clear
-void display_clear() {
-    tft.fillScreen(bruceConfig.bgColor);
-}
-#endif
-
 void probe_sniffer(void *buf, wifi_promiscuous_pkt_type_t type);
 
 #ifndef KARMA_CHANNELS
@@ -62,6 +56,7 @@ const uint8_t karma_channels[] PROGMEM = {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12,
 #define BEACON_BURST_SIZE 8
 #define BEACON_BURST_INTERVAL 60
 #define LISTEN_WINDOW 250
+#define KARMA_QUEUE_DEPTH 48
 
 const uint8_t vendorOUIs[][3] PROGMEM = {
     {0x00, 0x50, 0xF2}, {0x00, 0x1A, 0x11}, {0x00, 0x1B, 0x63}, {0x00, 0x24, 0x01},
@@ -93,6 +88,9 @@ unsigned long deauthCount[14] = {0};
 unsigned long lastDeauthReset = 0;
 unsigned long lastBeaconBurst = 0;
 uint8_t beaconsInBurst = 0;
+QueueHandle_t karmaQueue = nullptr;
+TaskHandle_t karmaWriterHandle = nullptr;
+bool storageAvailable = true;
 
 std::vector<String> SSIDDatabase::ssidCache;
 bool SSIDDatabase::cacheLoaded = false;
@@ -102,19 +100,10 @@ bool SSIDDatabase::useLittleFS = false;
 bool SSIDDatabase::loadFromFile() {
     if (cacheLoaded && !ssidCache.empty()) return true;
     ssidCache.clear();
-    File file;
-    if (useLittleFS) {
-        if (!LittleFS.begin()) return false;
-        file = LittleFS.open(currentFilename, FILE_READ);
-    } else {
-        if (!setupSdCard()) return false;
-        file = SD.open(currentFilename, FILE_READ);
-    }
-    if (!file) {
-        if (useLittleFS) LittleFS.end();
-        else SD.end();
-        return false;
-    }
+    FS *fs = nullptr;
+    if (!getFsStorage(fs)) return false;
+    File file = fs->open(currentFilename, FILE_READ);
+    if (!file) return false;
     while (file.available() && ssidCache.size() < MAX_SSID_DB_SIZE) {
         String line = file.readStringUntil('\n');
         line.trim();
@@ -124,8 +113,6 @@ bool SSIDDatabase::loadFromFile() {
         ssidCache.push_back(line);
     }
     file.close();
-    if (useLittleFS) LittleFS.end();
-    else SD.end();
     cacheLoaded = true;
     return !ssidCache.empty();
 }
@@ -1155,8 +1142,8 @@ void loadPortalTemplates() {
         }
         LittleFS.end();
     }
-    bool sdMounted = setupSdCard();
-    if (sdMounted) {
+    FS *fs = nullptr;
+    if (getFsStorage(fs) && fs == &SD) {
         if (!SD.exists("/PortalTemplates")) SD.mkdir("/PortalTemplates");
         if (SD.exists("/PortalTemplates")) {
             File root = SD.open("/PortalTemplates");
@@ -1176,7 +1163,6 @@ void loadPortalTemplates() {
                 file = root.openNextFile();
             }
         }
-        SD.end();
     }
 }
 
@@ -1207,12 +1193,11 @@ bool selectPortalTemplate(bool isInitialSetup) {
         drawMainBorderWithTitle("LOAD FROM");
         std::vector<Option> directOptions;
         
-        bool sdAvailable = setupSdCard();
-        if (sdAvailable) {
+        FS *fs = nullptr;
+        if (getFsStorage(fs) && fs == &SD) {
             directOptions.push_back({"SD Card", [=]() {
                 drawMainBorderWithTitle("BROWSE SD");
-                FS &fs = SD;
-                String templateFile = loopSD(fs, true, "HTML", "/");
+                String templateFile = loopSD(SD, true, "HTML", "/");
                 if (templateFile.length() > 0) {
                     PortalTemplate customTmpl;
                     customTmpl.name = "[SD] " + templateFile;
@@ -1246,8 +1231,7 @@ bool selectPortalTemplate(bool isInitialSetup) {
         directOptions.push_back({"LittleFS", [=]() {
             drawMainBorderWithTitle("BROWSE LITTLEFS");
             if (LittleFS.begin()) {
-                FS &fs = LittleFS;
-                String templateFile = loopSD(fs, true, "HTML", "/");
+                String templateFile = loopSD(LittleFS, true, "HTML", "/");
                 if (templateFile.length() > 0) {
                     PortalTemplate customTmpl;
                     customTmpl.name = "[FS] " + templateFile;
@@ -1490,6 +1474,7 @@ void handleBroadcastResponse(const String& ssid, const String& mac) {
 }
 
 void saveProbesToPCAP(FS &fs) {
+    if (!storageAvailable) return;
     String filename = "/ProbeData/karma_capture_" + String(millis()) + ".pcap";
     File file = fs.open(filename, FILE_WRITE);
     if (!file) {
@@ -1545,6 +1530,7 @@ void saveProbesToPCAP(FS &fs) {
 
 void probe_sniffer(void *buf, wifi_promiscuous_pkt_type_t type) {
     if (type != WIFI_PKT_MGMT) return;
+    if (!storageAvailable) return;
 
     wifi_promiscuous_pkt_t *pkt = (wifi_promiscuous_pkt_t *)buf;
     wifi_pkt_rx_ctrl_t ctrl = (wifi_pkt_rx_ctrl_t)pkt->rx_ctrl;
@@ -1763,6 +1749,7 @@ void updateKarmaDisplay() {
 }
 
 void saveNetworkHistory(FS &fs) {
+    if (!storageAvailable) return;
     if (!fs.exists("/ProbeData")) fs.mkdir("/ProbeData");
     String filename = "/ProbeData/network_history_" + String(millis()) + ".csv";
     File file = fs.open(filename, FILE_WRITE);
@@ -1834,17 +1821,21 @@ void karma_setup() {
         FileSys = (Fs == &SD) ? "SD" : "LittleFS";
         is_LittleFS = (Fs == &LittleFS);
         filen = generateUniqueFilename(*Fs, false);
+        storageAvailable = true;
     } else {
         Fs = &LittleFS;
         FileSys = "LittleFS";
         is_LittleFS = true;
         filen = generateUniqueFilename(LittleFS, false);
+        storageAvailable = checkLittleFsSizeNM();
     }
-    if (!Fs->exists("/ProbeData")) Fs->mkdir("/ProbeData");
+    if (storageAvailable && !Fs->exists("/ProbeData")) Fs->mkdir("/ProbeData");
     displayTextLine("Modern Karma Started");
     tft.setTextSize(FP);
     tft.setCursor(80, 100);
     clearProbes();
+
+    karmaQueue = xQueueCreate(KARMA_QUEUE_DEPTH, sizeof(ProbeRequest));
 
     karmaConfig.enableAutoKarma = true;
     karmaConfig.enableDeauth = false;
@@ -1895,12 +1886,16 @@ void karma_setup() {
                 macRingBuffer = NULL;
             }
             while (!responseQueue.empty()) responseQueue.pop();
-            display_clear();
-            tft.setTextSize(1);
-            tft.setTextColor(bruceConfig.priColor, bruceConfig.bgColor);
+            if (karmaQueue) {
+                vQueueDelete(karmaQueue);
+                karmaQueue = nullptr;
+            }
             return;
         }
         unsigned long currentTime = millis();
+        if (is_LittleFS) {
+            storageAvailable = checkLittleFsSizeNM();
+        }
         rotateBSSID();
         if (karmaConfig.enableSmartHop) smartChannelHop();
         if (karmaConfig.enableDeauth && (currentTime - lastDeauthTime > DEAUTH_INTERVAL)) {
@@ -2096,7 +2091,7 @@ void karma_setup() {
                 }},
                 {"Save Probes", [&]() {
                     FS *saveFs;
-                    if (getFsStorage(saveFs)) {
+                    if (getFsStorage(saveFs) && storageAvailable) {
                         saveProbesToFile(*saveFs, true);
                         displayTextLine("Probes saved!");
                     } else displayTextLine("No storage!");
@@ -2206,6 +2201,7 @@ void karma_setup() {
 }
 
 void saveProbesToFile(FS &fs, bool compressed) {
+    if (!storageAvailable) return;
     if (!fs.exists("/ProbeData")) fs.mkdir("/ProbeData");
     if (compressed) {
         File file = fs.open(filen, FILE_WRITE);
