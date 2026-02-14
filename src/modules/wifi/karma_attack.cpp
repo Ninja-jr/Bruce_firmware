@@ -57,7 +57,6 @@ void display_clear() {
 #define BEACON_INTERVAL_MS 102400
 #define MAX_CONCURRENT_SSIDS 8
 #define MAC_ROTATION_INTERVAL 30000
-#define MENU_TIMEOUT_MS 15000
 
 const uint8_t vendorOUIs[][3] = {
     {0x00, 0x50, 0xF2},
@@ -246,6 +245,7 @@ ActiveBroadcastAttack::ActiveBroadcastAttack()
 void ActiveBroadcastAttack::start() {
     size_t total = SSIDDatabase::getCount();
     if (total == 0) {
+        Serial.println("[BROADCAST] No SSIDs in database");
         return;
     }
 
@@ -254,10 +254,15 @@ void ActiveBroadcastAttack::start() {
     batchStart = 0;
     stats.startTime = millis();
     loadNextBatch();
+
+    Serial.printf("[BROADCAST] Started with %d SSIDs\n", total);
+    Serial.printf("[BROADCAST] Batch size: %d, Interval: %ldms\n", 
+                  config.batchSize, config.broadcastInterval);
 }
 
 void ActiveBroadcastAttack::stop() {
     _active = false;
+    Serial.println("[BROADCAST] Stopped");
 }
 
 void ActiveBroadcastAttack::restart() {
@@ -313,6 +318,7 @@ void ActiveBroadcastAttack::update() {
         if (currentBatch.empty()) {
             batchStart = 0;
             loadNextBatch();
+            Serial.println("[BROADCAST] Restarted from beginning");
         }
     }
 
@@ -328,6 +334,11 @@ void ActiveBroadcastAttack::update() {
         currentIndex++;
         stats.totalBroadcasts++;
         lastBroadcastTime = now;
+
+        if (stats.totalBroadcasts % 500 == 0) {
+            Serial.printf("[BROADCAST] Sent: %d, Responses: %d\n", 
+                         stats.totalBroadcasts, stats.totalResponses);
+        }
     }
 }
 
@@ -414,6 +425,8 @@ void ActiveBroadcastAttack::rotateChannel() {
 
     channelIndex = (channelIndex + 1) % (sizeof(channels) / sizeof(channels[0]));
     currentChannel = channels[channelIndex];
+
+    Serial.printf("[BROADCAST] Switched to channel %d\n", currentChannel);
 }
 
 void ActiveBroadcastAttack::sendBeaconFrame(const String &ssid, uint8_t channel) {
@@ -424,6 +437,9 @@ void ActiveBroadcastAttack::recordResponse(const String &ssid) {
     stats.totalResponses++;
     stats.ssidResponseCount[ssid]++;
     stats.lastResponseTime = millis();
+
+    Serial.printf("[BROADCAST] Response for: %s (total: %d)\n", 
+                 ssid.c_str(), stats.ssidResponseCount[ssid]);
 }
 
 void ActiveBroadcastAttack::launchAttackForResponse(const String &ssid, const String &mac) {
@@ -440,6 +456,7 @@ void ActiveBroadcastAttack::launchAttackForResponse(const String &ssid, const St
     }
 
     if (activeCount >= config.maxActiveAttacks) {
+        Serial.println("[BROADCAST] Max active attacks reached, skipping");
         return;
     }
 
@@ -461,6 +478,9 @@ void ActiveBroadcastAttack::launchAttackForResponse(const String &ssid, const St
 
     pendingPortals.push_back(portal);
     stats.successfulAttacks++;
+
+    Serial.printf("[BROADCAST] Scheduled attack for %s -> %s\n", 
+                 mac.c_str(), ssid.c_str());
 }
 
 ActiveBroadcastAttack broadcastAttack;
@@ -541,6 +561,7 @@ String generateUniqueFilename(FS &fs, bool compressed) {
 void initMACCache() {
     macRingBuffer = xRingbufferCreate(MAC_CACHE_SIZE * 18, RINGBUF_TYPE_NOSPLIT);
     if (!macRingBuffer) {
+        Serial.println("[ERROR] Failed to create MAC ring buffer!");
     }
 }
 
@@ -817,6 +838,9 @@ void rotateBSSID() {
     if (millis() - lastMACRotation > MAC_ROTATION_INTERVAL) {
         generateRandomBSSID(currentBSSID);
         lastMACRotation = millis();
+        Serial.printf("[MAC] Rotated BSSID to %02X:%02X:%02X:%02X:%02X:%02X\n",
+                     currentBSSID[0], currentBSSID[1], currentBSSID[2],
+                     currentBSSID[3], currentBSSID[4], currentBSSID[5]);
     }
 }
 
@@ -1158,6 +1182,8 @@ void sendProbeResponse(const String &ssid, const String &mac, uint8_t channel) {
 
     if (err == ESP_OK) {
         karmaResponsesSent++;
+        Serial.printf("[KARMA] Sent probe response for %s to %s on ch%d\n", 
+                     ssid.c_str(), mac.c_str(), channel);
     }
 }
 
@@ -1213,6 +1239,11 @@ void sendBeaconFrames() {
             
             activeNetworks[i].lastBeacon = now;
             beaconsSent++;
+            
+            if (beaconsSent % 100 == 0) {
+                Serial.printf("[BEACON] Sent %ld beacons for %s\n", 
+                             beaconsSent, activeNetworks[i].ssid.c_str());
+            }
         }
     }
 }
@@ -1314,6 +1345,11 @@ void checkForAssociations() {
                 if (it != networkHistory.end()) {
                     if (now - it->second.lastResponse < 10000) {
                         it->second.successfulConnections++;
+                        
+                        if (it->second.successfulConnections % 10 == 0) {
+                            Serial.printf("[SUCCESS] Potential %ld connections to %s\n",
+                                         it->second.successfulConnections, ssid.c_str());
+                        }
                     }
                 }
             }
@@ -1344,6 +1380,8 @@ void smartChannelHop() {
     last_ChannelChange = now;
     redrawNeeded = true;
     hop_interval = DEFAULT_HOP_INTERVAL;
+
+    Serial.printf("[CHANNEL] Switched to channel %d\n", priorityChannels[currentPriorityChannel]);
 }
 
 void updateChannelActivity(uint8_t channel) {
@@ -1425,6 +1463,9 @@ void checkCloneAttackOpportunities() {
                 portal.probeCount = ssidPair.second;
 
                 pendingPortals.push_back(portal);
+
+                Serial.printf("[CLONE] Scheduled clone attack for %s (%d probes)\n",
+                            ssidPair.first.c_str(), ssidPair.second);
             }
         }
     }
@@ -1436,11 +1477,7 @@ void loadPortalTemplates() {
     portalTemplates.push_back({"Google Login", "", true, false});
     portalTemplates.push_back({"Router Update", "", true, true});
 
-    bool fsSuccess = false;
-    bool sdSuccess = false;
-
     if (LittleFS.begin()) {
-        fsSuccess = true;
         if (!LittleFS.exists("/PortalTemplates")) {
             LittleFS.mkdir("/PortalTemplates");
         }
@@ -1464,6 +1501,7 @@ void loadPortalTemplates() {
                     }
 
                     portalTemplates.push_back(tmpl);
+                    Serial.printf("[TEMPLATE] Loaded custom: %s\n", tmpl.name.c_str());
                 }
                 file = root.openNextFile();
             }
@@ -1472,7 +1510,6 @@ void loadPortalTemplates() {
     }
 
     if (SD.begin()) {
-        sdSuccess = true;
         if (!SD.exists("/PortalTemplates")) {
             SD.mkdir("/PortalTemplates");
         }
@@ -1496,6 +1533,7 @@ void loadPortalTemplates() {
                     }
 
                     portalTemplates.push_back(tmpl);
+                    Serial.printf("[TEMPLATE] Loaded SD: %s\n", tmpl.name.c_str());
                 }
                 file = root.openNextFile();
             }
@@ -1535,174 +1573,123 @@ bool selectPortalTemplate(bool isInitialSetup) {
     }
 
     templateOptions.push_back({"Load Custom File", [=]() {
-        bool fileSelected = false;
+        display_clear();
+        drawMainBorderWithTitle("LOAD FROM");
         
-        std::vector<Option> fsOptions;
-        
-        fsOptions.push_back({"SD Card", [&]() {
-            display_clear();
-            drawMainBorderWithTitle("BROWSING SD...");
-            
-            if (!setupSdCard()) {
-                displayTextLine("SD Card not found!");
-                delay(2000);
-                return;
-            }
-            
-            String path = "/PortalTemplates/";
-            if (!SD.exists(path)) {
-                path = "/";
-            }
-            
-            displayTextLine("Scanning SD...");
-            File root = SD.open(path);
-            if (!root) {
-                displayTextLine("Cannot open SD!");
-                delay(2000);
-                return;
-            }
-            
-            std::vector<Option> fileOptions;
-            File file = root.openNextFile();
-            
-            while (file && fileOptions.size() < 20) {
-                if (!file.isDirectory()) {
-                    String filename = file.name();
-                    if (filename.endsWith(".html") || filename.endsWith(".htm")) {
-                        fileOptions.push_back({filename.c_str(), [&, filename]() {
-                            PortalTemplate customTmpl;
-                            customTmpl.name = "[SD] " + String(file.name());
-                            customTmpl.name.replace(".html", "");
-                            customTmpl.name.replace(".htm", "");
-                            customTmpl.filename = String(file.name());
-                            customTmpl.isDefault = false;
-                            
-                            File templateFile = SD.open(file.name(), FILE_READ);
-                            if (templateFile) {
-                                String firstLine = templateFile.readStringUntil('\n');
-                                templateFile.close();
-                                customTmpl.verifyPassword = (firstLine.indexOf("verify=\"true\"") != -1);
-                                if (customTmpl.verifyPassword) {
-                                    customTmpl.name += " (verify)";
-                                }
-                            }
-                            
-                            selectedTemplate = customTmpl;
-                            templateSelected = true;
-                            portalTemplates.push_back(customTmpl);
-                            fileSelected = true;
-                        }});
-                    }
-                }
-                file = root.openNextFile();
-            }
-            root.close();
-            
-            if (fileOptions.empty()) {
-                displayTextLine("No HTML files found!");
-                delay(2000);
-                return;
-            }
-            
-            fileOptions.push_back({"Back", []() {}});
-            
-            loopOptions(fileOptions);
-            
-            if (fileSelected) {
+        std::vector<Option> directOptions = {
+            {"SD Card", [=]() {
                 display_clear();
-                drawMainBorderWithTitle("SELECTED");
-                displayTextLine(selectedTemplate.name);
-                delay(1500);
-            }
-        }});
-        
-        fsOptions.push_back({"LittleFS", [&]() {
-            display_clear();
-            drawMainBorderWithTitle("BROWSING LITTLEFS...");
-            
-            if (!LittleFS.begin(true)) {
-                displayTextLine("LittleFS error!");
-                delay(2000);
-                return;
-            }
-            
-            String path = "/PortalTemplates/";
-            if (!LittleFS.exists(path)) {
-                path = "/";
-            }
-            
-            displayTextLine("Scanning LittleFS...");
-            File root = LittleFS.open(path);
-            if (!root) {
-                displayTextLine("Cannot open LittleFS!");
-                LittleFS.end();
-                delay(2000);
-                return;
-            }
-            
-            std::vector<Option> fileOptions;
-            File file = root.openNextFile();
-            
-            while (file && fileOptions.size() < 20) {
-                if (!file.isDirectory()) {
-                    String filename = file.name();
-                    if (filename.endsWith(".html") || filename.endsWith(".htm")) {
-                        fileOptions.push_back({filename.c_str(), [&, filename]() {
-                            PortalTemplate customTmpl;
-                            customTmpl.name = "[FS] " + String(file.name());
-                            customTmpl.name.replace(".html", "");
-                            customTmpl.name.replace(".htm", "");
-                            customTmpl.filename = String(file.name());
-                            customTmpl.isDefault = false;
-                            
-                            File templateFile = LittleFS.open(file.name(), FILE_READ);
-                            if (templateFile) {
-                                String firstLine = templateFile.readStringUntil('\n');
-                                templateFile.close();
-                                customTmpl.verifyPassword = (firstLine.indexOf("verify=\"true\"") != -1);
-                                if (customTmpl.verifyPassword) {
-                                    customTmpl.name += " (verify)";
-                                }
+                drawMainBorderWithTitle("BROWSE SD");
+                
+                if (setupSdCard()) {
+                    SD.begin();
+                    String templateFile = loopSD(SD, true, "HTML");
+                    if (templateFile.length() > 0) {
+                        PortalTemplate customTmpl;
+                        customTmpl.name = "[SD] " + templateFile;
+                        customTmpl.filename = templateFile;
+                        customTmpl.isDefault = false;
+                        customTmpl.verifyPassword = false;
+
+                        File file = SD.open(templateFile, FILE_READ);
+                        if (file) {
+                            String firstLine = file.readStringUntil('\n');
+                            file.close();
+                            if (firstLine.indexOf("verify=\"true\"") != -1) {
+                                customTmpl.verifyPassword = true;
+                                customTmpl.name += " (verify)";
                             }
-                            
-                            selectedTemplate = customTmpl;
-                            templateSelected = true;
-                            portalTemplates.push_back(customTmpl);
-                            fileSelected = true;
-                        }});
+                        }
+
+                        selectedTemplate = customTmpl;
+                        templateSelected = true;
+                        portalTemplates.push_back(customTmpl);
+                        
+                        SD.end();
+                        
+                        display_clear();
+                        drawMainBorderWithTitle("SELECTED");
+                        displayTextLine(customTmpl.name);
+                        delay(1500);
+                        
+                        if (isInitialSetup) {
+                            display_clear();
+                            drawMainBorderWithTitle("KARMA SETUP");
+                            displayTextLine("Selected: " + customTmpl.name);
+                            delay(1000);
+                        }
+                    } else {
+                        displayTextLine("No file selected");
+                        delay(1000);
+                        SD.end();
                     }
+                } else {
+                    displayTextLine("SD Card failed!");
+                    delay(1000);
                 }
-                file = root.openNextFile();
-            }
-            root.close();
-            LittleFS.end();
+            }},
             
-            if (fileOptions.empty()) {
-                displayTextLine("No HTML files found!");
-                delay(2000);
-                return;
-            }
-            
-            fileOptions.push_back({"Back", []() {}});
-            loopOptions(fileOptions);
-            
-            if (fileSelected) {
+            {"LittleFS", [=]() {
                 display_clear();
-                drawMainBorderWithTitle("SELECTED");
-                displayTextLine(selectedTemplate.name);
-                delay(1500);
-            }
-        }});
+                drawMainBorderWithTitle("BROWSE LITTLEFS");
+                
+                if (LittleFS.begin()) {
+                    String templateFile = loopSD(LittleFS, true, "HTML");
+                    if (templateFile.length() > 0) {
+                        PortalTemplate customTmpl;
+                        customTmpl.name = "[FS] " + templateFile;
+                        customTmpl.filename = templateFile;
+                        customTmpl.isDefault = false;
+                        customTmpl.verifyPassword = false;
+
+                        File file = LittleFS.open(templateFile, FILE_READ);
+                        if (file) {
+                            String firstLine = file.readStringUntil('\n');
+                            file.close();
+                            if (firstLine.indexOf("verify=\"true\"") != -1) {
+                                customTmpl.verifyPassword = true;
+                                customTmpl.name += " (verify)";
+                            }
+                        }
+
+                        selectedTemplate = customTmpl;
+                        templateSelected = true;
+                        portalTemplates.push_back(customTmpl);
+                        
+                        LittleFS.end();
+                        
+                        display_clear();
+                        drawMainBorderWithTitle("SELECTED");
+                        displayTextLine(customTmpl.name);
+                        delay(1500);
+                        
+                        if (isInitialSetup) {
+                            display_clear();
+                            drawMainBorderWithTitle("KARMA SETUP");
+                            displayTextLine("Selected: " + customTmpl.name);
+                            delay(1000);
+                        }
+                    } else {
+                        displayTextLine("No file selected");
+                        delay(1000);
+                        LittleFS.end();
+                    }
+                } else {
+                    displayTextLine("LittleFS error!");
+                    delay(1000);
+                }
+            }},
+            
+            {"Back", [=]() {
+            }}
+        };
         
-        fsOptions.push_back({"Cancel", []() {}});
-        loopOptions(fsOptions);
+        loopOptions(directOptions);
     }});
-    
+
     templateOptions.push_back({"Disable Auto-Portal", [=]() {
         karmaConfig.enableAutoPortal = false;
         templateSelected = false;
-        selectedTemplate.name = "";
-        selectedTemplate.filename = "";
         
         if (isInitialSetup) {
             drawMainBorderWithTitle("KARMA SETUP");
@@ -1711,30 +1698,15 @@ bool selectPortalTemplate(bool isInitialSetup) {
         }
     }});
 
-    templateOptions.push_back({"Cancel", [=]() {
-        templateSelected = false;
-        selectedTemplate.name = "";
-        selectedTemplate.filename = "";
-    }});
-
-    bool oldReturnToMenu = returnToMenu;
-    returnToMenu = false;
-    
-    unsigned long menuStart = millis();
     loopOptions(templateOptions);
-    
-    if (millis() - menuStart > MENU_TIMEOUT_MS) {
-        templateSelected = false;
-    }
-    
-    if (!templateSelected) {
-        returnToMenu = oldReturnToMenu;
-    }
-    
+
     return templateSelected;
 }
 
 void launchTieredEvilPortal(PendingPortal &portal) {
+    Serial.printf("[TIER-%d] Launching portal for %s (Duration: %ds)\n", 
+                 portal.tier, portal.ssid.c_str(), portal.duration / 1000);
+
     isPortalActive = true;
 
     esp_wifi_set_promiscuous(false);
@@ -1749,11 +1721,14 @@ void launchTieredEvilPortal(PendingPortal &portal) {
 
     while (millis() - portalStart < portal.duration) {
         if (check(EscPress)) {
+            Serial.println("[PORTAL] Early exit requested");
             break;
         }
 
         delay(100);
     }
+
+    Serial.printf("[PORTAL] Portal finished, returning to karma...\n");
 
     isPortalActive = false;
     restartKarmaAfterPortal = true;
@@ -1859,6 +1834,8 @@ void checkPendingPortals() {
 }
 
 void launchManualEvilPortal(const String &ssid, uint8_t channel, bool verifyPwd) {
+    Serial.printf("[MANUAL] Launching Evil Portal for %s (ch%d)\n", ssid.c_str(), channel);
+
     isPortalActive = true;
 
     esp_wifi_set_promiscuous(false);
@@ -1869,6 +1846,8 @@ void launchManualEvilPortal(const String &ssid, uint8_t channel, bool verifyPwd)
 
     isPortalActive = false;
     restartKarmaAfterPortal = true;
+
+    Serial.println("[MANUAL] Portal closed, returning to karma...");
 }
 
 void handleBroadcastResponse(const String& ssid, const String& mac) {
@@ -1891,6 +1870,9 @@ void handleBroadcastResponse(const String& ssid, const String& mac) {
             clientBehaviors[mac] = behavior;
             uniqueClients++;
             
+            Serial.printf("[BROADCAST] New client %s found via broadcast for %s\n",
+                         mac.c_str(), ssid.c_str());
+            
             if (karmaConfig.enableAutoKarma) {
                 PendingPortal portal;
                 portal.ssid = ssid;
@@ -1909,6 +1891,9 @@ void handleBroadcastResponse(const String& ssid, const String& mac) {
                 portal.probeCount = 1;
                 
                 pendingPortals.push_back(portal);
+                
+                Serial.printf("[BROADCAST] Scheduled attack for %s (responded to broadcast)\n",
+                            ssid.c_str());
             }
         }
     }
@@ -1974,6 +1959,7 @@ void probe_sniffer(void *buf, wifi_promiscuous_pkt_type_t type) {
             fakeMACCounter++;
             if (fakeMACCounter % 50 == 0) {
                 macBlacklist[mac] = millis();
+                Serial.printf("[FILTER] Blacklisted randomized MAC: %s\n", mac.c_str());
                 return;
             }
         }
@@ -2014,10 +2000,19 @@ void probe_sniffer(void *buf, wifi_promiscuous_pkt_type_t type) {
                             portal.probeCount = 1;
                             
                             pendingPortals.push_back(portal);
+                            
+                            Serial.printf("[SCHEDULE] Tier %d attack for %s (RSN:%d)\n",
+                                        tier, probe.ssid.c_str(), rsn.akmSuite);
                         }
                     }
                 }
             }
+        }
+        
+        if (rsn.akmSuite > 0) {
+            Serial.printf("[PROBE] %s -> %s (RSSI:%d, ch:%d, RSN:%s)\n", 
+                         mac.c_str(), ssid.c_str(), ctrl.rssi, probe.channel,
+                         rsn.akmSuite == 2 ? "WPA3" : "WPA2");
         }
     }
 }
@@ -2052,9 +2047,11 @@ void clearProbes() {
         vRingbufferDelete(macRingBuffer);
         initMACCache();
     }
+
+    Serial.println("[KARMA] All data cleared");
 }
 
-std::vector<ProbeRequest> getUniqueProbes(void) {
+std::vector<ProbeRequest> getUniqueProbes() {
     std::vector<ProbeRequest> unique;
     std::set<String> seen;
 
@@ -2075,7 +2072,7 @@ std::vector<ProbeRequest> getUniqueProbes(void) {
     return unique;
 }
 
-std::vector<ClientBehavior> getVulnerableClients(void) {
+std::vector<ClientBehavior> getVulnerableClients() {
     std::vector<ClientBehavior> vulnerable;
 
     for (const auto &pair : clientBehaviors) {
@@ -2195,6 +2192,7 @@ void saveNetworkHistory(FS &fs) {
         }
         
         file.close();
+        Serial.println("[HISTORY] Network history saved");
     }
 }
 
@@ -2205,7 +2203,7 @@ void karma_setup() {
     returnToMenu = false;
     isPortalActive = false;
     restartKarmaAfterPortal = false;
-    
+    templateSelected = false;
     redrawNeeded = true;
     
     probeBufferIndex = 0;
@@ -2234,79 +2232,15 @@ void karma_setup() {
     lastMACRotation = millis();
     
     display_clear();
-    
-    bool templateWasSelected = templateSelected;
-    
-    if (!templateSelected) {
-        drawMainBorderWithTitle("MODERN KARMA ATTACK");
-        displayTextLine("Enhanced Karma v2.0");
-        delay(500);
-        
-        unsigned long selectionStart = millis();
-        bool selected = selectPortalTemplate(true);
-        
-        if (!selected) {
-            display_clear();
-            drawMainBorderWithTitle("NO TEMPLATE");
-            displayTextLine("Continue without portal?");
-            displayTextLine("Select: Yes, Prev: No");
-            
-            bool decided = false;
-            unsigned long timeout = millis() + 10000;
-            
-            while (!decided && millis() < timeout) {
-                if (check(SelPress)) {
-                    templateSelected = false;
-                    karmaConfig.enableAutoPortal = false;
-                    selectedTemplate.name = "None";
-                    selectedTemplate.filename = "";
-                    selectedTemplate.isDefault = false;
-                    selectedTemplate.verifyPassword = false;
-                    decided = true;
-                    delay(200);
-                }
-                if (check(PrevPress) || check(EscPress)) {
-                    returnToMenu = true;
-                    return;
-                }
-                delay(50);
-            }
-            
-            if (!decided) {
-                returnToMenu = true;
-                return;
-            }
-        }
-    } else if (!selectedTemplate.filename.isEmpty() && !selectedTemplate.isDefault) {
-        if (selectedTemplate.filename.startsWith("[SD]")) {
-            String actualPath = selectedTemplate.filename.substring(4);
-            if (!setupSdCard() || !SD.exists(actualPath)) {
-                templateSelected = false;
-                selectedTemplate.name = "";
-                selectedTemplate.filename = "";
-            }
-        } else {
-            if (!LittleFS.begin() || !LittleFS.exists(selectedTemplate.filename)) {
-                templateSelected = false;
-                selectedTemplate.name = "";
-                selectedTemplate.filename = "";
-            }
-            LittleFS.end();
-        }
-    }
-    
-    if (templateSelected && selectedTemplate.name.isEmpty()) {
-        templateSelected = false;
-    }
-    
-    drawMainBorderWithTitle("ENHANCED KARMA ATK");
-    
-    if (templateSelected) {
-        displayTextLine("Template: " + selectedTemplate.name);
-    } else {
-        displayTextLine("Template: None (Karma Only)");
-    }
+    drawMainBorderWithTitle("MODERN KARMA ATTACK");
+    displayTextLine("Enhanced Karma v2.0");
     delay(500);
+    
+    if (!selectPortalTemplate(true)) {
+        drawMainBorderWithTitle("KARMA SETUP");
+        displayTextLine("Starting without portal...");
+        delay(1000);
+    }
     
     drawMainBorderWithTitle("ENHANCED KARMA ATK");
     
@@ -2367,6 +2301,11 @@ void karma_setup() {
     wifi_second_chan_t secondCh = (wifi_second_chan_t)NULL;
     esp_wifi_set_channel(karma_channels[channl % 14], secondCh);
     
+    Serial.println("Modern karma attack started!");
+    Serial.printf("BSSID: %02X:%02X:%02X:%02X:%02X:%02X\n",
+                 currentBSSID[0], currentBSSID[1], currentBSSID[2],
+                 currentBSSID[3], currentBSSID[4], currentBSSID[5]);
+    
     vTaskDelay(1000 / portTICK_RATE_MS);
     
     for (;;) {
@@ -2402,6 +2341,7 @@ void karma_setup() {
             tft.setTextSize(1);
             tft.setTextColor(bruceConfig.priColor, bruceConfig.bgColor);
             
+            Serial.printf("[KARMA] Exit complete. Heap: %lu\n", ESP.getFreeHeap());
             return;
         }
         
@@ -2448,22 +2388,20 @@ void karma_setup() {
         }
         
         if (PrevPress) {
-#if !defined(HAS_KEYBOARD) && !defined(HAS_ENCODER)
             check(PrevPress);
-            esp_wifi_set_promiscuous(false);
-            esp_wifi_set_promiscuous_rx_cb(nullptr);
-            if (channl > 0) channl--;
-            else channl = 13;
-            wifi_second_chan_t secondCh = (wifi_second_chan_t)NULL;
-            esp_wifi_set_channel(karma_channels[channl % 14], secondCh);
-            redraw = true;
-            vTaskDelay(50 / portTICK_PERIOD_MS);
-            esp_wifi_set_promiscuous(true);
-            esp_wifi_set_promiscuous_rx_cb(probe_sniffer);
-#endif
+            redraw = false;
+            redrawNeeded = false;
+            break;
         }
         
-        if (check(SelPress) || check(EscPress) || redraw || redrawNeeded) {
+#if defined(HAS_KEYBOARD) || defined(T_EMBED)
+        if (check(EscPress)) {
+            returnToMenu = true;
+            continue;
+        }
+#endif
+        
+        if (check(SelPress) || redraw || redrawNeeded) {
             vTaskDelay(200 / portTICK_PERIOD_MS);
             if (!redraw && !redrawNeeded) {
                 std::vector<Option> options = {
@@ -2531,12 +2469,11 @@ void karma_setup() {
                          }
                          
                          tft.setCursor(10, tftHeight - 20);
-                         tft.print("Press any button to return");
+                         tft.print("Prev/Sel: Back");
                          
-                         bool buttonPressed = false;
-                         while (!buttonPressed) {
-                             if (check(SelPress) || check(EscPress) || check(PrevPress) || check(NextPress)) {
-                                 buttonPressed = true;
+                         while (!check(SelPress) && !check(EscPress)) {
+                             if (check(PrevPress)) {
+                                 break;
                              }
                              delay(50);
                          }
@@ -2583,6 +2520,7 @@ void karma_setup() {
                                      launchManualEvilPortal(client.probedSSIDs[0], 
                                                            client.favoriteChannel, 
                                                            selectedTemplate.verifyPassword);
+                                     redrawNeeded = true;
                                  }});
                              }
                          }
@@ -2592,21 +2530,18 @@ void karma_setup() {
                              karmaOptions.push_back({itemText.c_str(), [=]() {
                                  launchManualEvilPortal(probe.ssid, probe.channel, 
                                                        selectedTemplate.verifyPassword);
+                                 redrawNeeded = true;
                              }});
                          }
 
                          karmaOptions.push_back({"Back", [=]() {}});
                          loopOptions(karmaOptions);
+                         redrawNeeded = true;
                      }},
 
                     {"Select Template",
                      [=]() {
-                         bool oldReturn = returnToMenu;
-                         returnToMenu = false;
                          selectPortalTemplate(false);
-                         if (!returnToMenu) {
-                             returnToMenu = oldReturn;
-                         }
                      }},
 
                     {"Attack Strategy",
@@ -2707,12 +2642,11 @@ void karma_setup() {
                             }
                             
                             tft.setCursor(10, tftHeight - 20);
-                            tft.print("Press any button to return");
+                            tft.print("Prev/Sel: Back");
                             
-                            bool buttonPressed = false;
-                            while (!buttonPressed) {
-                                if (check(SelPress) || check(EscPress) || check(PrevPress) || check(NextPress)) {
-                                    buttonPressed = true;
+                            while (!check(SelPress) && !check(EscPress)) {
+                                if (check(PrevPress)) {
+                                    break;
                                 }
                                 delay(50);
                             }
@@ -2868,12 +2802,11 @@ void karma_setup() {
                             }
                             
                             tft.setCursor(10, tftHeight - 20);
-                            tft.print("Press any button to return");
+                            tft.print("Prev/Sel: Back");
                             
-                            bool buttonPressed = false;
-                            while (!buttonPressed) {
-                                if (check(SelPress) || check(EscPress) || check(PrevPress) || check(NextPress)) {
-                                    buttonPressed = true;
+                            while (!check(SelPress) && !check(EscPress)) {
+                                if (check(PrevPress)) {
+                                    break;
                                 }
                                 delay(50);
                             }
@@ -2993,17 +2926,15 @@ void karma_setup() {
                              case TIER_HIGH: tierName = "High"; break;
                              case TIER_MEDIUM: tierName = "Medium"; break;
                              case TIER_FAST: tierName = "Fast"; break;
-                             default: tierName = "None"; break;
                          }
                          tft.print("Attack Tier: " + tierName);
 
                          tft.setCursor(10, tftHeight - 20);
-                         tft.print("Press any button to return");
+                         tft.print("Prev/Sel: Back");
 
-                         bool buttonPressed = false;
-                         while (!buttonPressed) {
-                             if (check(SelPress) || check(EscPress) || check(PrevPress) || check(NextPress)) {
-                                 buttonPressed = true;
+                         while (!check(SelPress) && !check(EscPress)) {
+                             if (check(PrevPress)) {
+                                 break;
                              }
                              delay(50);
                          }
@@ -3012,12 +2943,25 @@ void karma_setup() {
 
                     {"Exit Karma", [=]() { returnToMenu = true; }},
                 };
+                
+                bool wasActive = broadcastAttack.isActive();
+                
                 loopOptions(options);
+                
+                if (!returnToMenu) {
+                    redraw = true;
+                    redrawNeeded = true;
+                    
+                    if (wasActive && !broadcastAttack.isActive()) {
+                        broadcastAttack.start();
+                    }
+                }
             }
             
             if (returnToMenu) {
                 continue;
             }
+            
             redraw = false;
             redrawNeeded = false;
             tft.drawPixel(0, 0, 0);
@@ -3031,7 +2975,7 @@ void karma_setup() {
             } else {
                 padprintln("Template: None");
             }
-            padprintln("PREV/SEL: Menu");
+            padprintln(String(BTN_ALIAS) + ": Enhanced Menu");
             tft.drawRightString(
                 "Ch." +
                     String(
@@ -3039,8 +2983,14 @@ void karma_setup() {
                         : karma_channels[channl % 14] < 100 ? " "
                                                           : ""
                     ) +
-                    String(karma_channels[channl % 14]),
+                    String(karma_channels[channl % 14]) + "(Next)",
                 tftWidth - 10,
+                tftHeight - 18,
+                1
+            );
+            tft.drawString(
+                "Prev: Menu",
+                10,
                 tftHeight - 18,
                 1
             );
@@ -3085,6 +3035,7 @@ void saveProbesToFile(FS &fs, bool compressed) {
                 }
             }
             file.close();
+            Serial.println("[KARMA] Probes saved in compressed format");
         }
     } else {
         File file = fs.open(filen, FILE_WRITE);
@@ -3108,6 +3059,7 @@ void saveProbesToFile(FS &fs, bool compressed) {
                 }
             }
             file.close();
+            Serial.println("[KARMA] Probes saved in CSV format");
         }
     }
 }
