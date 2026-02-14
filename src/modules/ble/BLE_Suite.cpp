@@ -37,6 +37,10 @@ class AdvertisedDeviceCallbacks : public NimBLEAdvertisedDeviceCallbacks {
     void onResult(NimBLEAdvertisedDevice* advertisedDevice) {
         if(!advertisedDevice) return;
         
+        if(!scanMutex) {
+            scanMutex = xSemaphoreCreateMutex();
+        }
+        
         SimpleScanResult result;
         result.address = String(advertisedDevice->getAddress().toString().c_str());
         
