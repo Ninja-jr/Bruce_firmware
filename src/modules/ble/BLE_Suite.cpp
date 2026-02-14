@@ -33,13 +33,9 @@ struct SimpleScanResult {
 static std::vector<SimpleScanResult> scanCache;
 static SemaphoreHandle_t scanMutex = NULL;
 
-class AdvertisedDeviceCallbacks : public NimBLEScanCallbacks {
+class AdvertisedDeviceCallbacks : public NimBLEAdvertisedDeviceCallbacks {
     void onResult(NimBLEAdvertisedDevice* advertisedDevice) {
         if(!advertisedDevice) return;
-        
-        if(!scanMutex) {
-            scanMutex = xSemaphoreCreateMutex();
-        }
         
         SimpleScanResult result;
         result.address = String(advertisedDevice->getAddress().toString().c_str());
@@ -3239,18 +3235,15 @@ String selectTargetFromScan(const char* title) {
     BLEStateManager::deinitBLE(true);
     delay(500);
     
-    NimBLEDevice::init("Bruce-Scanner");
-    NimBLEDevice::setPower(ESP_PWR_LVL_P9);
-    NimBLEDevice::setSecurityAuth(false, false, false);
-    
-    NimBLEScan* pBLEScan = NimBLEDevice::getScan();
+    BLEDevice::init("");
+    NimBLEScan* pBLEScan = BLEDevice::getScan();
     if(!pBLEScan) {
         showErrorMessage("Failed to create BLE scanner!");
         return "";
     }
     
     static AdvertisedDeviceCallbacks callbacks;
-    pBLEScan->setScanCallbacks(&callbacks, false);
+    pBLEScan->setAdvertisedDeviceCallbacks(&callbacks, false);
     pBLEScan->setActiveScan(true);
     pBLEScan->setInterval(100);
     pBLEScan->setWindow(99);
@@ -3267,7 +3260,7 @@ String selectTargetFromScan(const char* title) {
     while(millis() - startTime < 15000) {
         if(check(EscPress)) {
             pBLEScan->stop();
-            BLEStateManager::deinitBLE(true);
+            BLEDevice::deinit(true);
             scanCache.clear();
             return "";
         }
@@ -3300,7 +3293,7 @@ String selectTargetFromScan(const char* title) {
     while(millis() - startTime < 15000) {
         if(check(EscPress)) {
             pBLEScan->stop();
-            BLEStateManager::deinitBLE(true);
+            BLEDevice::deinit(true);
             scanCache.clear();
             return "";
         }
@@ -3331,7 +3324,7 @@ String selectTargetFromScan(const char* title) {
     
     if(deviceCount == 0) {
         showErrorMessage("No BLE devices found!");
-        BLEStateManager::deinitBLE(true);
+        BLEDevice::deinit(true);
         scanCache.clear();
         return "";
     }
@@ -3458,7 +3451,7 @@ String selectTargetFromScan(const char* title) {
         }
     }
     
-    BLEStateManager::deinitBLE(true);
+    BLEDevice::deinit(true);
     scanCache.clear();
     return "";
 }
