@@ -10,6 +10,10 @@
 #include <freertos/semphr.h>
 #include <functional>
 
+#if __has_include(<NimBLEExtAdvertising.h>)
+#define NIMBLE_V2_PLUS 1
+#endif
+
 #ifndef TFT_WHITE
 #define TFT_WHITE 0xFFFF
 #endif
