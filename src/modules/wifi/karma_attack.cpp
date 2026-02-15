@@ -36,7 +36,7 @@ const uint8_t karma_channels[] PROGMEM = {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12,
 #define MAC_CACHE_SIZE 100
 #define MAX_CLIENT_TRACK 30
 #define FAST_HOP_INTERVAL 500
-#define DEFAULT_HOP_INTERVAL 1000
+#define DEFAULT_HOP_INTERVAL 2000
 #define DEAUTH_INTERVAL 30000
 #define VULNERABLE_THRESHOLD 3
 #define AUTO_PORTAL_DELAY 2000
@@ -47,7 +47,7 @@ const uint8_t karma_channels[] PROGMEM = {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12,
 #define MAC_ROTATION_INTERVAL 30000
 #define MAX_PORTAL_TEMPLATES 10
 #define MAX_PENDING_PORTALS 10
-#define MAX_SSID_DB_SIZE 200
+#define MAX_SSID_DB_SIZE 500
 #define MAX_POPULAR_SSIDS 20
 #define MAX_NETWORK_HISTORY 30
 #define ACTIVE_PORTAL_CHANNEL 0
@@ -56,7 +56,6 @@ const uint8_t karma_channels[] PROGMEM = {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12,
 #define BEACON_BURST_SIZE 8
 #define BEACON_BURST_INTERVAL 60
 #define LISTEN_WINDOW 250
-#define KARMA_QUEUE_DEPTH 48
 
 const uint8_t vendorOUIs[][3] PROGMEM = {
     {0x00, 0x50, 0xF2}, {0x00, 0x1A, 0x11}, {0x00, 0x1B, 0x63}, {0x00, 0x24, 0x01},
@@ -88,9 +87,8 @@ unsigned long deauthCount[14] = {0};
 unsigned long lastDeauthReset = 0;
 unsigned long lastBeaconBurst = 0;
 uint8_t beaconsInBurst = 0;
-QueueHandle_t karmaQueue = nullptr;
-TaskHandle_t karmaWriterHandle = nullptr;
-bool storageAvailable = true;
+size_t totalSsidsInFile = 0;
+File ssidFile;
 
 std::vector<String> SSIDDatabase::ssidCache;
 bool SSIDDatabase::cacheLoaded = false;
@@ -104,13 +102,17 @@ bool SSIDDatabase::loadFromFile() {
     if (!getFsStorage(fs)) return false;
     File file = fs->open(currentFilename, FILE_READ);
     if (!file) return false;
-    while (file.available() && ssidCache.size() < MAX_SSID_DB_SIZE) {
+    totalSsidsInFile = 0;
+    while (file.available()) {
         String line = file.readStringUntil('\n');
         line.trim();
         if (line.length() == 0) continue;
         if (line.startsWith("#") || line.startsWith("//")) continue;
         if (line.length() > 32) continue;
-        ssidCache.push_back(line);
+        totalSsidsInFile++;
+        if (ssidCache.size() < MAX_SSID_DB_SIZE) {
+            ssidCache.push_back(line);
+        }
     }
     file.close();
     cacheLoaded = true;
@@ -145,12 +147,32 @@ String SSIDDatabase::getSourceFile() {
 
 size_t SSIDDatabase::getCount() {
     if (!cacheLoaded) loadFromFile();
-    return ssidCache.size();
+    return totalSsidsInFile;
 }
 
 String SSIDDatabase::getSSID(size_t index) {
     if (!cacheLoaded) loadFromFile();
-    if (index >= ssidCache.size()) return "";
+    if (index >= ssidCache.size()) {
+        FS *fs = nullptr;
+        if (!getFsStorage(fs)) return "";
+        File file = fs->open(currentFilename, FILE_READ);
+        if (!file) return "";
+        size_t currentIndex = 0;
+        while (file.available()) {
+            String line = file.readStringUntil('\n');
+            line.trim();
+            if (line.length() == 0) continue;
+            if (line.startsWith("#") || line.startsWith("//")) continue;
+            if (line.length() > 32) continue;
+            if (currentIndex == index) {
+                file.close();
+                return line;
+            }
+            currentIndex++;
+        }
+        file.close();
+        return "";
+    }
     return ssidCache[index];
 }
 
@@ -177,10 +199,32 @@ String SSIDDatabase::getRandomSSID() {
 void SSIDDatabase::getBatch(size_t startIndex, size_t count, std::vector<String> &result) {
     if (!cacheLoaded) if (!loadFromFile()) { result.clear(); return; }
     result.clear();
-    if (startIndex >= ssidCache.size()) return;
+    if (startIndex >= totalSsidsInFile) return;
     size_t endIndex = startIndex + count;
-    if (endIndex > ssidCache.size()) endIndex = ssidCache.size();
-    for (size_t i = startIndex; i < endIndex; i++) result.push_back(ssidCache[i]);
+    if (endIndex > totalSsidsInFile) endIndex = totalSsidsInFile;
+    if (startIndex < ssidCache.size() && endIndex <= ssidCache.size()) {
+        for (size_t i = startIndex; i < endIndex; i++) {
+            result.push_back(ssidCache[i]);
+        }
+        return;
+    }
+    FS *fs = nullptr;
+    if (!getFsStorage(fs)) return;
+    File file = fs->open(currentFilename, FILE_READ);
+    if (!file) return;
+    size_t currentIndex = 0;
+    while (file.available() && result.size() < (endIndex - startIndex)) {
+        String line = file.readStringUntil('\n');
+        line.trim();
+        if (line.length() == 0) continue;
+        if (line.startsWith("#") || line.startsWith("//")) continue;
+        if (line.length() > 32) continue;
+        if (currentIndex >= startIndex && currentIndex < endIndex) {
+            result.push_back(line);
+        }
+        currentIndex++;
+    }
+    file.close();
 }
 
 bool SSIDDatabase::contains(const String &ssid) {
@@ -212,7 +256,15 @@ size_t SSIDDatabase::getMinLength() {
 
 ActiveBroadcastAttack::ActiveBroadcastAttack() 
     : currentIndex(0), batchStart(0), lastBroadcastTime(0), lastChannelHopTime(0),
-      _active(false), currentChannel(1), totalSSIDsInFile(0), ssidsProcessed(0), updateCounter(0) {
+      _active(true), currentChannel(1), totalSSIDsInFile(0), ssidsProcessed(0), updateCounter(0) {
+    config.enableBroadcast = true;
+    config.broadcastInterval = 150;
+    config.batchSize = 100;
+    config.rotateChannels = true;
+    config.channelHopInterval = 5000;
+    config.respondToProbes = true;
+    config.maxActiveAttacks = 3;
+    config.prioritizeResponses = true;
     stats.startTime = millis();
 }
 
@@ -358,9 +410,10 @@ void ActiveBroadcastAttack::broadcastSSID(const String &ssid) {
 }
 
 void ActiveBroadcastAttack::rotateChannel() {
+    static const uint8_t channels[] = {1, 6, 11, 3, 8, 2, 7, 12, 4, 9, 5, 10, 13, 14};
     static size_t channelIndex = 0;
-    channelIndex = (channelIndex + 1) % (sizeof(rotate_channels) / sizeof(rotate_channels[0]));
-    currentChannel = pgm_read_byte(&rotate_channels[channelIndex]);
+    channelIndex = (channelIndex + 1) % (sizeof(channels) / sizeof(channels[0]));
+    currentChannel = channels[channelIndex];
 }
 
 void ActiveBroadcastAttack::sendBeaconFrame(const String &ssid, uint8_t channel) {
@@ -1474,7 +1527,6 @@ void handleBroadcastResponse(const String& ssid, const String& mac) {
 }
 
 void saveProbesToPCAP(FS &fs) {
-    if (!storageAvailable) return;
     String filename = "/ProbeData/karma_capture_" + String(millis()) + ".pcap";
     File file = fs.open(filename, FILE_WRITE);
     if (!file) {
@@ -1530,7 +1582,6 @@ void saveProbesToPCAP(FS &fs) {
 
 void probe_sniffer(void *buf, wifi_promiscuous_pkt_type_t type) {
     if (type != WIFI_PKT_MGMT) return;
-    if (!storageAvailable) return;
 
     wifi_promiscuous_pkt_t *pkt = (wifi_promiscuous_pkt_t *)buf;
     wifi_pkt_rx_ctrl_t ctrl = (wifi_pkt_rx_ctrl_t)pkt->rx_ctrl;
@@ -1749,7 +1800,6 @@ void updateKarmaDisplay() {
 }
 
 void saveNetworkHistory(FS &fs) {
-    if (!storageAvailable) return;
     if (!fs.exists("/ProbeData")) fs.mkdir("/ProbeData");
     String filename = "/ProbeData/network_history_" + String(millis()) + ".csv";
     File file = fs.open(filename, FILE_WRITE);
@@ -1821,23 +1871,19 @@ void karma_setup() {
         FileSys = (Fs == &SD) ? "SD" : "LittleFS";
         is_LittleFS = (Fs == &LittleFS);
         filen = generateUniqueFilename(*Fs, false);
-        storageAvailable = true;
     } else {
         Fs = &LittleFS;
         FileSys = "LittleFS";
         is_LittleFS = true;
         filen = generateUniqueFilename(LittleFS, false);
-        storageAvailable = checkLittleFsSizeNM();
     }
-    if (storageAvailable && !Fs->exists("/ProbeData")) Fs->mkdir("/ProbeData");
+    if (!Fs->exists("/ProbeData")) Fs->mkdir("/ProbeData");
     displayTextLine("Modern Karma Started");
     tft.setTextSize(FP);
     tft.setCursor(80, 100);
     clearProbes();
 
-    karmaQueue = xQueueCreate(KARMA_QUEUE_DEPTH, sizeof(ProbeRequest));
-
-    karmaConfig.enableAutoKarma = true;
+    karmaConfig.enableAutoKarma = false;
     karmaConfig.enableDeauth = false;
     karmaConfig.enableSmartHop = true;
     karmaConfig.prioritizeVulnerable = true;
@@ -1868,6 +1914,8 @@ void karma_setup() {
     vTaskDelay(1000 / portTICK_RATE_MS);
     screenNeedsRedraw = true;
 
+    broadcastAttack.start();
+
     for (;;) {
         if (restartKarmaAfterPortal) {
             restartKarmaAfterPortal = false;
@@ -1886,16 +1934,9 @@ void karma_setup() {
                 macRingBuffer = NULL;
             }
             while (!responseQueue.empty()) responseQueue.pop();
-            if (karmaQueue) {
-                vQueueDelete(karmaQueue);
-                karmaQueue = nullptr;
-            }
             return;
         }
         unsigned long currentTime = millis();
-        if (is_LittleFS) {
-            storageAvailable = checkLittleFsSizeNM();
-        }
         rotateBSSID();
         if (karmaConfig.enableSmartHop) smartChannelHop();
         if (karmaConfig.enableDeauth && (currentTime - lastDeauthTime > DEAUTH_INTERVAL)) {
@@ -2091,7 +2132,7 @@ void karma_setup() {
                 }},
                 {"Save Probes", [&]() {
                     FS *saveFs;
-                    if (getFsStorage(saveFs) && storageAvailable) {
+                    if (getFsStorage(saveFs)) {
                         saveProbesToFile(*saveFs, true);
                         displayTextLine("Probes saved!");
                     } else displayTextLine("No storage!");
@@ -2201,7 +2242,6 @@ void karma_setup() {
 }
 
 void saveProbesToFile(FS &fs, bool compressed) {
-    if (!storageAvailable) return;
     if (!fs.exists("/ProbeData")) fs.mkdir("/ProbeData");
     if (compressed) {
         File file = fs.open(filen, FILE_WRITE);
