@@ -33,7 +33,11 @@ struct SimpleScanResult {
 static std::vector<SimpleScanResult> scanCache;
 static SemaphoreHandle_t scanMutex = NULL;
 
+#ifdef NIMBLE_V2_PLUS
+class AdvertisedDeviceCallbacks : public NimBLEScanCallbacks {
+#else
 class AdvertisedDeviceCallbacks : public NimBLEAdvertisedDeviceCallbacks {
+#endif
     void onResult(NimBLEAdvertisedDevice* advertisedDevice) {
         if(!advertisedDevice) return;
         
@@ -3247,7 +3251,11 @@ String selectTargetFromScan(const char* title) {
     }
     
     static AdvertisedDeviceCallbacks callbacks;
+#ifdef NIMBLE_V2_PLUS
+    pBLEScan->setScanCallbacks(&callbacks, false);
+#else
     pBLEScan->setAdvertisedDeviceCallbacks(&callbacks, false);
+#endif
     pBLEScan->setActiveScan(true);
     pBLEScan->setInterval(100);
     pBLEScan->setWindow(99);
