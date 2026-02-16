@@ -59,7 +59,7 @@ const uint8_t karma_channels[] PROGMEM = {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12,
 #define PORTAL_HEARTBEAT_INTERVAL 500  // Check each portal every 500ms
 #define PORTAL_MAX_IDLE 60000          // Kill portals after 60s idle
 
-enum KarmaMode currentMode = MODE_PASSIVE;
+enum KarmaMode karmaMode = MODE_PASSIVE;  // Renamed to avoid conflict with sniffer's currentMode
 bool karmaPaused = false;
 
 // Background portal tracking - pointer vector for multiple simultaneous portals
@@ -1198,7 +1198,7 @@ void sendDeauth(const String &mac, uint8_t channel, bool broadcast) {
 
 void sendBeaconFrames() {
     if (activePortalChannel > 0 || karmaPaused) return;
-    if (currentMode != MODE_BROADCAST && currentMode != MODE_FULL) return;
+    if (karmaMode != MODE_BROADCAST && karmaMode != MODE_FULL) return;
 
     unsigned long now = millis();
 
@@ -2002,7 +2002,7 @@ void probe_sniffer(void *buf, wifi_promiscuous_pkt_type_t type) {
     updateChannelActivity(probe.channel);
     updateSSIDFrequency(probe.ssid);
 
-    if (currentMode == MODE_PASSIVE || currentMode == MODE_FULL) {
+    if (karmaMode == MODE_PASSIVE || karmaMode == MODE_FULL) {
         if (broadcastAttack.isActive() && ssid != "*WILDCARD*" && SSIDDatabase::contains(ssid)) {
             handleBroadcastResponse(ssid, mac);
         }
@@ -2178,7 +2178,7 @@ void updateKarmaDisplay() {
         tft.print("HS: " + String(handshakeBuffer.size()));
         
         String modeText = "Mode: ";
-        switch(currentMode) {
+        switch(karmaMode) {
             case MODE_PASSIVE: modeText += "PASSIVE"; break;
             case MODE_BROADCAST: modeText += "BROADCAST"; break;
             case MODE_FULL: modeText += "FULL"; break;
@@ -2266,7 +2266,7 @@ void karma_setup() {
     generateRandomBSSID(currentBSSID);
     lastMACRotation = millis();
 
-    currentMode = MODE_PASSIVE;
+    karmaMode = MODE_PASSIVE;
 
     drawMainBorderWithTitle("MODERN KARMA ATTACK");
     displayTextLine("Enhanced Karma v3.0");
@@ -2370,7 +2370,7 @@ void karma_setup() {
             checkForAssociations();
             checkPortals();
         }
-        if (broadcastAttack.isActive() && (currentMode == MODE_BROADCAST || currentMode == MODE_FULL) && !karmaPaused) {
+        if (broadcastAttack.isActive() && (karmaMode == MODE_BROADCAST || karmaMode == MODE_FULL) && !karmaPaused) {
             broadcastAttack.update();
         }
         
@@ -2458,14 +2458,14 @@ void karma_setup() {
                     {"Set Mode", [&]() {
                         std::vector<Option> modeOptions = {
                             {"Passive (Listen only)", [&]() {
-                                currentMode = MODE_PASSIVE;
+                                karmaMode = MODE_PASSIVE;
                                 broadcastAttack.stop();
                                 attackConfig.enableBeaconing = false;
                                 displayTextLine("Passive mode");
                                 delay(1000);
                             }},
                             {"Broadcast (Advertise SSIDs)", [&]() {
-                                currentMode = MODE_BROADCAST;
+                                karmaMode = MODE_BROADCAST;
                                 if (!karmaPaused) {
                                     broadcastAttack.start();
                                     attackConfig.enableBeaconing = true;
@@ -2474,7 +2474,7 @@ void karma_setup() {
                                 delay(1000);
                             }},
                             {"Full (Both)", [&]() {
-                                currentMode = MODE_FULL;
+                                karmaMode = MODE_FULL;
                                 if (!karmaPaused) {
                                     broadcastAttack.start();
                                     attackConfig.enableBeaconing = true;
