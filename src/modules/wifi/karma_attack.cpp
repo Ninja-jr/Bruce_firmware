@@ -58,12 +58,11 @@ const uint8_t karma_channels[] PROGMEM = {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12,
 #define LISTEN_WINDOW 250
 #define PORTAL_HEARTBEAT_INTERVAL 500  // Check each portal every 500ms
 #define PORTAL_MAX_IDLE 60000          // Kill portals after 60s idle
-#define POST_DEAUTH_LISTEN_MS 50       // Listen for probes after deauth
 
 enum KarmaMode currentMode = MODE_PASSIVE;
 bool karmaPaused = false;
 
-// Background portal tracking - now using pointer vector (fixes duplicate declaration)
+// Background portal tracking - pointer vector for multiple simultaneous portals
 std::vector<BackgroundPortal*> activePortals;
 int nextPortalIndex = 0;
 unsigned long lastPortalHeartbeat = 0;
@@ -705,7 +704,8 @@ uint32_t generateClientFingerprint(const uint8_t *frame, int len) {
         hash = ((hash << 5) + hash) + tagLen;       // hash * 33 + length
         
         // Include first few bytes of tag content (vendor-specific often)
-        for (int i = 0; i < min(4, tagLen); i++) {
+        int maxBytes = (tagLen < 4) ? tagLen : 4;
+        for (int i = 0; i < maxBytes; i++) {
             hash = ((hash << 5) + hash) + frame[pos + 2 + i];
         }
         
@@ -1087,7 +1087,7 @@ void sendBeaconFrameHelper(const String &ssid, uint8_t channel) {
     beaconPacket[pos++] = 0x00;
     beaconPacket[pos++] = 0x00;
     
-    // Use hardware TSF timer
+    // Use hardware TSF timer for accurate timestamps
     uint64_t tsf = esp_wifi_get_tsf_time(WIFI_IF_AP);
     memcpy(&beaconPacket[pos], &tsf, 8);
     pos += 8;
@@ -2098,7 +2098,7 @@ void clearProbes() {
 
 std::vector<ProbeRequest> getUniqueProbes() {
     std::vector<ProbeRequest> unique;
-    std::set<String> seen;  // Use fingerprint + SSID as key
+    std::set<String> seen;
     int start = bufferWrapped ? probeBufferIndex : 0;
     int count = bufferWrapped ? MAX_PROBE_BUFFER : probeBufferIndex;
     count = std::min(count, 20);
