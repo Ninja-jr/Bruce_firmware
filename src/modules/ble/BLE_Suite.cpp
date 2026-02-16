@@ -3841,8 +3841,8 @@ String selectTargetFromScan(const char* title) {
 
     tft.setTextColor(TFT_GREEN, TFT_GRAY);
     tft.setTextSize(1);
-    tft.setCursor((tftWidth - tft.textWidth("by Ninja-Jr")) / 2, 130);
-    tft.print("by Ninja-Jr");
+    tft.setCursor((tftWidth - tft.textWidth("v2.0b")) / 2, 130);
+    tft.print("v2.0b");
     delay(1500);
 
     tft.fillScreen(bruceConfig.bgColor);
