@@ -2299,7 +2299,7 @@ void karma_setup() {
 
     karmaConfig.enableAutoKarma = true;
     karmaConfig.enableDeauth = false;
-    karmaConfig.enableSmartHop = true;
+    karmaConfig.enableSmartHop = false;  // Disabled by default as requested
     karmaConfig.prioritizeVulnerable = true;
     karmaConfig.enableAutoPortal = templateSelected;
     karmaConfig.maxClients = MAX_CLIENT_TRACK;
@@ -2398,14 +2398,14 @@ void karma_setup() {
             }
         }
         
-        if (check(EscPress) && !karmaPaused) {
-            check(EscPress);
-            returnToMenu = true;
-            continue;
-        }
+        // Removed the EscPress exit handler - Esc now opens menu with Sel
         
-        if (check(SelPress) || screenNeedsRedraw) {
-            if (check(SelPress)) {
+        if (check(SelPress) || check(EscPress) || screenNeedsRedraw) {
+            if (check(SelPress) || check(EscPress)) {
+                // Clear both button presses
+                if (check(SelPress)) check(SelPress);
+                if (check(EscPress)) check(EscPress);
+                
                 vTaskDelay(200 / portTICK_PERIOD_MS);
                 
                 std::vector<Option> options = {
@@ -2744,7 +2744,7 @@ void karma_setup() {
             padprintln("Modern Karma v3.0");
             if (templateSelected) padprintln("Template: " + selectedTemplate.name);
             else padprintln("Template: None");
-            padprintln("SEL: Menu | Prev/Next: Channel");
+            padprintln("SEL/ESC: Menu | Prev/Next: Channel");
             tft.drawRightString("Ch." + String(pgm_read_byte(&karma_channels[channl % 14])),
                                tftWidth - 10, tftHeight - 18, 1);
         }
