@@ -106,6 +106,62 @@ bool isBLEInitialized() {
 }
 
 //=============================================================================
+// FastPair Model Information
+//=============================================================================
+
+const FastPairModelInfo fastpair_models[] = {
+    {0x000047, "Pixel Buds Pro", "Headphones"},
+    {0x000048, "Pixel Buds A-Series", "Headphones"},
+    {0x00000A, "Galaxy Buds Live", "Headphones"},
+    {0x0000F0, "Galaxy Buds2", "Headphones"},
+    {0x000006, "AirPods Pro", "Headphones"},
+    {0xF00100, "Fun Device 1", "Fun"},
+    {0xF00101, "Fun Device 2", "Fun"},
+    {0xF00103, "Fun Device 3", "Fun"},
+    {0xF00104, "Fun Device 4", "Fun"},
+    {0xF00105, "Fun Device 5", "Fun"},
+    {0xF01011, "Prank Device 1", "Prank"},
+    {0xF38C02, "Prank Device 2", "Prank"},
+    {0xF00106, "Prank Device 3", "Prank"},
+    {0, nullptr, nullptr}
+};
+
+//=============================================================================
+// FastPair Exploit Engine Class Declaration
+//=============================================================================
+
+class FastPairExploitEngine {
+public:
+    std::vector<FastPairDeviceInfo> scanForFastPairDevices(int duration);
+    bool exploitFastPairConnection(NimBLEAddress target, FastPairExploitType exploitType);
+    void spamFastPairPopups(FastPairPopupType popupType, int count);
+    bool testVulnerability(NimBLEAddress target);
+
+private:
+    std::vector<FastPairDeviceInfo> discoveredDevices;
+    NimBLERemoteCharacteristic* findKBPCharacteristic(NimBLERemoteService* service);
+    bool executeMemoryCorruption(NimBLERemoteCharacteristic* pChar);
+    bool executeStateConfusion(NimBLERemoteCharacteristic* pChar);
+    bool executeCryptoOverflow(NimBLERemoteCharacteristic* pChar);
+    bool executeHandshakeFault(NimBLERemoteCharacteristic* pChar);
+    bool executeRapidConnection(NimBLEAddress target, NimBLERemoteCharacteristic* pChar);
+    bool executeAllExploits(NimBLERemoteCharacteristic* pChar, NimBLEAddress target);
+    uint32_t selectModelForPopup(FastPairPopupType type);
+    uint32_t randomRegularModel();
+    uint32_t randomFunModel();
+    uint32_t randomPrankModel();
+    uint32_t selectCustomModel();
+    void createFastPairAdvertisement(uint8_t* buffer, uint32_t modelId);
+    String getDeviceTypeFromModelId(uint32_t modelId);
+    bool testServiceDiscovery(NimBLEAddress target);
+    bool testCharacteristicAccess(NimBLEAddress target);
+    bool testBufferOverflow(NimBLEAddress target);
+    bool testStateConfusion(NimBLEAddress target);
+    void logExploitResult(NimBLEAddress target, FastPairExploitType type, bool success);
+    void generateRandomMac(uint8_t* mac);
+};
+
+//=============================================================================
 // BLE Attack Manager Implementation
 //=============================================================================
 
@@ -3638,8 +3694,8 @@ String selectTargetFromScan(const char* title) {
 
     tft.setTextColor(TFT_GREEN, TFT_GRAY);
     tft.setTextSize(1);
-    tft.setCursor((tftWidth - tft.textWidth("v2.0b")) / 2, 130);
-    tft.print("v2.0b");
+    tft.setCursor((tftWidth - tft.textWidth("by Ninja-Jr")) / 2, 130);
+    tft.print("by Ninja-Jr");
     delay(1500);
 
     tft.fillScreen(bruceConfig.bgColor);
