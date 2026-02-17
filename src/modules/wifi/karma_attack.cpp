@@ -24,6 +24,7 @@
 #include <globals.h>
 
 void probe_sniffer(void *buf, wifi_promiscuous_pkt_type_t type);
+void saveHandshakeToFile(const HandshakeCapture &hs);
 
 #ifndef KARMA_CHANNELS
 #define KARMA_CHANNELS
@@ -58,7 +59,7 @@ const uint8_t karma_channels[] PROGMEM = {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12,
 #define LISTEN_WINDOW 250
 #define KARMA_QUEUE_DEPTH 48
 
-// KarmaMode is defined in karma_attack.h, use extern here
+// KarmaMode is defined in karma_attack.h
 extern enum KarmaMode karmaMode;
 bool karmaPaused = false;
 
@@ -655,7 +656,19 @@ void analyzeClientBehavior(const ProbeRequest &probe) {
     auto it = clientBehaviors.find(probe.fingerprint);
     
     if (it == clientBehaviors.end()) {
-        if (clientBehaviors.size() >= MAX_CLIENT_TRACK) return;
+        if (clientBehaviors.size() >= MAX_CLIENT_TRACK) {
+            uint32_t oldestFingerprint = 0;
+            unsigned long oldestTime = UINT32_MAX;
+            for (const auto &pair : clientBehaviors) {
+                if (pair.second.lastSeen < oldestTime) {
+                    oldestTime = pair.second.lastSeen;
+                    oldestFingerprint = pair.first;
+                }
+            }
+            if (oldestFingerprint != 0) {
+                clientBehaviors.erase(oldestFingerprint);
+            }
+        }
         
         ClientBehavior behavior;
         behavior.fingerprint = probe.fingerprint;
@@ -1513,7 +1526,6 @@ void handleBroadcastResponse(const String& ssid, const String& mac) {
     if (broadcastAttack.isActive()) {
         broadcastAttack.processProbeResponse(ssid, mac);
         
-        // Use fingerprint from probe? For now, generate simple hash from MAC
         uint32_t fingerprint = 0;
         for (int i = 0; i < mac.length(); i++) {
             fingerprint = ((fingerprint << 5) + fingerprint) + mac.charAt(i);
@@ -1614,6 +1626,37 @@ void saveProbesToPCAP(FS &fs) {
     delay(1000);
 }
 
+void saveHandshakeToFile(const HandshakeCapture &hs) {
+    FS *fs = nullptr;
+    if (!getFsStorage(fs)) return;
+    
+    if (!fs->exists("/BrucePCAP/handshakes")) {
+        fs->mkdir("/BrucePCAP/handshakes");
+    }
+    
+    char macStr[18];
+    snprintf(macStr, sizeof(macStr), "%02X%02X%02X%02X%02X%02X",
+             hs.bssid[0], hs.bssid[1], hs.bssid[2],
+             hs.bssid[3], hs.bssid[4], hs.bssid[5]);
+    
+    String filename = "/BrucePCAP/handshakes/HS_" + String(macStr) + "_" + hs.ssid + ".pcap";
+    filename.replace(" ", "_");
+    filename.replace("*", "");
+    
+    File file = fs->open(filename, FILE_APPEND);
+    if (file) {
+        uint32_t ts_sec = hs.timestamp / 1000;
+        uint32_t ts_usec = (hs.timestamp % 1000) * 1000;
+        file.write((uint8_t*)&ts_sec, 4);
+        file.write((uint8_t*)&ts_usec, 4);
+        uint32_t len = hs.frameLen;
+        file.write((uint8_t*)&len, 4);
+        file.write((uint8_t*)&len, 4);
+        file.write(hs.eapolFrame, hs.frameLen);
+        file.close();
+    }
+}
+
 void probe_sniffer(void *buf, wifi_promiscuous_pkt_type_t type) {
     if (type != WIFI_PKT_MGMT) return;
     if (!storageAvailable) return;
@@ -1650,7 +1693,6 @@ void probe_sniffer(void *buf, wifi_promiscuous_pkt_type_t type) {
     String ssid = extractSSID(pkt);
     if (mac.isEmpty()) return;
 
-    // Generate client fingerprint
     uint32_t fingerprint = generateClientFingerprint(frame, pkt->rx_ctrl.sig_len);
     
     String cacheKey = mac + ":" + String(fingerprint);
