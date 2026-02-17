@@ -2175,9 +2175,6 @@ bool MultiConnectionAttack::advertisingSpam(std::vector<NimBLEAddress> targets) 
     return true;
 }
 
-bool MultiConnectionAttack::mitmAttackSingle(NimBLEAddress target) { return false; }
-bool MultiConnectionAttack::mitmAttack(std::vector<NimBLEAddress> targets) { showAttackResult(false, "MITM attack not implemented"); return false; }
-
 bool MultiConnectionAttack::nrf24JamAttack(int jamMode) {
     AutoCleanup cleanup([]() { BLEStateManager::deinitBLE(true); });
     
@@ -3701,10 +3698,11 @@ NimBLEAddress parseAddress(const String& addressInfo) {
 }
 
 //=============================================================================
-// Menu System
+// Menu System - with double buffering to prevent flicker
 //=============================================================================
 
 static bool welcomeShown = false;
+static TFT_eSprite menuSprite = TFT_eSprite(&tft);
 
 void showWelcomeScreen() {
     if(welcomeShown) return;
@@ -3731,6 +3729,7 @@ void showWelcomeScreen() {
 
 void BleSuiteMenu() {
     showWelcomeScreen();
+    menuSprite.createSprite(tftWidth, tftHeight);
 
     const int MENU_ITEMS = 11;
     const char* menuItems[] = {
@@ -3738,10 +3737,10 @@ void BleSuiteMenu() {
         "Deep Device Profiling",
         "FastPair Attack Suite",
         "HFP (Hands-Free) Suite",
-        "Audio (A2DP/AVRCP) Suite",
+        "Audio Suite",
         "HID Attack Suite",
         "Memory Corruption Suite",
-        "DoS Connection Attacks",
+        "DoS Attacks",
         "Payload Delivery",
         "Testing Tools",
         "Universal Attack Chain"
@@ -3751,46 +3750,51 @@ void BleSuiteMenu() {
     int maxVisible = (tftHeight - 80) / 25;
     
     while(true) {
-        tft.fillScreen(bruceConfig.bgColor);
-        tft.drawRect(5, 5, tftWidth - 10, tftHeight - 10, TFT_WHITE);
+        menuSprite.fillSprite(bruceConfig.bgColor);
+        menuSprite.drawRect(5, 5, tftWidth - 10, tftHeight - 10, TFT_WHITE);
         
-        tft.setTextColor(TFT_WHITE, bruceConfig.bgColor);
-        tft.setTextSize(2);
-        tft.setCursor((tftWidth - strlen("BLE SUITE") * 12) / 2, 15);
-        tft.print("BLE SUITE");
-        tft.setTextSize(1);
+        menuSprite.setTextColor(TFT_WHITE, bruceConfig.bgColor);
+        menuSprite.setTextSize(2);
+        menuSprite.setCursor((tftWidth - menuSprite.textWidth("BLE SUITE")) / 2, 15);
+        menuSprite.print("BLE SUITE");
+        menuSprite.setTextSize(1);
         
         for(int i = 0; i < maxVisible && (scrollOffset + i) < MENU_ITEMS; i++) {
             int idx = scrollOffset + i;
             int yPos = 60 + (i * 25);
             
             if(idx == selected) {
-                tft.fillRect(20, yPos, tftWidth - 40, 20, TFT_WHITE);
-                tft.setTextColor(TFT_BLACK, TFT_WHITE);
-                tft.setCursor(25, yPos + 5);
-                tft.print("> ");
+                menuSprite.fillRect(20, yPos, tftWidth - 40, 20, TFT_WHITE);
+                menuSprite.setTextColor(TFT_BLACK, TFT_WHITE);
+                menuSprite.setCursor(25, yPos + 5);
+                menuSprite.print("> ");
             } else {
-                tft.fillRect(20, yPos, tftWidth - 40, 20, bruceConfig.bgColor);
-                tft.setTextColor(TFT_WHITE, bruceConfig.bgColor);
-                tft.setCursor(25, yPos + 5);
-                tft.print("  ");
+                menuSprite.fillRect(20, yPos, tftWidth - 40, 20, bruceConfig.bgColor);
+                menuSprite.setTextColor(TFT_WHITE, bruceConfig.bgColor);
+                menuSprite.setCursor(25, yPos + 5);
+                menuSprite.print("  ");
             }
-            tft.print(String(idx + 1) + ". " + menuItems[idx]);
+            menuSprite.print(String(idx + 1) + ". " + menuItems[idx]);
         }
         
         if(MENU_ITEMS > maxVisible) {
-            tft.setTextColor(TFT_CYAN, bruceConfig.bgColor);
-            tft.setCursor(tftWidth - 25, 65);
-            if(scrollOffset > 0) tft.print("^");
-            tft.setCursor(tftWidth - 25, 65 + (maxVisible * 25) - 10);
-            if(scrollOffset + maxVisible < MENU_ITEMS) tft.print("v");
+            menuSprite.setTextColor(TFT_CYAN, bruceConfig.bgColor);
+            menuSprite.setCursor(tftWidth - 25, 65);
+            if(scrollOffset > 0) menuSprite.print("^");
+            menuSprite.setCursor(tftWidth - 25, 65 + (maxVisible * 25) - 10);
+            if(scrollOffset + maxVisible < MENU_ITEMS) menuSprite.print("v");
         }
         
-        tft.setTextColor(TFT_GREEN, bruceConfig.bgColor);
-        tft.setCursor(20, tftHeight - 35);
-        tft.print("SEL: Select  PREV/NEXT: Navigate  ESC: Back");
+        menuSprite.setTextColor(TFT_GREEN, bruceConfig.bgColor);
+        menuSprite.setCursor(20, tftHeight - 35);
+        menuSprite.print("SEL: Select  PREV/NEXT: Navigate  ESC: Back");
         
-        if(check(EscPress)) return;
+        menuSprite.pushSprite(0, 0);
+        
+        if(check(EscPress)) {
+            menuSprite.deleteSprite();
+            return;
+        }
         if(check(PrevPress)) {
             selected = (selected > 0) ? selected - 1 : MENU_ITEMS - 1;
             if(selected < scrollOffset) scrollOffset = selected;
@@ -3816,7 +3820,7 @@ void BleSuiteMenu() {
 
 const char* getScanTitle(int attackIndex) {
     switch(attackIndex) {
-        case 0: return "SELECT TARGET FOR QUICK SCAN";
+        case 0: return "SELECT TARGET";
         case 1: return "SELECT TARGET TO PROFILE";
         case 2: return "SELECT FASTPAIR DEVICE";
         case 3: return "SELECT HFP DEVICE";
@@ -3861,8 +3865,37 @@ void executeAttackWithTargetScan(int attackIndex) {
 }
 
 //=============================================================================
-// Submenu Display
+// Submenu Display - with text wrapping
 //=============================================================================
+
+void drawWrappedText(TFT_eSprite* sprite, const char* text, int x, int y, int maxWidth, int lineHeight) {
+    String str = text;
+    int len = str.length();
+    int start = 0;
+    int lineY = y;
+    
+    while(start < len) {
+        int end = start;
+        int lastSpace = -1;
+        
+        while(end < len && (end - start) * 6 < maxWidth) {
+            if(str.charAt(end) == ' ') lastSpace = end;
+            end++;
+        }
+        
+        if(end == len || lastSpace == -1) {
+            sprite->setCursor(x, lineY);
+            sprite->print(str.substring(start, end));
+            start = end;
+        } else {
+            sprite->setCursor(x, lineY);
+            sprite->print(str.substring(start, lastSpace));
+            start = lastSpace + 1;
+        }
+        lineY += lineHeight;
+        if(lineY > tftHeight - 45) break;
+    }
+}
 
 int showSubMenu(const char* title, const char* options[], int optionCount) {
     tft.fillScreen(bruceConfig.bgColor);
@@ -3878,9 +3911,16 @@ int showSubMenu(const char* title, const char* options[], int optionCount) {
     int maxVisible = (tftHeight - 80) / 25;
     
     while(true) {
+        tft.fillRect(20, 60, tftWidth - 40, tftHeight - 100, bruceConfig.bgColor);
+        
         for(int i = 0; i < maxVisible && (scrollOffset + i) < optionCount; i++) {
             int idx = scrollOffset + i;
             int yPos = 60 + (i * 25);
+            
+            String displayText = options[idx];
+            if(displayText.length() > 28) {
+                displayText = displayText.substring(0, 25) + "...";
+            }
             
             if(idx == selected) {
                 tft.fillRect(20, yPos, tftWidth - 40, 20, TFT_WHITE);
@@ -3893,7 +3933,7 @@ int showSubMenu(const char* title, const char* options[], int optionCount) {
                 tft.setCursor(25, yPos + 5);
                 tft.print("  ");
             }
-            tft.print(options[idx]);
+            tft.print(displayText);
         }
         
         if(optionCount > maxVisible) {
@@ -4128,7 +4168,7 @@ void showMemorySubMenu(NimBLEAddress target) {
         "FastPair Crypto Overflow",
         "FastPair Handshake Fault",
         "FastPair Rapid Connection",
-        "Run All FastPair Memory Attacks"
+        "Run All FastPair Attacks"
     };
     
     int choice = showSubMenu("Memory Corruption", options, 6);
@@ -4591,6 +4631,9 @@ void runAudioControlTest(NimBLEAddress target) {
             int yPos = startY + (i * testHeight);
             if(yPos + testHeight > tftHeight - 45) break;
 
+            String displayName = audioTestNames[i];
+            if(displayName.length() > 28) displayName = displayName.substring(0, 25) + "...";
+
             if(i == selectedTest) {
                 tft.fillRoundRect(30, yPos, tftWidth - 60, testHeight - 5, 5, TFT_WHITE);
                 tft.setTextColor(TFT_BLACK, TFT_WHITE);
@@ -4602,7 +4645,7 @@ void runAudioControlTest(NimBLEAddress target) {
                 tft.setCursor(40, yPos + 10);
                 tft.print("  ");
             }
-            tft.print(audioTestNames[i]);
+            tft.print(displayName);
         }
 
         tft.setTextColor(TFT_WHITE, bruceConfig.bgColor);
@@ -4727,7 +4770,7 @@ void runHFPHIDPivotAttack(NimBLEAddress target) {
 }
 
 //=============================================================================
-// UI Helpers
+// UI Helpers - with text wrapping
 //=============================================================================
 
 void showAttackProgress(const char* message, uint16_t color) {
@@ -4736,13 +4779,40 @@ void showAttackProgress(const char* message, uint16_t color) {
 
     tft.setTextColor(TFT_WHITE, bruceConfig.bgColor);
     tft.setTextSize(2);
-    tft.setCursor((tftWidth - strlen("BLE SUITE") * 12) / 2, 15);
+    tft.setCursor((tftWidth - tft.textWidth("BLE SUITE")) / 2, 15);
     tft.print("BLE SUITE");
     tft.setTextSize(1);
 
     tft.setTextColor(color, bruceConfig.bgColor);
-    tft.setCursor(20, 80);
-    tft.print(message);
+    
+    String msg = message;
+    int maxWidth = tftWidth - 40;
+    int lineHeight = 20;
+    int yPos = 80;
+    int start = 0;
+    int len = msg.length();
+    
+    while(start < len) {
+        int end = start;
+        int lastSpace = -1;
+        
+        while(end < len && (end - start) * 6 < maxWidth) {
+            if(msg.charAt(end) == ' ') lastSpace = end;
+            end++;
+        }
+        
+        if(end == len || lastSpace == -1) {
+            tft.setCursor(20, yPos);
+            tft.print(msg.substring(start, end));
+            start = end;
+        } else {
+            tft.setCursor(20, yPos);
+            tft.print(msg.substring(start, lastSpace));
+            start = lastSpace + 1;
+        }
+        yPos += lineHeight;
+        if(yPos > tftHeight - 60) break;
+    }
 
     static uint8_t spinnerPos = 0;
     const char* spinner = "|/-\\";
@@ -4761,7 +4831,7 @@ void showAttackResult(bool success, const char* message) {
         tft.drawRect(5, 5, tftWidth - 10, tftHeight - 10, TFT_BLACK);
         tft.setTextColor(TFT_WHITE, TFT_GREEN);
         tft.setTextSize(2);
-        tft.setCursor((tftWidth - strlen("SUCCESS") * 12) / 2, 15);
+        tft.setCursor((tftWidth - tft.textWidth("SUCCESS")) / 2, 15);
         tft.print("SUCCESS");
         tft.setTextSize(1);
         tft.setTextColor(TFT_BLACK, TFT_GREEN);
@@ -4770,19 +4840,51 @@ void showAttackResult(bool success, const char* message) {
         tft.drawRect(5, 5, tftWidth - 10, tftHeight - 10, TFT_BLACK);
         tft.setTextColor(TFT_WHITE, TFT_RED);
         tft.setTextSize(2);
-        tft.setCursor((tftWidth - strlen("FAILED") * 12) / 2, 15);
+        tft.setCursor((tftWidth - tft.textWidth("FAILED")) / 2, 15);
         tft.print("FAILED");
         tft.setTextSize(1);
         tft.setTextColor(TFT_WHITE, TFT_RED);
     }
 
-    tft.setCursor(20, 80);
-    if(message) tft.print(message);
-    else tft.print(success ? "Attack successful!" : "Attack failed");
+    tft.setTextColor(success ? TFT_BLACK : TFT_WHITE, success ? TFT_GREEN : TFT_RED);
+    
+    if(message) {
+        String msg = message;
+        int maxWidth = tftWidth - 40;
+        int lineHeight = 20;
+        int yPos = 80;
+        int start = 0;
+        int len = msg.length();
+        
+        while(start < len) {
+            int end = start;
+            int lastSpace = -1;
+            
+            while(end < len && (end - start) * 6 < maxWidth) {
+                if(msg.charAt(end) == ' ') lastSpace = end;
+                end++;
+            }
+            
+            if(end == len || lastSpace == -1) {
+                tft.setCursor(20, yPos);
+                tft.print(msg.substring(start, end));
+                start = end;
+            } else {
+                tft.setCursor(20, yPos);
+                tft.print(msg.substring(start, lastSpace));
+                start = lastSpace + 1;
+            }
+            yPos += lineHeight;
+            if(yPos > tftHeight - 100) break;
+        }
+    } else {
+        tft.setCursor(20, 80);
+        tft.print(success ? "Attack successful!" : "Attack failed");
+    }
 
-    tft.fillRoundRect(tftWidth/2 - 40, 150, 80, 35, 5, TFT_BLACK);
+    tft.fillRoundRect(tftWidth/2 - 40, tftHeight - 60, 80, 35, 5, TFT_BLACK);
     tft.setTextColor(success ? TFT_GREEN : TFT_RED, TFT_BLACK);
-    tft.setCursor(tftWidth/2 - 15, 157);
+    tft.setCursor(tftWidth/2 - 15, tftHeight - 53);
     tft.print("OK");
 
     tft.setTextColor(success ? TFT_BLACK : TFT_WHITE, success ? TFT_GREEN : TFT_RED);
@@ -4799,12 +4901,20 @@ bool confirmAttack(const char* targetName) {
 
     tft.setTextColor(TFT_WHITE, bruceConfig.bgColor);
     tft.setTextSize(2);
-    tft.setCursor((tftWidth - strlen("CONFIRM ATTACK") * 12) / 2, 15);
+    tft.setCursor((tftWidth - tft.textWidth("CONFIRM ATTACK")) / 2, 15);
     tft.print("CONFIRM ATTACK");
     tft.setTextSize(1);
 
     tft.setCursor(20, 60);
-    tft.print("Target: "); tft.println(targetName);
+    tft.print("Target: ");
+    
+    String targetStr = targetName;
+    if(targetStr.length() > 30) {
+        tft.println(targetStr.substring(0, 27) + "...");
+    } else {
+        tft.println(targetStr);
+    }
+    
     tft.setCursor(20, 90);
     tft.println("FastPair buffer overflow exploit");
 
@@ -4837,19 +4947,41 @@ bool requireSimpleConfirmation(const char* message) {
 
     tft.setTextColor(TFT_WHITE, bruceConfig.bgColor);
     tft.setTextSize(2);
-    tft.setCursor((tftWidth - strlen("CONFIRM") * 12) / 2, 15);
+    tft.setCursor((tftWidth - tft.textWidth("CONFIRM")) / 2, 15);
     tft.print("CONFIRM");
     tft.setTextSize(1);
 
     tft.fillRect(20, 50, tftWidth - 40, 80, bruceConfig.bgColor);
     tft.setCursor(20, 60);
     String msgStr = message;
-    if(msgStr.length() > 30) {
-        tft.print(msgStr.substring(0, 30));
-        tft.setCursor(20, 85);
-        if(msgStr.length() > 60) tft.print(msgStr.substring(30, 60) + "...");
-        else tft.print(msgStr.substring(30));
-    } else tft.print(message);
+    
+    int maxWidth = tftWidth - 40;
+    int lineHeight = 20;
+    int yPos = 60;
+    int start = 0;
+    int len = msgStr.length();
+    
+    while(start < len) {
+        int end = start;
+        int lastSpace = -1;
+        
+        while(end < len && (end - start) * 6 < maxWidth) {
+            if(msgStr.charAt(end) == ' ') lastSpace = end;
+            end++;
+        }
+        
+        if(end == len || lastSpace == -1) {
+            tft.setCursor(20, yPos);
+            tft.print(msgStr.substring(start, end));
+            start = end;
+        } else {
+            tft.setCursor(20, yPos);
+            tft.print(msgStr.substring(start, lastSpace));
+            start = lastSpace + 1;
+        }
+        yPos += lineHeight;
+        if(yPos > 130) break;
+    }
 
     tft.setTextColor(TFT_WHITE, bruceConfig.bgColor);
     tft.setCursor(20, tftHeight - 35);
@@ -4873,18 +5005,39 @@ int8_t showAdaptiveMessage(const char* line1, const char* btn1, const char* btn2
         tft.drawRect(5, 5, tftWidth - 10, tftHeight - 10, TFT_WHITE);
         tft.setTextColor(TFT_WHITE, bruceConfig.bgColor);
         tft.setTextSize(2);
-        tft.setCursor((tftWidth - strlen("MESSAGE") * 12) / 2, 15);
+        tft.setCursor((tftWidth - tft.textWidth("MESSAGE")) / 2, 15);
         tft.print("MESSAGE");
         tft.setTextSize(1);
         tft.setTextColor(color, bruceConfig.bgColor);
-        tft.setCursor(20, 80);
+        
         String lineStr = line1;
-        if(lineStr.length() > 30) {
-            tft.print(lineStr.substring(0, 30));
-            tft.setCursor(20, 105);
-            if(lineStr.length() > 60) tft.print(lineStr.substring(30, 60) + "...");
-            else tft.print(lineStr.substring(30));
-        } else tft.print(line1);
+        int maxWidth = tftWidth - 40;
+        int lineHeight = 20;
+        int yPos = 80;
+        int start = 0;
+        int len = lineStr.length();
+        
+        while(start < len) {
+            int end = start;
+            int lastSpace = -1;
+            
+            while(end < len && (end - start) * 6 < maxWidth) {
+                if(lineStr.charAt(end) == ' ') lastSpace = end;
+                end++;
+            }
+            
+            if(end == len || lastSpace == -1) {
+                tft.setCursor(20, yPos);
+                tft.print(lineStr.substring(start, end));
+                start = end;
+            } else {
+                tft.setCursor(20, yPos);
+                tft.print(lineStr.substring(start, lastSpace));
+                start = lastSpace + 1;
+            }
+            yPos += lineHeight;
+            if(yPos > tftHeight - 60) break;
+        }
         delay(1500);
         return 0;
     }
@@ -4894,19 +5047,40 @@ int8_t showAdaptiveMessage(const char* line1, const char* btn1, const char* btn2
         tft.drawRect(5, 5, tftWidth - 10, tftHeight - 10, TFT_WHITE);
         tft.setTextColor(TFT_WHITE, bruceConfig.bgColor);
         tft.setTextSize(2);
-        tft.setCursor((tftWidth - strlen("MESSAGE") * 12) / 2, 15);
+        tft.setCursor((tftWidth - tft.textWidth("MESSAGE")) / 2, 15);
         tft.print("MESSAGE");
         tft.setTextSize(1);
         tft.setTextColor(color, bruceConfig.bgColor);
         tft.fillRect(20, 60, tftWidth - 40, 100, bruceConfig.bgColor);
-        tft.setCursor(20, 70);
+        
         String lineStr = line1;
-        if(lineStr.length() > 30) {
-            tft.print(lineStr.substring(0, 30));
-            tft.setCursor(20, 95);
-            if(lineStr.length() > 60) tft.print(lineStr.substring(30, 60) + "...");
-            else tft.print(lineStr.substring(30));
-        } else tft.print(line1);
+        int maxWidth = tftWidth - 40;
+        int lineHeight = 20;
+        int yPos = 70;
+        int start = 0;
+        int len = lineStr.length();
+        
+        while(start < len) {
+            int end = start;
+            int lastSpace = -1;
+            
+            while(end < len && (end - start) * 6 < maxWidth) {
+                if(lineStr.charAt(end) == ' ') lastSpace = end;
+                end++;
+            }
+            
+            if(end == len || lastSpace == -1) {
+                tft.setCursor(20, yPos);
+                tft.print(lineStr.substring(start, end));
+                start = end;
+            } else {
+                tft.setCursor(20, yPos);
+                tft.print(lineStr.substring(start, lastSpace));
+                start = lastSpace + 1;
+            }
+            yPos += lineHeight;
+            if(yPos > 160) break;
+        }
 
         tft.setTextColor(TFT_WHITE, bruceConfig.bgColor);
         tft.setCursor(20, tftHeight - 35);
@@ -4928,21 +5102,41 @@ int8_t showAdaptiveMessage(const char* line1, const char* btn1, const char* btn2
         tft.drawRect(5, 5, tftWidth - 10, tftHeight - 10, TFT_WHITE);
         tft.setTextColor(TFT_WHITE, bruceConfig.bgColor);
         tft.setTextSize(2);
-        tft.setCursor((tftWidth - strlen("MESSAGE") * 12) / 2, 15);
+        tft.setCursor((tftWidth - tft.textWidth("MESSAGE")) / 2, 15);
         tft.print("MESSAGE");
         tft.setTextSize(1);
 
         tft.fillRect(20, 60, tftWidth - 40, 60, bruceConfig.bgColor);
         tft.setTextColor(color, bruceConfig.bgColor);
-        tft.setCursor(20, 70);
+        
         String lineStr = line1;
-        if(lineStr.length() > 30) {
-            tft.print(lineStr.substring(0, 30));
-            if(lineStr.length() > 60) {
-                tft.setCursor(20, 95);
-                tft.print(lineStr.substring(30, 60) + "...");
+        int maxWidth = tftWidth - 40;
+        int lineHeight = 20;
+        int yPos = 70;
+        int start = 0;
+        int len = lineStr.length();
+        
+        while(start < len) {
+            int end = start;
+            int lastSpace = -1;
+            
+            while(end < len && (end - start) * 6 < maxWidth) {
+                if(lineStr.charAt(end) == ' ') lastSpace = end;
+                end++;
             }
-        } else tft.print(line1);
+            
+            if(end == len || lastSpace == -1) {
+                tft.setCursor(20, yPos);
+                tft.print(lineStr.substring(start, end));
+                start = end;
+            } else {
+                tft.setCursor(20, yPos);
+                tft.print(lineStr.substring(start, lastSpace));
+                start = lastSpace + 1;
+            }
+            yPos += lineHeight;
+            if(yPos > 120) break;
+        }
 
         String btnText = actualBtn;
         if(btnText.length() > 12) btnText = btnText.substring(0, 9) + "...";
@@ -4972,13 +5166,40 @@ int8_t showAdaptiveMessage(const char* line1, const char* btn1, const char* btn2
         tft.drawRect(5, 5, tftWidth - 10, tftHeight - 10, TFT_WHITE);
         tft.setTextColor(TFT_WHITE, bruceConfig.bgColor);
         tft.setTextSize(2);
-        tft.setCursor((tftWidth - strlen("SELECT") * 12) / 2, 15);
+        tft.setCursor((tftWidth - tft.textWidth("SELECT")) / 2, 15);
         tft.print("SELECT");
         tft.setTextSize(1);
 
         tft.setTextColor(color, bruceConfig.bgColor);
-        tft.setCursor(20, 70);
-        tft.print(line1);
+        
+        String lineStr = line1;
+        int maxWidth = tftWidth - 40;
+        int lineHeight = 20;
+        int yPos = 70;
+        int start = 0;
+        int len = lineStr.length();
+        
+        while(start < len) {
+            int end = start;
+            int lastSpace = -1;
+            
+            while(end < len && (end - start) * 6 < maxWidth) {
+                if(lineStr.charAt(end) == ' ') lastSpace = end;
+                end++;
+            }
+            
+            if(end == len || lastSpace == -1) {
+                tft.setCursor(20, yPos);
+                tft.print(lineStr.substring(start, end));
+                start = end;
+            } else {
+                tft.setCursor(20, yPos);
+                tft.print(lineStr.substring(start, lastSpace));
+                start = lastSpace + 1;
+            }
+            yPos += lineHeight;
+            if(yPos > 130) break;
+        }
 
         int btnWidth = 80, btnHeight = 35, btnY = 150;
 
@@ -5020,19 +5241,40 @@ void showWarningMessage(const char* message) {
     tft.drawRect(5, 5, tftWidth - 10, tftHeight - 10, TFT_BLACK);
     tft.setTextColor(TFT_BLACK, TFT_YELLOW);
     tft.setTextSize(2);
-    tft.setCursor((tftWidth - strlen("WARNING") * 12) / 2, 15);
+    tft.setCursor((tftWidth - tft.textWidth("WARNING")) / 2, 15);
     tft.print("WARNING");
     tft.setTextSize(1);
     tft.setTextColor(TFT_BLACK, TFT_YELLOW);
     tft.fillRect(20, 60, tftWidth - 40, 100, TFT_YELLOW);
-    tft.setCursor(20, 70);
+    
     String msgStr = message;
-    if(msgStr.length() > 30) {
-        tft.print(msgStr.substring(0, 30));
-        tft.setCursor(20, 95);
-        if(msgStr.length() > 60) tft.print(msgStr.substring(30, 60) + "...");
-        else tft.print(msgStr.substring(30));
-    } else tft.print(message);
+    int maxWidth = tftWidth - 40;
+    int lineHeight = 20;
+    int yPos = 70;
+    int start = 0;
+    int len = msgStr.length();
+    
+    while(start < len) {
+        int end = start;
+        int lastSpace = -1;
+        
+        while(end < len && (end - start) * 6 < maxWidth) {
+            if(msgStr.charAt(end) == ' ') lastSpace = end;
+            end++;
+        }
+        
+        if(end == len || lastSpace == -1) {
+            tft.setCursor(20, yPos);
+            tft.print(msgStr.substring(start, end));
+            start = end;
+        } else {
+            tft.setCursor(20, yPos);
+            tft.print(msgStr.substring(start, lastSpace));
+            start = lastSpace + 1;
+        }
+        yPos += lineHeight;
+        if(yPos > 160) break;
+    }
 
     tft.setTextColor(TFT_BLACK, TFT_YELLOW);
     tft.setCursor(20, tftHeight - 35);
@@ -5052,19 +5294,40 @@ void showErrorMessage(const char* message) {
     tft.drawRect(5, 5, tftWidth - 10, tftHeight - 10, TFT_BLACK);
     tft.setTextColor(TFT_WHITE, TFT_RED);
     tft.setTextSize(2);
-    tft.setCursor((tftWidth - strlen("ERROR") * 12) / 2, 15);
+    tft.setCursor((tftWidth - tft.textWidth("ERROR")) / 2, 15);
     tft.print("ERROR");
     tft.setTextSize(1);
     tft.setTextColor(TFT_WHITE, TFT_RED);
     tft.fillRect(20, 60, tftWidth - 40, 100, TFT_RED);
-    tft.setCursor(20, 70);
+    
     String msgStr = message;
-    if(msgStr.length() > 30) {
-        tft.print(msgStr.substring(0, 30));
-        tft.setCursor(20, 95);
-        if(msgStr.length() > 60) tft.print(msgStr.substring(30, 60) + "...");
-        else tft.print(msgStr.substring(30));
-    } else tft.print(message);
+    int maxWidth = tftWidth - 40;
+    int lineHeight = 20;
+    int yPos = 70;
+    int start = 0;
+    int len = msgStr.length();
+    
+    while(start < len) {
+        int end = start;
+        int lastSpace = -1;
+        
+        while(end < len && (end - start) * 6 < maxWidth) {
+            if(msgStr.charAt(end) == ' ') lastSpace = end;
+            end++;
+        }
+        
+        if(end == len || lastSpace == -1) {
+            tft.setCursor(20, yPos);
+            tft.print(msgStr.substring(start, end));
+            start = end;
+        } else {
+            tft.setCursor(20, yPos);
+            tft.print(msgStr.substring(start, lastSpace));
+            start = lastSpace + 1;
+        }
+        yPos += lineHeight;
+        if(yPos > 160) break;
+    }
 
     tft.setCursor(20, tftHeight - 35);
     tft.print("Press any key to continue...");
@@ -5083,19 +5346,40 @@ void showSuccessMessage(const char* message) {
     tft.drawRect(5, 5, tftWidth - 10, tftHeight - 10, TFT_BLACK);
     tft.setTextColor(TFT_WHITE, TFT_GREEN);
     tft.setTextSize(2);
-    tft.setCursor((tftWidth - strlen("SUCCESS") * 12) / 2, 15);
+    tft.setCursor((tftWidth - tft.textWidth("SUCCESS")) / 2, 15);
     tft.print("SUCCESS");
     tft.setTextSize(1);
     tft.setTextColor(TFT_BLACK, TFT_GREEN);
     tft.fillRect(20, 60, tftWidth - 40, 100, TFT_GREEN);
-    tft.setCursor(20, 70);
+    
     String msgStr = message;
-    if(msgStr.length() > 30) {
-        tft.print(msgStr.substring(0, 30));
-        tft.setCursor(20, 95);
-        if(msgStr.length() > 60) tft.print(msgStr.substring(30, 60) + "...");
-        else tft.print(msgStr.substring(30));
-    } else tft.print(message);
+    int maxWidth = tftWidth - 40;
+    int lineHeight = 20;
+    int yPos = 70;
+    int start = 0;
+    int len = msgStr.length();
+    
+    while(start < len) {
+        int end = start;
+        int lastSpace = -1;
+        
+        while(end < len && (end - start) * 6 < maxWidth) {
+            if(msgStr.charAt(end) == ' ') lastSpace = end;
+            end++;
+        }
+        
+        if(end == len || lastSpace == -1) {
+            tft.setCursor(20, yPos);
+            tft.print(msgStr.substring(start, end));
+            start = end;
+        } else {
+            tft.setCursor(20, yPos);
+            tft.print(msgStr.substring(start, lastSpace));
+            start = lastSpace + 1;
+        }
+        yPos += lineHeight;
+        if(yPos > 160) break;
+    }
 
     tft.setCursor(20, tftHeight - 35);
     tft.print("Press any key to continue...");
@@ -5115,20 +5399,46 @@ void showDeviceInfoScreen(const char* title, const std::vector<String>& lines, u
 
     tft.setTextColor(TFT_WHITE, bgColor);
     tft.setTextSize(2);
-    tft.setCursor((tftWidth - strlen(title) * 12) / 2, 15);
+    tft.setCursor((tftWidth - tft.textWidth(title)) / 2, 15);
     tft.print(title);
     tft.setTextSize(1);
 
     tft.setTextColor(textColor, bgColor);
-    int yPos = 60, lineHeight = 20, maxLines = 8;
+    int yPos = 60;
+    int lineHeight = 20;
+    int maxLines = 8;
 
     for(int i = 0; i < std::min((int)lines.size(), maxLines); i++) {
         if(yPos + lineHeight > tftHeight - 45) break;
-        tft.setCursor(20, yPos);
+        
         String displayLine = lines[i];
-        if(displayLine.length() > 35) displayLine = displayLine.substring(0, 32) + "...";
-        tft.print(displayLine);
-        yPos += lineHeight;
+        int maxWidth = tftWidth - 40;
+        int lineY = yPos;
+        int start = 0;
+        int len = displayLine.length();
+        
+        while(start < len) {
+            int end = start;
+            int lastSpace = -1;
+            
+            while(end < len && (end - start) * 6 < maxWidth) {
+                if(displayLine.charAt(end) == ' ') lastSpace = end;
+                end++;
+            }
+            
+            if(end == len || lastSpace == -1) {
+                tft.setCursor(20, lineY);
+                tft.print(displayLine.substring(start, end));
+                start = end;
+            } else {
+                tft.setCursor(20, lineY);
+                tft.print(displayLine.substring(start, lastSpace));
+                start = lastSpace + 1;
+            }
+            lineY += lineHeight;
+            if(lineY > tftHeight - 45) break;
+        }
+        yPos = lineY;
     }
 
     tft.setTextColor(TFT_WHITE, bgColor);
