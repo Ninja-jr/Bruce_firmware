@@ -143,59 +143,11 @@ struct ScannerData {
     SemaphoreHandle_t mutex;
     int foundCount;
 
-    ScannerData() {
-        mutex = xSemaphoreCreateMutex();
-        foundCount = 0;
-    }
-
-    ~ScannerData() {
-        if(mutex) vSemaphoreDelete(mutex);
-    }
-
-    void addDevice(const String& name, const String& address, int rssi, bool fastPair, bool hasHFP, uint8_t type) {
-        if(xSemaphoreTake(mutex, portMAX_DELAY)) {
-            bool isDuplicate = false;
-            for(size_t i = 0; i < deviceAddresses.size(); i++) {
-                if(deviceAddresses[i] == address) {
-                    isDuplicate = true;
-                    deviceRssi[i] = rssi;
-                    break;
-                }
-            }
-            if(!isDuplicate) {
-                deviceNames.push_back(name);
-                deviceAddresses.push_back(address);
-                deviceRssi.push_back(rssi);
-                deviceFastPair.push_back(fastPair);
-                deviceHasHFP.push_back(hasHFP);
-                deviceTypes.push_back(type);
-                foundCount++;
-            }
-            xSemaphoreGive(mutex);
-        }
-    }
-
-    void clear() {
-        if(xSemaphoreTake(mutex, portMAX_DELAY)) {
-            deviceNames.clear();
-            deviceAddresses.clear();
-            deviceRssi.clear();
-            deviceFastPair.clear();
-            deviceHasHFP.clear();
-            deviceTypes.clear();
-            foundCount = 0;
-            xSemaphoreGive(mutex);
-        }
-    }
-
-    size_t size() {
-        size_t result = 0;
-        if(xSemaphoreTake(mutex, portMAX_DELAY)) {
-            result = deviceAddresses.size();
-            xSemaphoreGive(mutex);
-        }
-        return result;
-    }
+    ScannerData();
+    ~ScannerData();
+    void addDevice(const String& name, const String& address, int rssi, bool fastPair, bool hasHFP, uint8_t type);
+    void clear();
+    size_t size();
 };
 
 class AutoCleanup {
@@ -204,26 +156,10 @@ private:
     bool enabled;
 
 public:
-    AutoCleanup(std::function<void()> func, bool enable = true) 
-        : cleanupFunc(func), enabled(enable) {}
-
-    ~AutoCleanup() { 
-        if(enabled && cleanupFunc) {
-            cleanupFunc(); 
-        }
-    }
-
-    void disable() { enabled = false; }
-    void enable() { enabled = true; }
-
-    AutoCleanup(const AutoCleanup&) = delete;
-    AutoCleanup& operator=(const AutoCleanup&) = delete;
-
-    AutoCleanup(AutoCleanup&& other) noexcept 
-        : cleanupFunc(std::move(other.cleanupFunc)), enabled(other.enabled) {
-        other.cleanupFunc = nullptr;
-        other.enabled = false;
-    }
+    AutoCleanup(std::function<void()> func, bool enable = true);
+    ~AutoCleanup();
+    void disable();
+    void enable();
 };
 
 class BLEStateManager {
@@ -244,9 +180,6 @@ public:
 };
 
 class BLEAttackManager {
-private:
-    bool isInAttackMode = false;
-    bool wasScanning = false;
 public:
     void prepareForConnection();
     void cleanupAfterAttack();
@@ -254,8 +187,58 @@ public:
     DeviceProfile profileDevice(NimBLEAddress target);
 };
 
-class HIDExploitEngine {
+// FastPair structs
+struct FastPairDeviceInfo {
+    NimBLEAddress address;
+    String name;
+    int rssi;
+    bool supportsFastPair;
+    bool connected;
+    uint32_t modelId;
+    String deviceType;
+};
+
+struct FastPairModelInfo {
+    uint32_t modelId;
+    const char* name;
+    const char* deviceType;
+};
+
+class FastPairExploitEngine {
+public:
+    std::vector<FastPairDeviceInfo> scanForFastPairDevices(int duration);
+    bool exploitFastPairConnection(NimBLEAddress target, FastPairExploitType exploitType);
+    void spamFastPairPopups(FastPairPopupType popupType, int count);
+    bool testVulnerability(NimBLEAddress target);
+    
+    // Public exploit methods
+    bool executeMemoryCorruption(NimBLERemoteCharacteristic* pChar);
+    bool executeStateConfusion(NimBLERemoteCharacteristic* pChar);
+    bool executeCryptoOverflow(NimBLERemoteCharacteristic* pChar);
+    bool executeHandshakeFault(NimBLERemoteCharacteristic* pChar);
+    bool executeRapidConnection(NimBLEAddress target, NimBLERemoteCharacteristic* pChar);
+    bool executeAllExploits(NimBLERemoteCharacteristic* pChar, NimBLEAddress target);
+
 private:
+    std::vector<FastPairDeviceInfo> discoveredDevices;
+    NimBLERemoteCharacteristic* findKBPCharacteristic(NimBLERemoteService* service);
+    uint32_t selectModelForPopup(FastPairPopupType type);
+    uint32_t randomRegularModel();
+    uint32_t randomFunModel();
+    uint32_t randomPrankModel();
+    uint32_t selectCustomModel();
+    void createFastPairAdvertisement(uint8_t* buffer, uint32_t modelId);
+    String getDeviceTypeFromModelId(uint32_t modelId);
+    bool testServiceDiscovery(NimBLEAddress target);
+    bool testCharacteristicAccess(NimBLEAddress target);
+    bool testBufferOverflow(NimBLEAddress target);
+    bool testStateConfusion(NimBLEAddress target);
+    void logExploitResult(NimBLEAddress target, FastPairExploitType type, bool success);
+    void generateRandomMac(uint8_t* mac);
+};
+
+class HIDExploitEngine {
+public:
     HIDDeviceProfile analyzeHIDDevice(NimBLEAddress target, const String& name, int rssi);
     bool tryAppleMagicSpoof(NimBLEAddress target, HIDDeviceProfile profile);
     bool tryWindowsHIDBypass(NimBLEAddress target, HIDDeviceProfile profile);
@@ -267,25 +250,23 @@ private:
     bool trySecurityModeBypass(NimBLEAddress target, HIDDeviceProfile profile);
     bool tryAddressSpoofingAttack(NimBLEAddress target, HIDDeviceProfile profile);
     bool tryServiceDiscoveryHijack(NimBLEAddress target, HIDDeviceProfile profile);
-
-public:
     HIDConnectionResult forceHIDConnection(NimBLEAddress target, const String& deviceName, int rssi);
     bool executeHIDInjection(NimBLEAddress target, const String& duckyScript);
     bool testHIDVulnerability(NimBLEAddress target);
 };
 
 class WhisperPairExploit {
-private:
+public:
+    WhisperPairExploit();
     BLEAttackManager bleManager;
     FastPairCrypto crypto;
+    
     NimBLERemoteCharacteristic* findKBPCharacteristic(NimBLERemoteService* fastpairService);
     bool performRealHandshake(NimBLERemoteCharacteristic* kbpChar, uint8_t* devicePubKey);
     bool sendProtocolAttack(NimBLERemoteCharacteristic* kbpChar, const uint8_t* devicePubKey);
     bool sendStateConfusionAttack(NimBLERemoteCharacteristic* kbpChar);
     bool sendCryptoOverflowAttack(NimBLERemoteCharacteristic* kbpChar);
     bool testForVulnerability(NimBLERemoteCharacteristic* kbpChar);
-
-public:
     bool execute(NimBLEAddress target);
     bool executeSilent(NimBLEAddress target);
     bool executeAdvanced(NimBLEAddress target, int attackType);
@@ -308,10 +289,7 @@ public:
         uint8_t modifier;
         uint8_t keycode;
     };
-private:
-    std::vector<DuckyCommand> commands;
-    bool scriptLoaded;
-public:
+
     DuckyScriptEngine();
     HIDKeycode charToKeycode(char c);
     bool parseLine(String line);
@@ -321,9 +299,22 @@ public:
     bool isLoaded();
     void clear();
     size_t getCommandCount();
+
+private:
+    std::vector<DuckyCommand> commands;
+    bool scriptLoaded;
 };
 
 class HIDDuckyService {
+public:
+    HIDDuckyService();
+    bool injectDuckyScript(NimBLEAddress target, String script);
+    bool injectDuckyScriptFromSD(NimBLEAddress target, String filename);
+    bool executeDuckyScript(NimBLEAddress target);
+    bool forceInjectDuckyScript(NimBLEAddress target, String script, const String& deviceName, int rssi);
+    void setDefaultDelay(int delay_ms);
+    size_t getScriptSize();
+
 private:
     DuckyScriptEngine duckyEngine;
     int defaultDelay;
@@ -333,14 +324,6 @@ private:
     bool sendSpecialKey(NimBLERemoteCharacteristic* pChar, const String& key);
     bool sendComboKey(NimBLERemoteCharacteristic* pChar, const String& combo);
     bool sendGUIKey(NimBLERemoteCharacteristic* pChar, char key);
-public:
-    HIDDuckyService();
-    bool injectDuckyScript(NimBLEAddress target, String script);
-    bool injectDuckyScriptFromSD(NimBLEAddress target, String filename);
-    bool executeDuckyScript(NimBLEAddress target);
-    bool forceInjectDuckyScript(NimBLEAddress target, String script, const String& deviceName, int rssi);
-    void setDefaultDelay(int delay_ms);
-    size_t getScriptSize();
 };
 
 class AuthBypassEngine {
@@ -352,6 +335,7 @@ private:
         unsigned long bondedAt;
     };
     std::vector<PairedDevice> knownDevices;
+
 public:
     AuthBypassEngine();
     void addKnownDevice(const String& name, const String& address, uint8_t linkKey[16]);
@@ -362,8 +346,6 @@ public:
 };
 
 class MultiConnectionAttack {
-private:
-    std::vector<NimBLEClient*> activeConnections;
 public:
     MultiConnectionAttack();
     ~MultiConnectionAttack();
@@ -376,6 +358,9 @@ public:
     bool nrf24JamAttack(int jamMode = 0);
     bool jamAndConnect(NimBLEAddress target);
     void cleanup();
+
+private:
+    std::vector<NimBLEClient*> activeConnections;
 };
 
 class VulnerabilityScanner {
@@ -386,6 +371,7 @@ private:
         String description;
     };
     std::vector<VulnCheck> vulnerabilityChecks;
+
 public:
     VulnerabilityScanner();
     void scanDevice(NimBLEAddress target);
@@ -395,8 +381,6 @@ public:
 };
 
 class HIDAttackServiceClass {
-private:
-    HIDExploitEngine hidExploit;
 public:
     bool injectKeystrokes(NimBLEAddress target);
     bool forceHIDKeystrokes(NimBLEAddress target, const String& deviceName, int rssi);
@@ -415,17 +399,6 @@ public:
 
 #ifdef DEBUG_MEMORY
 class HeapMonitor {
-private:
-    struct HeapSnapshot {
-        size_t freeHeap;
-        size_t maxFreeBlock;
-        unsigned long timestamp;
-        String label;
-    };
-
-    static std::vector<HeapSnapshot> snapshots;
-    static size_t initialHeap;
-
 public:
     static void takeSnapshot(const String& label);
     static void printReport();
@@ -509,5 +482,16 @@ void runFastPairHIDChain(NimBLEAddress target);
 void runUniversalAttack(NimBLEAddress target);
 String selectFileFromSD();
 bool loadScriptFromSD(String filename);
+
+// Forward declarations for submenu functions
+void showFastPairSubMenu(NimBLEAddress target);
+void showHFPSubMenu(NimBLEAddress target);
+void showAudioSubMenu(NimBLEAddress target);
+void showHIDSubMenu(NimBLEAddress target);
+void showMemorySubMenu(NimBLEAddress target);
+void showDoSSubMenu(NimBLEAddress target);
+void showPayloadSubMenu(NimBLEAddress target);
+void showTestingSubMenu(NimBLEAddress target);
+void executeAttackWithTargetScan(int attackIndex);
 
 #endif
