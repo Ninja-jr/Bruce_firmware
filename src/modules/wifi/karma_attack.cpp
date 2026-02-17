@@ -2132,13 +2132,14 @@ void updateKarmaDisplay() {
     unsigned long currentTime = millis();
     if (currentTime - last_time > 1000) {
         last_time = currentTime;
-        tft.fillRect(10, tftHeight - 110, tftWidth - 20, 105, bruceConfig.bgColor);
+        // Clear the stats area only, preserve border
+        tft.fillRect(10, 25, tftWidth - 20, tftHeight - 45, bruceConfig.bgColor);
         tft.setTextSize(1);
         tft.setTextColor(bruceConfig.priColor, bruceConfig.bgColor);
         
-        int y = tftHeight - 110;
+        int y = 30;  // Start just below the border line
         
-        // KARMA PAUSED indicator at top
+        // KARMA PAUSED indicator (if active)
         if (karmaPaused) {
             tft.setTextColor(TFT_RED, bruceConfig.bgColor);
             tft.setCursor(10, y);
@@ -2146,14 +2147,6 @@ void updateKarmaDisplay() {
             tft.setTextColor(bruceConfig.priColor, bruceConfig.bgColor);
             y += 15;
         }
-        
-        // Half-size bold title
-        tft.setTextSize(2);  // Half-size (font 2 is 8x8 pixels)
-        tft.setTextColor(bruceConfig.priColor, bruceConfig.bgColor);
-        tft.setCursor(10, y);
-        tft.print("ENHANCED KARMA");
-        tft.setTextSize(1);  // Reset to normal
-        y += 12;  // Slightly less space for half-size font
         
         // Template line
         if (templateSelected && !selectedTemplate.name.isEmpty()) {
@@ -2164,69 +2157,80 @@ void updateKarmaDisplay() {
             y += 15;
         }
         
-        // Stats rows - 8 lines
-        tft.setCursor(10, y); 
-        tft.print("Total: " + String(totalProbes));
-        tft.setCursor(tftWidth/2, y);
-        tft.print("Pending: " + String(pendingPortals.size()));
+        // Line 3: Total, Unique, Active
+        tft.setCursor(10, y);
+        tft.print("Total:" + String(totalProbes));
+        tft.setCursor(70, y);
+        tft.print("Uniq:" + String(uniqueClients));
+        tft.setCursor(130, y);
+        tft.print("Act:" + String(activeNetworks.size()));
         y += 15;
         
+        // Line 4: Pending, Queue, Beacons
         tft.setCursor(10, y);
-        tft.print("Unique: " + String(uniqueClients));
-        tft.setCursor(tftWidth/2, y);
-        tft.print("Ch: " + String(pgm_read_byte(&karma_channels[channl % 14])));
+        tft.print("Pend:" + String(pendingPortals.size()));
+        tft.setCursor(70, y);
+        tft.print("Q:" + String(responseQueue.size()));
+        tft.setCursor(130, y);
+        tft.print("Beac:" + String(beaconsSent));
         y += 15;
         
+        // Line 5: Karma, Clones, Portals
         tft.setCursor(10, y);
-        tft.print("Karma: " + String(karmaResponsesSent));
-        tft.setCursor(tftWidth/2, y);
+        tft.print("Karma:" + String(karmaResponsesSent));
+        tft.setCursor(70, y);
+        tft.print("Clon:" + String(cloneAttacksLaunched));
+        tft.setCursor(130, y);
+        tft.print("Port:" + String(autoPortalsLaunched) + "/" + String(activePortals.size()));
+        y += 15;
+        
+        // Line 6: HS, PMKID
+        tft.setCursor(10, y);
+        tft.print("HS:" + String(handshakeBuffer.size()));
+        tft.setCursor(70, y);
+        tft.print("PMKID:" + String(pmkidCaptured));
+        y += 15;
+        
+        // Line 7: Ch, A (hop status)
+        tft.setCursor(10, y);
+        tft.print("Ch:" + String(pgm_read_byte(&karma_channels[channl % 14])));
+        tft.setCursor(70, y);
         String hopStatus = String(auto_hopping ? "A:" : "M:") + String(hop_interval) + "ms";
         tft.print(hopStatus);
         y += 15;
         
+        // Line 8: Full MAC and Mode
         tft.setCursor(10, y);
-        tft.print("Beacons: " + String(beaconsSent));
-        tft.setCursor(tftWidth/2, y);
-        tft.print("Queue: " + String(responseQueue.size()));
-        y += 15;
+        char macStr[18];
+        snprintf(macStr, sizeof(macStr), "%02X:%02X:%02X:%02X:%02X:%02X",
+                 currentBSSID[0], currentBSSID[1], currentBSSID[2],
+                 currentBSSID[3], currentBSSID[4], currentBSSID[5]);
+        tft.print("MAC:" + String(macStr));
         
-        tft.setCursor(10, y);
-        tft.print("Active: " + String(activeNetworks.size()));
-        tft.setCursor(tftWidth/2, y);
-        tft.print("MAC: " + String(currentBSSID[5] & 0xFF, HEX));
-        y += 15;
-        
-        tft.setCursor(10, y);
-        tft.print("Portals: " + String(autoPortalsLaunched) + "/" + String(activePortals.size()));
-        tft.setCursor(tftWidth/2, y);
-        tft.print("PMKID: " + String(pmkidCaptured));
-        y += 15;
-        
-        tft.setCursor(10, y);
-        tft.print("Clones: " + String(cloneAttacksLaunched));
-        tft.setCursor(tftWidth/2, y);
-        tft.print("HS: " + String(handshakeBuffer.size()));
-        y += 15;
-        
-        // Mode line with broadcast progress on right
-        tft.setCursor(10, y);
-        String modeText = "Mode: ";
+        String modeText = "";
         switch(karmaMode) {
-            case MODE_PASSIVE: modeText += "PASSIVE"; break;
-            case MODE_BROADCAST: modeText += "BROADCAST"; break;
-            case MODE_FULL: modeText += "FULL"; break;
+            case MODE_PASSIVE: modeText = "PASSIVE"; break;
+            case MODE_BROADCAST: modeText = "BCAST"; break;
+            case MODE_FULL: modeText = "FULL"; break;
         }
+        // Calculate position for mode at right side
+        int modeX = tftWidth - 10 - (modeText.length() * 6);
+        tft.setCursor(modeX, y);
         tft.print(modeText);
-        
-        if (broadcastAttack.isActive()) {
-            tft.setCursor(tftWidth - 80, y);
-            tft.print(broadcastAttack.getProgressString());
-        }
         y += 15;
         
-        // Key hints at bottom
+        // Line 9: Broadcast progress (if active)
+        if (broadcastAttack.isActive()) {
+            tft.setCursor(10, y);
+            tft.print("Broadcast: " + broadcastAttack.getProgressString());
+            y += 15;
+        } else {
+            y += 15; // Keep spacing consistent even when blank
+        }
+        
+        // Line 10: Key hints at bottom
         tft.setCursor(10, tftHeight - 18);
-        tft.print("SEL/ESC: Menu | Prev/Next: Channel");
+        tft.print("SEL/ESC:Menu | Prev/Next:Ch");
     }
 }
 
@@ -2760,9 +2764,6 @@ void karma_setup() {
             screenNeedsRedraw = true;
             continue;
         }
-        
-        // Screen redraw is now only handled by updateKarmaDisplay() which runs every second
-        // The screenNeedsRedraw flag is still used but no separate drawing block
         
         updateKarmaDisplay();
         vTaskDelay(10 / portTICK_PERIOD_MS);
