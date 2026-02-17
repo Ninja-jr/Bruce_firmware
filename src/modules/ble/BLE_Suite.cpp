@@ -23,6 +23,91 @@ std::vector<NimBLEClient*> BLEStateManager::activeClients;
 String BLEStateManager::currentDeviceName = "";
 
 //=============================================================================
+// ScannerData Implementation
+//=============================================================================
+
+ScannerData::ScannerData() {
+    mutex = xSemaphoreCreateMutex();
+    foundCount = 0;
+}
+
+ScannerData::~ScannerData() {
+    if(mutex) vSemaphoreDelete(mutex);
+}
+
+void ScannerData::addDevice(const String& name, const String& address, int rssi, bool fastPair, bool hasHFP, uint8_t type) {
+    if(xSemaphoreTake(mutex, portMAX_DELAY)) {
+        bool isDuplicate = false;
+        for(size_t i = 0; i < deviceAddresses.size(); i++) {
+            if(deviceAddresses[i] == address) {
+                isDuplicate = true;
+                deviceRssi[i] = rssi;
+                break;
+            }
+        }
+        if(!isDuplicate) {
+            deviceNames.push_back(name);
+            deviceAddresses.push_back(address);
+            deviceRssi.push_back(rssi);
+            deviceFastPair.push_back(fastPair);
+            deviceHasHFP.push_back(hasHFP);
+            deviceTypes.push_back(type);
+            foundCount++;
+        }
+        xSemaphoreGive(mutex);
+    }
+}
+
+void ScannerData::clear() {
+    if(xSemaphoreTake(mutex, portMAX_DELAY)) {
+        deviceNames.clear();
+        deviceAddresses.clear();
+        deviceRssi.clear();
+        deviceFastPair.clear();
+        deviceHasHFP.clear();
+        deviceTypes.clear();
+        foundCount = 0;
+        xSemaphoreGive(mutex);
+    }
+}
+
+size_t ScannerData::size() {
+    size_t result = 0;
+    if(xSemaphoreTake(mutex, portMAX_DELAY)) {
+        result = deviceAddresses.size();
+        xSemaphoreGive(mutex);
+    }
+    return result;
+}
+
+//=============================================================================
+// AutoCleanup Implementation
+//=============================================================================
+
+AutoCleanup::AutoCleanup(std::function<void()> func, bool enable) 
+    : cleanupFunc(func), enabled(enable) {}
+
+AutoCleanup::~AutoCleanup() { 
+    if(enabled && cleanupFunc) {
+        cleanupFunc(); 
+    }
+}
+
+void AutoCleanup::disable() { enabled = false; }
+void AutoCleanup::enable() { enabled = true; }
+
+//=============================================================================
+// isBLEInitialized Implementation
+//=============================================================================
+
+bool isBLEInitialized() {
+    return BLEStateManager::isBLEActive() || 
+           NimBLEDevice::getAdvertising() != nullptr || 
+           NimBLEDevice::getScan() != nullptr || 
+           NimBLEDevice::getServer() != nullptr;
+}
+
+//=============================================================================
 // FastPair Model Database
 //=============================================================================
 
