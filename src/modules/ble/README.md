@@ -10,8 +10,8 @@ BLE Suite is a comprehensive Bluetooth Low Energy security testing framework for
 
 Hardware Integration
 
-· NRF24L01+ - BLE frequency jamming (jamming modes, jam & connect attacks)
-· FastPair Crypto - mbedTLS-based cryptographic operations (ECDH, AES-CCM)
+· NRF24L01+ - BLE frequency jamming (3 jamming modes, jam & connect attacks)
+· FastPair Crypto - mbedTLS-based cryptographic operations (ECDH, AES-CCM, key generation)
 
 Core Components
 
@@ -29,19 +29,13 @@ Stores discovered devices with service detection:
 
 Attack Engines
 
-NimbleExploitEngine
-
-· CVE-2024-47248 - Mesh buffer overflow
-· CVE-2024-47249 - HCI OOB
-
-A2DPAttackEngine
-
-· Protocol-level AVDTP attacks (discovery, codec, stream)
-
 HIDExploitEngine
 
 · OS-specific attacks (Apple spoof, Windows bypass, Android JustWorks)
+· Boot protocol injection
 · Connection parameter manipulation
+· Security mode bypass
+· Address spoofing
 · Service discovery hijacking
 
 WhisperPairExploit
@@ -49,6 +43,7 @@ WhisperPairExploit
 · FastPair cryptographic handshake simulation
 · Protocol state confusion
 · Crypto overflow attacks
+· Memory corruption attempts
 
 AudioAttackService
 
@@ -59,53 +54,67 @@ AudioAttackService
 FastPairExploitEngine
 
 · Device scanning with model identification
-· Memory corruption attempts
-· Popup spam (Regular/Fun/Prank)
+· Memory corruption attacks
+· State confusion attacks
+· Crypto overflow attacks
+· Handshake fault attacks
+· Rapid connection attacks
+· Popup spam (Regular/Fun/Prank/Custom)
 · Vulnerability testing
+
+HIDDuckyService
+
+· Full DuckyScript injection
+· Keyboard keystroke simulation
+· Special key handling
+· Combo key support
 
 AuthBypassEngine
 
 · Address spoofing
 · Zero-key auth attempts
 · Legacy pairing force
+· Known device database
 
 MultiConnectionAttack
 
 · Connection flooding
 · Advertising spam
 · NRF24 jamming coordination
+· Jam & connect attacks
 
 Attack Menu (11 Main Items)
 
 Reconnaissance
 
 1. Quick Vulnerability Scan - HFP + FastPair testing
-2. Deep Device Profiling - Full service enumeration
+2. Deep Device Profiling - Full service enumeration with characteristic analysis
 
 Protocol Suites
 
-1. FastPair Suite - 6 options (test, memory corruption, state confusion, crypto overflow, popup spam, all)
+1. FastPair Suite - 6 options (vulnerability test, memory corruption, state confusion, crypto overflow, popup spam, all exploits)
 2. HFP Suite - 4 options (CVE-2025-36911 test, connection, full chain, HID pivot)
-3. Audio Suite - 5 options (AVRCP, A2DP discovery, codec overflow, stack crash, all)
+3. Audio Suite - 5 options (AVRCP, audio stack crash, telephony, all tests)
 4. HID Suite - 6 options (vulnerability test, force connection, keystrokes, DuckyScript, OS exploits, all)
 
 Advanced Attacks
 
-1. Memory Corruption Suite - 5 options (FastPair crypto/state, NimBLE mesh/HCI, all)
-2. DoS Attacks - 4 options (flood, spam, jam & connect, fuzzer)
+1. Memory Corruption Suite - 6 options (FastPair memory corruption, state confusion, crypto overflow, handshake fault, rapid connection, all)
+2. DoS Attacks - 4 options (connection flood, advertising spam, jam & connect, protocol fuzzer)
 3. Payload Delivery - 3 options (DuckyScript, PIN brute force, auth bypass)
 4. Testing Tools - 4 options (write access, audio control, fuzzer, HID test)
 
 Chain Attacks
 
-1. Universal Attack Chain - Attempts HFP → HID → FastPair sequentially
+1. Universal Attack Chain - Attempts HFP → HID → FastPair sequentially based on detected services
 
 Smart Features
 
 · Auto-detection of HFP/FastPair services during scan
 · Context-aware attack suggestions
-· Seamless pivot chains (HFP→HID, FastPair→HID)
+· Seamless pivot chains (HFP→HID)
 · Device model identification for FastPair
+· RSSI-based device sorting
 
 Dependencies
 
@@ -113,6 +122,7 @@ Dependencies
 · mbedTLS (ECDH, AES-CCM)
 · TFT_eSPI
 · SD card support
+· NRF24L01+ (optional)
 
 Flow
 
