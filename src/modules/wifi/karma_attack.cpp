@@ -2137,15 +2137,25 @@ void updateKarmaDisplay() {
         tft.setTextColor(bruceConfig.priColor, bruceConfig.bgColor);
         
         int y = tftHeight - 110;
-        tft.setCursor(10, y);
+        
+        // KARMA PAUSED indicator at top
         if (karmaPaused) {
             tft.setTextColor(TFT_RED, bruceConfig.bgColor);
+            tft.setCursor(10, y);
             tft.print("KARMA PAUSED");
             tft.setTextColor(bruceConfig.priColor, bruceConfig.bgColor);
             y += 15;
         }
         
-        // Template at top
+        // Half-size bold title
+        tft.setTextSize(2);  // Half-size (font 2 is 8x8 pixels)
+        tft.setTextColor(bruceConfig.priColor, bruceConfig.bgColor);
+        tft.setCursor(10, y);
+        tft.print("ENHANCED KARMA");
+        tft.setTextSize(1);  // Reset to normal
+        y += 12;  // Slightly less space for half-size font
+        
+        // Template line
         if (templateSelected && !selectedTemplate.name.isEmpty()) {
             tft.setCursor(10, y);
             String templateText = "Template: " + selectedTemplate.name;
@@ -2751,18 +2761,9 @@ void karma_setup() {
             continue;
         }
         
-        if (screenNeedsRedraw) {
-            screenNeedsRedraw = false;
-            vTaskDelay(200 / portTICK_PERIOD_MS);
-            drawMainBorderWithTitle("ENHANCED KARMA ATK");
-            tft.setTextSize(FP);
-            tft.setTextColor(bruceConfig.priColor, bruceConfig.bgColor);
-            if (templateSelected) padprintln("Template: " + selectedTemplate.name);
-            else padprintln("Template: None");
-            padprintln("SEL/ESC: Menu | Prev/Next: Channel");
-            tft.drawRightString("Ch." + String(pgm_read_byte(&karma_channels[channl % 14])),
-                               tftWidth - 10, tftHeight - 18, 1);
-        }
+        // Screen redraw is now only handled by updateKarmaDisplay() which runs every second
+        // The screenNeedsRedraw flag is still used but no separate drawing block
+        
         updateKarmaDisplay();
         vTaskDelay(10 / portTICK_PERIOD_MS);
     }
