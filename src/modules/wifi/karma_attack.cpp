@@ -2038,25 +2038,19 @@ void updateKarmaDisplay() {
     unsigned long currentTime = millis();
     if (currentTime - last_time > 1000) {
         last_time = currentTime;
-        tft.fillRect(10, 25, tftWidth - 20, tftHeight - 45, bruceConfig.bgColor);
+        
+        // Clear only the stats area, leave title area alone (above y=25)
+        tft.fillRect(10, 30, tftWidth - 20, tftHeight - 60, bruceConfig.bgColor);
         tft.setTextSize(1);
         tft.setTextColor(bruceConfig.priColor, bruceConfig.bgColor);
         
-        int y = 30;
+        int y = 35;  // Start below title (title ends around 25-30)
         
         if (karmaPaused) {
             tft.setTextColor(TFT_RED, bruceConfig.bgColor);
             tft.setCursor(10, y);
             tft.print("KARMA PAUSED");
             tft.setTextColor(bruceConfig.priColor, bruceConfig.bgColor);
-            y += 15;
-        }
-        
-        if (templateSelected && !selectedTemplate.name.isEmpty()) {
-            tft.setCursor(10, y);
-            String templateText = "Template: " + selectedTemplate.name;
-            if (templateText.length() > 40) templateText = templateText.substring(0, 37) + "...";
-            tft.print(templateText);
             y += 15;
         }
         
@@ -2091,7 +2085,7 @@ void updateKarmaDisplay() {
         tft.setCursor(10, y);
         tft.print("Ch:" + String(pgm_read_byte(&karma_channels[channl % 14])));
         tft.setCursor(70, y);
-        String hopStatus = String(auto_hopping ? "AutoHop:" : "Manual:") + String(hop_interval) + "ms";
+        String hopStatus = String(auto_hopping ? "Auto:" : "Man:") + String(hop_interval) + "ms";
         tft.print(hopStatus);
         y += 15;
         
@@ -2104,25 +2098,32 @@ void updateKarmaDisplay() {
         
         String modeText = "";
         switch(karmaMode) {
-            case MODE_PASSIVE: modeText = "Mode: PASSIVE"; break;
-            case MODE_BROADCAST: modeText = "Mode: BROADCAST"; break;
-            case MODE_FULL: modeText = "Mode: FULL"; break;
-            default: modeText = "Mode: PASSIVE"; break;
+            case MODE_PASSIVE: modeText = "PASSIVE"; break;
+            case MODE_BROADCAST: modeText = "BROADCAST"; break;
+            case MODE_FULL: modeText = "FULL"; break;
+            default: modeText = "PASSIVE"; break;
         }
-        int modeX = tftWidth - 10 - (modeText.length() * 6);
-        tft.setCursor(modeX, y);
+        tft.setCursor(tftWidth - 10 - (modeText.length() * 6), y);
         tft.print(modeText);
         y += 15;
         
-        if (broadcastAttack.isActive()) {
+        if (templateSelected && !selectedTemplate.name.isEmpty()) {
             tft.setCursor(10, y);
-            tft.print("Broadcast: " + broadcastAttack.getProgressString());
-            y += 15;
-        } else {
+            String templateText = "Template:" + selectedTemplate.name;
+            if (templateText.length() > 40) templateText = templateText.substring(0, 37) + "...";
+            tft.print(templateText);
             y += 15;
         }
         
-        tft.setCursor(10, tftHeight - 18);
+        if (broadcastAttack.isActive()) {
+            tft.setCursor(10, y);
+            tft.print("Broadcast:" + broadcastAttack.getProgressString());
+            y += 15;
+        } else {
+            y += 15; // Keep spacing consistent
+        }
+        
+        tft.setCursor(10, tftHeight - 15);
         tft.print("SEL/ESC:Menu | Prev/Next:Channel");
     }
 }
@@ -2270,11 +2271,9 @@ void karma_setup() {
             screenNeedsRedraw = true;
         }
         if (returnToMenu) {
-            // Stop promiscuous mode first
             esp_wifi_set_promiscuous(false);
             esp_wifi_set_promiscuous_rx_cb(nullptr);
             
-            // Stop all background portals
             for (auto portal : activePortals) {
                 if (portal->instance) {
                     delete portal->instance;
@@ -2284,7 +2283,6 @@ void karma_setup() {
             }
             activePortals.clear();
             
-            // Clear queues and buffers
             while (!responseQueue.empty()) responseQueue.pop();
             if (macRingBuffer) {
                 vRingbufferDelete(macRingBuffer);
