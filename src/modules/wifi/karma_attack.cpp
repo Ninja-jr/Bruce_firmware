@@ -61,7 +61,8 @@ const uint8_t karma_channels[] PROGMEM = {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12,
 #define PORTAL_HEARTBEAT_INTERVAL 500
 #define PORTAL_MAX_IDLE 60000
 
-extern enum KarmaMode karmaMode;
+// Define the actual karmaMode variable (declared extern in header)
+KarmaMode karmaMode = MODE_PASSIVE;
 bool karmaPaused = false;
 
 // Background portal tracking - pointer vector for multiple simultaneous portals
