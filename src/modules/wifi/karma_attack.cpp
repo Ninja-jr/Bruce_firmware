@@ -25,6 +25,7 @@
 
 void probe_sniffer(void *buf, wifi_promiscuous_pkt_type_t type);
 void saveHandshakeToFile(const HandshakeCapture &hs);
+void forceFullRedraw();
 
 #ifndef KARMA_CHANNELS
 #define KARMA_CHANNELS
@@ -477,6 +478,20 @@ std::map<String, uint16_t> ssidFrequency;
 std::vector<std::pair<String, uint16_t>> popularSSIDs;
 
 std::vector<PendingPortal> pendingPortals;
+
+void forceFullRedraw() {
+    // Completely clear the screen
+    tft.fillScreen(bruceConfig.bgColor);
+    tft.setTextColor(bruceConfig.priColor, bruceConfig.bgColor);
+    tft.setTextSize(FP);
+    
+    // Force a full refresh of the display
+    tft.setCursor(0, 0);
+    tft.fillRect(0, 0, tftWidth, tftHeight, bruceConfig.bgColor);
+    
+    // Small delay to ensure display processes the clear
+    delay(50);
+}
 
 // Helper: Generate clean display name from file path
 String getDisplayName(const String &fullPath, bool isSD) {
@@ -2039,7 +2054,6 @@ void updateKarmaDisplay() {
     if (currentTime - last_time > 1000) {
         last_time = currentTime;
         
-        // Clear stats area, preserve title area
         tft.fillRect(10, 45, tftWidth - 20, tftHeight - 70, bruceConfig.bgColor);
         tft.setTextSize(1);
         tft.setTextColor(bruceConfig.priColor, bruceConfig.bgColor);
@@ -2158,8 +2172,7 @@ void karma_setup() {
     esp_wifi_set_promiscuous(false);
     
     // Force full screen clear on entry
-    tft.fillScreen(bruceConfig.bgColor);
-    tft.setTextColor(bruceConfig.priColor, bruceConfig.bgColor);
+    forceFullRedraw();
     
     returnToMenu = false;
     isPortalActive = false;
@@ -2227,7 +2240,7 @@ void karma_setup() {
     if (storageAvailable && !Fs->exists("/ProbeData")) Fs->mkdir("/ProbeData");
     
     // Force another full clear before showing main screen
-    tft.fillScreen(bruceConfig.bgColor);
+    forceFullRedraw();
     drawMainBorderWithTitle("ENHANCED KARMA ATK");
     tft.setTextSize(FP);
     tft.setTextColor(bruceConfig.priColor, bruceConfig.bgColor);
@@ -2806,7 +2819,7 @@ void karma_setup() {
             loopOptions(options);
             
             // Force full screen redraw after menu returns
-            tft.fillScreen(bruceConfig.bgColor);
+            forceFullRedraw();
             drawMainBorderWithTitle("ENHANCED KARMA ATK");
             tft.setTextSize(FP);
             tft.setTextColor(bruceConfig.priColor, bruceConfig.bgColor);
