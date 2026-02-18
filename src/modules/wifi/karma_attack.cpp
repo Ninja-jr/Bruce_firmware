@@ -2038,11 +2038,12 @@ void updateKarmaDisplay() {
     unsigned long currentTime = millis();
     if (currentTime - last_time > 1000) {
         last_time = currentTime;
-        tft.fillRect(10, 10, tftWidth - 20, tftHeight - 40, bruceConfig.bgColor);
+        
+        tft.fillRect(10, 45, tftWidth - 20, tftHeight - 70, bruceConfig.bgColor);
         tft.setTextSize(1);
         tft.setTextColor(bruceConfig.priColor, bruceConfig.bgColor);
         
-        int y = 15;
+        int y = 50;
         
         if (karmaPaused) {
             tft.setTextColor(TFT_RED, bruceConfig.bgColor);
@@ -2545,9 +2546,9 @@ void karma_setup() {
                         }},
                         {"Database Info", [&]() {
                             drawMainBorderWithTitle("SSID DATABASE");
-                            int y = 40;
+                            int y = 60;
                             tft.setTextSize(1);
-                            tft.fillRect(10, 40, tftWidth - 20, 80, bruceConfig.bgColor);
+                            tft.fillRect(10, 40, tftWidth - 20, 100, bruceConfig.bgColor);
                             size_t total = SSIDDatabase::getCount();
                             size_t cached = SSIDDatabase::getAllSSIDs().size();
                             tft.setCursor(10, y); y += 15;
