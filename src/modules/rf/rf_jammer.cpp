@@ -2,7 +2,7 @@
 #include "core/display.h"
 #include "rf_utils.h"
 
-static const uint32_t MAX_JAM_TIME_MS = 20000;
+static const uint32_t MAX_JAM_TIME_MS = 7200000UL;
 static const uint32_t MAX_SEQUENCE = 50;
 static const uint32_t DURATION_CYCLES = 3;
 
