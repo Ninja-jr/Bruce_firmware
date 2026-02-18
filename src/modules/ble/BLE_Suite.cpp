@@ -4267,7 +4267,6 @@ void runUniversalAttack(NimBLEAddress target) {
     if(!confirmAttack("Execute universal attack chain (HFP + HID + FastPair)?")) return;
     
     String deviceName = "";
-    int rssi = -60;
     bool hasHFP = false, hasFastPair = false;
     
     if(xSemaphoreTake(scannerData.mutex, portMAX_DELAY)) {
