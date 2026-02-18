@@ -61,7 +61,6 @@ const uint8_t karma_channels[] PROGMEM = {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12,
 #define PORTAL_HEARTBEAT_INTERVAL 500
 #define PORTAL_MAX_IDLE 60000
 
-// Define the actual karmaMode variable (declared extern in header)
 KarmaMode karmaMode = MODE_PASSIVE;
 bool karmaPaused = false;
 
@@ -2062,37 +2061,37 @@ void updateKarmaDisplay() {
         }
         
         tft.setCursor(10, y);
-        tft.print("T:" + String(totalProbes));
-        tft.setCursor(50, y);
-        tft.print("U:" + String(uniqueClients));
-        tft.setCursor(90, y);
-        tft.print("A:" + String(activeNetworks.size()));
-        tft.setCursor(130, y);
-        tft.print("P:" + String(pendingPortals.size()));
-        y += 15;
-        
-        tft.setCursor(10, y);
-        tft.print("Q:" + String(responseQueue.size()));
-        tft.setCursor(50, y);
-        tft.print("B:" + String(beaconsSent));
-        tft.setCursor(90, y);
-        tft.print("K:" + String(karmaResponsesSent));
-        tft.setCursor(130, y);
-        tft.print("C:" + String(cloneAttacksLaunched));
-        y += 15;
-        
-        tft.setCursor(10, y);
-        tft.print("Pt:" + String(autoPortalsLaunched) + "/" + String(activePortals.size()));
+        tft.print("Total:" + String(totalProbes));
         tft.setCursor(70, y);
-        tft.print("HS:" + String(handshakeBuffer.size()));
+        tft.print("Uniq:" + String(uniqueClients));
         tft.setCursor(130, y);
-        tft.print("PK:" + String(pmkidCaptured));
+        tft.print("Act:" + String(activeNetworks.size()));
+        tft.setCursor(190, y);
+        tft.print("Pend:" + String(pendingPortals.size()));
+        y += 15;
+        
+        tft.setCursor(10, y);
+        tft.print("Queue:" + String(responseQueue.size()));
+        tft.setCursor(70, y);
+        tft.print("Beac:" + String(beaconsSent));
+        tft.setCursor(130, y);
+        tft.print("Karma:" + String(karmaResponsesSent));
+        tft.setCursor(190, y);
+        tft.print("Clone:" + String(cloneAttacksLaunched));
+        y += 15;
+        
+        tft.setCursor(10, y);
+        tft.print("Port:" + String(autoPortalsLaunched) + "/" + String(activePortals.size()));
+        tft.setCursor(100, y);
+        tft.print("HS:" + String(handshakeBuffer.size()));
+        tft.setCursor(160, y);
+        tft.print("PMKID:" + String(pmkidCaptured));
         y += 15;
         
         tft.setCursor(10, y);
         tft.print("Ch:" + String(pgm_read_byte(&karma_channels[channl % 14])));
         tft.setCursor(70, y);
-        String hopStatus = String(auto_hopping ? "A:" : "M:") + String(hop_interval) + "ms";
+        String hopStatus = String(auto_hopping ? "AutoHop:" : "Manual:") + String(hop_interval) + "ms";
         tft.print(hopStatus);
         y += 15;
         
@@ -2105,25 +2104,26 @@ void updateKarmaDisplay() {
         
         String modeText = "";
         switch(karmaMode) {
-            case MODE_PASSIVE: modeText = "PASSIVE"; break;
-            case MODE_BROADCAST: modeText = "BROADCAST"; break;
-            case MODE_FULL: modeText = "FULL"; break;
-            default: modeText = "PASSIVE"; break;
+            case MODE_PASSIVE: modeText = "Mode: PASSIVE"; break;
+            case MODE_BROADCAST: modeText = "Mode: BROADCAST"; break;
+            case MODE_FULL: modeText = "Mode: FULL"; break;
+            default: modeText = "Mode: PASSIVE"; break;
         }
-        tft.setCursor(130, y);
+        int modeX = tftWidth - 10 - (modeText.length() * 6);
+        tft.setCursor(modeX, y);
         tft.print(modeText);
         y += 15;
         
         if (broadcastAttack.isActive()) {
             tft.setCursor(10, y);
-            tft.print("BCast: " + broadcastAttack.getProgressString());
+            tft.print("Broadcast: " + broadcastAttack.getProgressString());
             y += 15;
         } else {
             y += 15;
         }
         
         tft.setCursor(10, tftHeight - 18);
-        tft.print("SEL/ESC:Menu | Prev/Next:Ch");
+        tft.print("SEL/ESC:Menu | Prev/Next:Channel");
     }
 }
 
@@ -2270,22 +2270,32 @@ void karma_setup() {
             screenNeedsRedraw = true;
         }
         if (returnToMenu) {
+            // Stop promiscuous mode first
             esp_wifi_set_promiscuous(false);
             esp_wifi_set_promiscuous_rx_cb(nullptr);
+            
+            // Stop all background portals
+            for (auto portal : activePortals) {
+                if (portal->instance) {
+                    delete portal->instance;
+                    portal->instance = nullptr;
+                }
+                delete portal;
+            }
+            activePortals.clear();
+            
+            // Clear queues and buffers
+            while (!responseQueue.empty()) responseQueue.pop();
             if (macRingBuffer) {
                 vRingbufferDelete(macRingBuffer);
                 macRingBuffer = NULL;
             }
-            while (!responseQueue.empty()) responseQueue.pop();
             if (karmaQueue) {
                 vQueueDelete(karmaQueue);
                 karmaQueue = nullptr;
             }
-            for (auto portal : activePortals) {
-                if (portal->instance) delete portal->instance;
-                delete portal;
-            }
-            activePortals.clear();
+            
+            vTaskDelay(50 / portTICK_PERIOD_MS);
             return;
         }
         unsigned long currentTime = millis();
@@ -2541,6 +2551,7 @@ void karma_setup() {
                             drawMainBorderWithTitle("SSID DATABASE");
                             int y = 40;
                             tft.setTextSize(1);
+                            tft.fillRect(10, 40, tftWidth - 20, 80, bruceConfig.bgColor);
                             size_t total = SSIDDatabase::getCount();
                             size_t cached = SSIDDatabase::getAllSSIDs().size();
                             tft.setCursor(10, y); y += 15;
