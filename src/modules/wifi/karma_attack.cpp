@@ -2039,6 +2039,7 @@ void updateKarmaDisplay() {
     if (currentTime - last_time > 1000) {
         last_time = currentTime;
         
+        // Clear stats area, preserve title area
         tft.fillRect(10, 45, tftWidth - 20, tftHeight - 70, bruceConfig.bgColor);
         tft.setTextSize(1);
         tft.setTextColor(bruceConfig.priColor, bruceConfig.bgColor);
@@ -2155,6 +2156,11 @@ void karma_setup() {
     }
     esp_wifi_set_promiscuous_rx_cb(nullptr);
     esp_wifi_set_promiscuous(false);
+    
+    // Force full screen clear on entry
+    tft.fillScreen(bruceConfig.bgColor);
+    tft.setTextColor(bruceConfig.priColor, bruceConfig.bgColor);
+    
     returnToMenu = false;
     isPortalActive = false;
     restartKarmaAfterPortal = false;
@@ -2219,9 +2225,15 @@ void karma_setup() {
         storageAvailable = checkLittleFsSizeNM();
     }
     if (storageAvailable && !Fs->exists("/ProbeData")) Fs->mkdir("/ProbeData");
-    displayTextLine("Modern Karma Started");
+    
+    // Force another full clear before showing main screen
+    tft.fillScreen(bruceConfig.bgColor);
+    drawMainBorderWithTitle("ENHANCED KARMA ATK");
     tft.setTextSize(FP);
-    tft.setCursor(80, 100);
+    tft.setTextColor(bruceConfig.priColor, bruceConfig.bgColor);
+    padprintln("Saved to " + FileSys);
+    padprintln("Modern Karma Started");
+    
     clearProbes();
 
     karmaQueue = xQueueCreate(KARMA_QUEUE_DEPTH, sizeof(ProbeRequest));
@@ -2792,6 +2804,17 @@ void karma_setup() {
             };
             
             loopOptions(options);
+            
+            // Force full screen redraw after menu returns
+            tft.fillScreen(bruceConfig.bgColor);
+            drawMainBorderWithTitle("ENHANCED KARMA ATK");
+            tft.setTextSize(FP);
+            tft.setTextColor(bruceConfig.priColor, bruceConfig.bgColor);
+            padprintln("Saved to " + FileSys);
+            if (templateSelected) padprintln("Template: " + selectedTemplate.name);
+            else padprintln("Template: None");
+            padprintln("SEL/ESC: Menu | Prev/Next: Channel");
+            
             screenNeedsRedraw = true;
             continue;
         }
