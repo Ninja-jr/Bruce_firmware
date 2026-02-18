@@ -3417,7 +3417,7 @@ String selectTargetFromScan(const char* title) {
 
     tft.setTextColor(TFT_WHITE, bruceConfig.bgColor);
     tft.setTextSize(2);
-    tft.setCursor((tftWidth - strlen(title) * 12) / 2, 15);
+    tft.setCursor((tftWidth - tft.textWidth(title)) / 2, 15);
     tft.print(title);
     tft.setTextSize(1);
 
@@ -3566,7 +3566,7 @@ String selectTargetFromScan(const char* title) {
 
         tft.setTextColor(TFT_WHITE, bruceConfig.bgColor);
         tft.setTextSize(2);
-        tft.setCursor((tftWidth - strlen("SELECT DEVICE") * 12) / 2, 15);
+        tft.setCursor((tftWidth - tft.textWidth("SELECT DEVICE")) / 2, 15);
         tft.print("SELECT DEVICE");
         tft.setTextSize(1);
 
@@ -3698,11 +3698,10 @@ NimBLEAddress parseAddress(const String& addressInfo) {
 }
 
 //=============================================================================
-// Menu System - with double buffering to prevent flicker
+// Menu System - with optimized redraw to prevent flicker
 //=============================================================================
 
 static bool welcomeShown = false;
-static TFT_eSprite menuSprite = TFT_eSprite(&tft);
 
 void showWelcomeScreen() {
     if(welcomeShown) return;
@@ -3729,7 +3728,6 @@ void showWelcomeScreen() {
 
 void BleSuiteMenu() {
     showWelcomeScreen();
-    menuSprite.createSprite(tftWidth, tftHeight);
 
     const int MENU_ITEMS = 11;
     const char* menuItems[] = {
@@ -3747,54 +3745,55 @@ void BleSuiteMenu() {
     };
 
     int selected = 0, scrollOffset = 0;
+    int lastSelected = -1, lastScrollOffset = -1;
     int maxVisible = (tftHeight - 80) / 25;
     
     while(true) {
-        menuSprite.fillSprite(bruceConfig.bgColor);
-        menuSprite.drawRect(5, 5, tftWidth - 10, tftHeight - 10, TFT_WHITE);
-        
-        menuSprite.setTextColor(TFT_WHITE, bruceConfig.bgColor);
-        menuSprite.setTextSize(2);
-        menuSprite.setCursor((tftWidth - menuSprite.textWidth("BLE SUITE")) / 2, 15);
-        menuSprite.print("BLE SUITE");
-        menuSprite.setTextSize(1);
-        
-        for(int i = 0; i < maxVisible && (scrollOffset + i) < MENU_ITEMS; i++) {
-            int idx = scrollOffset + i;
-            int yPos = 60 + (i * 25);
+        if(selected != lastSelected || scrollOffset != lastScrollOffset) {
+            tft.fillScreen(bruceConfig.bgColor);
+            tft.drawRect(5, 5, tftWidth - 10, tftHeight - 10, TFT_WHITE);
             
-            if(idx == selected) {
-                menuSprite.fillRect(20, yPos, tftWidth - 40, 20, TFT_WHITE);
-                menuSprite.setTextColor(TFT_BLACK, TFT_WHITE);
-                menuSprite.setCursor(25, yPos + 5);
-                menuSprite.print("> ");
-            } else {
-                menuSprite.fillRect(20, yPos, tftWidth - 40, 20, bruceConfig.bgColor);
-                menuSprite.setTextColor(TFT_WHITE, bruceConfig.bgColor);
-                menuSprite.setCursor(25, yPos + 5);
-                menuSprite.print("  ");
+            tft.setTextColor(TFT_WHITE, bruceConfig.bgColor);
+            tft.setTextSize(2);
+            tft.setCursor((tftWidth - tft.textWidth("BLE SUITE")) / 2, 15);
+            tft.print("BLE SUITE");
+            tft.setTextSize(1);
+            
+            for(int i = 0; i < maxVisible && (scrollOffset + i) < MENU_ITEMS; i++) {
+                int idx = scrollOffset + i;
+                int yPos = 60 + (i * 25);
+                
+                if(idx == selected) {
+                    tft.fillRect(20, yPos, tftWidth - 40, 20, TFT_WHITE);
+                    tft.setTextColor(TFT_BLACK, TFT_WHITE);
+                    tft.setCursor(25, yPos + 5);
+                    tft.print("> ");
+                } else {
+                    tft.fillRect(20, yPos, tftWidth - 40, 20, bruceConfig.bgColor);
+                    tft.setTextColor(TFT_WHITE, bruceConfig.bgColor);
+                    tft.setCursor(25, yPos + 5);
+                    tft.print("  ");
+                }
+                tft.print(String(idx + 1) + ". " + menuItems[idx]);
             }
-            menuSprite.print(String(idx + 1) + ". " + menuItems[idx]);
+            
+            if(MENU_ITEMS > maxVisible) {
+                tft.setTextColor(TFT_CYAN, bruceConfig.bgColor);
+                tft.setCursor(tftWidth - 25, 65);
+                if(scrollOffset > 0) tft.print("^");
+                tft.setCursor(tftWidth - 25, 65 + (maxVisible * 25) - 10);
+                if(scrollOffset + maxVisible < MENU_ITEMS) tft.print("v");
+            }
+            
+            tft.setTextColor(TFT_GREEN, bruceConfig.bgColor);
+            tft.setCursor(20, tftHeight - 35);
+            tft.print("SEL: Select  PREV/NEXT: Navigate  ESC: Back");
+            
+            lastSelected = selected;
+            lastScrollOffset = scrollOffset;
         }
         
-        if(MENU_ITEMS > maxVisible) {
-            menuSprite.setTextColor(TFT_CYAN, bruceConfig.bgColor);
-            menuSprite.setCursor(tftWidth - 25, 65);
-            if(scrollOffset > 0) menuSprite.print("^");
-            menuSprite.setCursor(tftWidth - 25, 65 + (maxVisible * 25) - 10);
-            if(scrollOffset + maxVisible < MENU_ITEMS) menuSprite.print("v");
-        }
-        
-        menuSprite.setTextColor(TFT_GREEN, bruceConfig.bgColor);
-        menuSprite.setCursor(20, tftHeight - 35);
-        menuSprite.print("SEL: Select  PREV/NEXT: Navigate  ESC: Back");
-        
-        menuSprite.pushSprite(0, 0);
-        
-        if(check(EscPress)) {
-            menuSprite.deleteSprite();
-            return;
-        }
+        if(check(EscPress)) return;
         if(check(PrevPress)) {
             selected = (selected > 0) ? selected - 1 : MENU_ITEMS - 1;
             if(selected < scrollOffset) scrollOffset = selected;
@@ -3809,6 +3808,7 @@ void BleSuiteMenu() {
         }
         if(check(SelPress)) {
             executeAttackWithTargetScan(selected);
+            lastSelected = -1;
         }
         delay(50);
     }
@@ -3865,37 +3865,8 @@ void executeAttackWithTargetScan(int attackIndex) {
 }
 
 //=============================================================================
-// Submenu Display - with text wrapping
+// Submenu Display - with text wrapping for long options
 //=============================================================================
-
-void drawWrappedText(TFT_eSprite* sprite, const char* text, int x, int y, int maxWidth, int lineHeight) {
-    String str = text;
-    int len = str.length();
-    int start = 0;
-    int lineY = y;
-    
-    while(start < len) {
-        int end = start;
-        int lastSpace = -1;
-        
-        while(end < len && (end - start) * 6 < maxWidth) {
-            if(str.charAt(end) == ' ') lastSpace = end;
-            end++;
-        }
-        
-        if(end == len || lastSpace == -1) {
-            sprite->setCursor(x, lineY);
-            sprite->print(str.substring(start, end));
-            start = end;
-        } else {
-            sprite->setCursor(x, lineY);
-            sprite->print(str.substring(start, lastSpace));
-            start = lastSpace + 1;
-        }
-        lineY += lineHeight;
-        if(lineY > tftHeight - 45) break;
-    }
-}
 
 int showSubMenu(const char* title, const char* options[], int optionCount) {
     tft.fillScreen(bruceConfig.bgColor);
@@ -3903,7 +3874,7 @@ int showSubMenu(const char* title, const char* options[], int optionCount) {
     
     tft.setTextColor(TFT_WHITE, bruceConfig.bgColor);
     tft.setTextSize(2);
-    tft.setCursor((tftWidth - strlen(title) * 12) / 2, 15);
+    tft.setCursor((tftWidth - tft.textWidth(title)) / 2, 15);
     tft.print(title);
     tft.setTextSize(1);
     
@@ -4043,7 +4014,7 @@ void showFastPairSubMenu(NimBLEAddress target) {
 
 void showHFPSubMenu(NimBLEAddress target) {
     const char* options[] = {
-        "Test Vulnerability (CVE-2025-36911)",
+        "Test Vulnerability (CVE)",
         "Establish HFP Connection",
         "Full HFP Attack Chain",
         "HFP → HID Pivot"
@@ -4616,7 +4587,7 @@ void runAudioControlTest(NimBLEAddress target) {
 
         tft.setTextColor(TFT_WHITE, bruceConfig.bgColor);
         tft.setTextSize(2);
-        tft.setCursor((tftWidth - strlen("AUDIO CONTROL TEST") * 12) / 2, 15);
+        tft.setCursor((tftWidth - tft.textWidth("AUDIO CONTROL TEST")) / 2, 15);
         tft.print("AUDIO CONTROL TEST");
         tft.setTextSize(1);
 
@@ -4770,7 +4741,7 @@ void runHFPHIDPivotAttack(NimBLEAddress target) {
 }
 
 //=============================================================================
-// UI Helpers - with text wrapping
+// UI Helpers - with text wrapping for long messages
 //=============================================================================
 
 void showAttackProgress(const char* message, uint16_t color) {
