@@ -5,7 +5,7 @@
 #include <ELECHOUSE_CC1101_SRC_DRV.h>
 #include <globals.h>
 
-#define MAX_JAMMER_RUNTIME 30000 // 30 seconds max runtime for jammer (safety cutoff)
+#define MAX_JAMMER_RUNTIME 7200000UL
 
 static const uint32_t MAX_SEQUENCE = 50;
 static const uint32_t DURATION_CYCLES = 3;
