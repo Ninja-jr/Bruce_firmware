@@ -115,7 +115,7 @@ bool _connectToWifiNetwork(const String &ssid, const String &pwd) {
     WiFi.begin(ssid, pwd);
 
     int i = 1;
-    while (WiFi.status() != WL_CONNECTED) {
+    while (!WiFi.isConnected()) {
         if (tft.getCursorX() >= tftWidth - 12) {
             padprintln("");
             padprint("");
@@ -136,7 +136,7 @@ bool _connectToWifiNetwork(const String &ssid, const String &pwd) {
         i++;
     }
 
-    return WiFi.status() == WL_CONNECTED;
+    return WiFi.isConnected();
 }
 
 bool _setupAP() {
@@ -228,6 +228,8 @@ bool wifiConnectMenu(wifi_mode_t mode) {
                             case WIFI_AUTH_WPA2_PSK: encryptionTypeStr = "WPA2/PSK"; break;
                             case WIFI_AUTH_WPA_WPA2_PSK: encryptionTypeStr = "WPA/WPA2/PSK"; break;
                             case WIFI_AUTH_WPA2_ENTERPRISE: encryptionTypeStr = "WPA2/Enterprise"; break;
+                            case WIFI_AUTH_WPA3_PSK: encryptionTypeStr = "WPA3/PSK"; break;
+                            case WIFI_AUTH_WPA2_WPA3_PSK: encryptionTypeStr = "WPA2/WPA3/PSK"; break;
                             default: encryptionTypeStr = "Unknown"; break;
                         }
 
@@ -281,7 +283,7 @@ bool wifiConnectMenu(wifi_mode_t mode) {
 }
 
 void wifiConnectTask(void *pvParameters) {
-    if (WiFi.status() == WL_CONNECTED) return;
+    if (WiFi.isConnected()) return;
 
     if (FORCE_RADIO_TEARDOWN_ON_SWITCH) {
         stopBLEStack();
@@ -314,7 +316,7 @@ void wifiConnectTask(void *pvParameters) {
 
         WiFi.begin(ssid, pwd);
         for (int i = 0; i < 50; i++) {
-            if (WiFi.status() == WL_CONNECTED) {
+            if (WiFi.isConnected()) {
                 wifiConnected = true;
                 wifiIP = WiFi.localIP().toString();
 
@@ -379,7 +381,7 @@ bool wifiConnecttoKnownNet(void) {
             break;
         }
     }
-    if (WiFi.status() == WL_CONNECTED) {
+    if (WiFi.isConnected()) {
         wifiConnected = true;
         wifiIP = WiFi.localIP().toString();
 
