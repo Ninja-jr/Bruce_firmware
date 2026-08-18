@@ -1,4 +1,4 @@
-name: Merge PRs to Test Branch
+name: Merge PRs and Build
 
 on:
   workflow_dispatch:
@@ -14,7 +14,74 @@ on:
       base_branch:
         description: 'Base branch to start from (use "upstream/dev" for upstream)'
         required: true
-        default: 'upstream/dev'
+        default: 'dev'
+      build_env:
+        description: 'Select environment to build'
+        required: true
+        default: 'm5stack-cardputer'
+        type: choice
+        options:
+          - "arduino-nesso-n1"
+          - "m5stack-cardputer"
+          - "m5stack-sticks3"
+          - "m5stack-cplus2"
+          - "m5stack-cplus1_1"
+          - "LAUNCHER_m5stack-cplus1_1"
+          - "m5stack-core2"
+          - "m5stack-core16mb"
+          - "m5stack-core4mb"
+          - "m5stack-cores3"
+          - "m5stack-dinmeter"
+          - "esp32-s3-devkitc-1"
+          - "esp32-s3-devkitc-1-psram"
+          - "esp32-c5"
+          - "esp32-c5-tft"
+          - "nm-cyd-c5"
+          - "CYD-2432S028"
+          - "CYD-2USB"
+          - "CYD-2432W328C"
+          - "CYD-2432W328C_2"
+          - "CYD-2432W328R-or-S024R"
+          - "CYD-3248S035R"
+          - "CYD-3248S035C"
+          - "LAUNCHER_CYD-2432W328R-or-S024R"
+          - "LAUNCHER_CYD-2432S028"
+          - "LAUNCHER_CYD-2USB"
+          - "LAUNCHER_CYD-2432W328C"
+          - "LAUNCHER_CYD-3248S035R"
+          - "LAUNCHER_CYD-3248S035C"
+          - "lilygo-t-embed-cc1101"
+          - "lilygo-t-embed"
+          - "lilygo-t-deck"
+          - "lilygo-t-watch-s3"
+          - "lilygo-t-deck-pro"
+          - "lilygo-t-display-s3"
+          - "lilygo-t-display-s3-touch"
+          - "lilygo-t-display-s3-mmc"
+          - "lilygo-t-display-s3-touch-mmc"
+          - "lilygo-t-display-S3-pro"
+          - "lilygo-t-display-ttgo"
+          - "lilygo-t-hmi"
+          - "lilygo-t-lora-pager"
+          - "elecrow-24B"
+          - "elecrow-28B"
+          - "elecrow-advance-35-s3"
+          - "smoochiee-board"
+          - "reaper"
+          - "Phantom_S024R"
+          - "LAUNCHER_Phantom_S024R"
+          - "Marauder-Mini"
+          - "LAUNCHER_Marauder-Mini"
+          - "Awok-Mini"
+          - "Marauder-v7"
+          - "LAUNCHER_Marauder-v7"
+          - "Marauder-V4-V6"
+          - "Marauder-v61"
+          - "LAUNCHER_Marauder-V4-V6"
+          - "LAUNCHER_Marauder-v61"
+          - "Awok-Touch"
+          - "WaveSentry-R1"
+          - "LAUNCHER_WaveSentry-R1"
 
 permissions:
   contents: write
@@ -22,6 +89,10 @@ permissions:
 jobs:
   merge-prs-to-test:
     runs-on: ubuntu-latest
+    outputs:
+      new_merged_prs: ${{ steps.merge_prs.outputs.new_merged_prs }}
+      success_count: ${{ steps.merge_prs.outputs.success_count }}
+      failed_count: ${{ steps.merge_prs.outputs.failed_count }}
     steps:
       - name: Checkout our fork
         uses: actions/checkout@v4
@@ -80,6 +151,7 @@ jobs:
           fi
 
       - name: Merge PRs sequentially
+        id: merge_prs
         env:
           PR_NUMBERS: ${{ github.event.inputs.pr_numbers }}
           MERGED_PRS: ${{ steps.read_merged.outputs.merged_prs }}
@@ -89,6 +161,7 @@ jobs:
           FAIL_COUNT=0
           SKIPPED=""
           NEW_MERGED=""
+          ALREADY_MERGED=0
           
           for PR in "${PR_ARRAY[@]}"; do
             PR=$(echo "$PR" | xargs)
@@ -97,6 +170,7 @@ jobs:
             # Check if PR is already merged
             if echo "$MERGED_PRS" | grep -q "\b$PR\b"; then
               echo "ℹ️  PR #$PR already merged previously - skipping"
+              ALREADY_MERGED=$((ALREADY_MERGED + 1))
               continue
             fi
             
@@ -127,13 +201,19 @@ jobs:
           fi
 
           echo "=========================================="
-          echo "📊 Summary:"
+          echo "📊 Merge Summary:"
           echo "   ✅ Successfully merged: $SUCCESS_COUNT PR(s)"
           echo "   ❌ Failed/Skipped: $FAIL_COUNT PR(s)"
+          echo "   ⏩ Already merged: $ALREADY_MERGED PR(s)"
           if [ ! -z "$SKIPPED" ]; then
             echo "   ⚠️  Skipped PRs: $SKIPPED"
           fi
           echo "=========================================="
+          
+          # Set outputs
+          echo "new_merged_prs=$NEW_MERGED" >> $GITHUB_OUTPUT
+          echo "success_count=$SUCCESS_COUNT" >> $GITHUB_OUTPUT
+          echo "failed_count=$FAIL_COUNT" >> $GITHUB_OUTPUT
 
       - name: Commit tracking file if updated
         run: |
@@ -158,3 +238,92 @@ jobs:
           echo ""
           echo "📋 PRs currently merged into test branch:"
           cat merged_prs.txt 2>/dev/null || echo "   (No tracking file found)"
+
+  build:
+    name: Build ${{ github.event.inputs.build_env }}
+    runs-on: ubuntu-latest
+    needs: merge-prs-to-test
+    if: needs.merge-prs-to-test.outputs.success_count > 0 || needs.merge-prs-to-test.outputs.failed_count > 0
+    env:
+      SELECTED_ENV: ${{ github.event.inputs.build_env }}
+      VERSION_NAME: "PR-Test"
+    steps:
+      - name: Checkout test branch
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.SYNC_PAT }}
+          ref: ${{ github.event.inputs.test_branch }}
+          fetch-depth: 0
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+
+      - name: Install build deps (multilib)
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends gcc-multilib libc6-dev-i386
+
+      - name: Cache pip
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements.txt') }}
+          restore-keys: |
+            ${{ runner.os }}-pip-
+
+      - name: Install dependencies
+        run: |
+          pip install requests esptool intelhex
+
+      - name: Cache PlatformIO
+        uses: actions/cache@v4
+        with:
+          path: ~/.platformio
+          key: Bruce-platformio-${{ hashFiles('**/platformio.ini') }}
+          restore-keys: Bruce-platformio-
+
+      - name: Restore PIO Build Cache
+        uses: actions/cache/restore@v4
+        with:
+          path: ${{ github.workspace }}/.pio
+          key: Bruce-pio-${{ env.SELECTED_ENV }}-${{ github.run_id }}-${{ github.run_attempt }}
+          restore-keys: |
+            Bruce-pio-${{ env.SELECTED_ENV }}-
+
+      - name: Install PlatformIO Core
+        run: |
+          pip install platformio
+          sed -i "s/-DBRUCE_VERSION=/-DBRUCE_VERSION='\"Bruce Test - PR Merge\"' ; /g" ./platformio.ini
+          GIT_HASH=$(git describe --always --dirty)
+          sed -i "s|-DGIT_COMMIT_HASH='\"Homebrew\"'|!echo '-DGIT_COMMIT_HASH=\\\\\\\\\"${GIT_HASH}\\\\\\\\\"'|g" ./platformio.ini
+
+      - name: Run Compile for selected environment
+        run: |
+          echo "Building environment: ${{ env.SELECTED_ENV }}"
+          platformio run -e "${{ env.SELECTED_ENV }}"
+
+      - name: Save PIO Build Cache
+        uses: actions/cache/save@v4
+        with:
+          path: ${{ github.workspace }}/.pio
+          key: Bruce-pio-${{ env.SELECTED_ENV }}-${{ github.run_id }}-${{ github.run_attempt }}
+
+      - name: Upload Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: Bruce-${{ env.SELECTED_ENV }}-PR-Test
+          path: Bruce-*.*
+          retention-days: 30
+          if-no-files-found: error
+
+      - name: Display Build Info
+        run: |
+          echo "=========================================="
+          echo "✅ Build completed successfully!"
+          echo "   Environment: ${{ env.SELECTED_ENV }}"
+          echo "   Branch: ${{ github.event.inputs.test_branch }}"
+          echo "   Git Hash: $(git describe --always --dirty)"
+          echo "=========================================="
+          ls -la Bruce-*.* 2>/dev/null || echo "No Bruce files found"
