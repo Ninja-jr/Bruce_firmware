@@ -61,21 +61,20 @@ jobs:
 
       - name: Ensure tracking file exists
         run: |
-          mkdir -p .github
-          if [ ! -f .github/merged_prs.txt ]; then
-            echo "# PRs merged into ${{ github.event.inputs.test_branch }}" > .github/merged_prs.txt
-            echo "# Format: one PR number per line" >> .github/merged_prs.txt
-            echo "# Last updated: $(date)" >> .github/merged_prs.txt
-            echo "" >> .github/merged_prs.txt
-            git add .github/merged_prs.txt
+          if [ ! -f merged_prs.txt ]; then
+            echo "# PRs merged into ${{ github.event.inputs.test_branch }}" > merged_prs.txt
+            echo "# Format: one PR number per line" >> merged_prs.txt
+            echo "# Last updated: $(date)" >> merged_prs.txt
+            echo "" >> merged_prs.txt
+            git add merged_prs.txt
             git commit -m "chore: initialize merged PRs tracking [skip ci]"
           fi
 
       - name: Read existing merged PRs
         id: read_merged
         run: |
-          if [ -f .github/merged_prs.txt ]; then
-            echo "merged_prs=$(cat .github/merged_prs.txt | grep -E '^[0-9]+$' | tr '\n' ',' | sed 's/,$//')" >> $GITHUB_OUTPUT
+          if [ -f merged_prs.txt ]; then
+            echo "merged_prs=$(cat merged_prs.txt | grep -E '^[0-9]+$' | tr '\n' ',' | sed 's/,$//')" >> $GITHUB_OUTPUT
           else
             echo "merged_prs=" >> $GITHUB_OUTPUT
           fi
@@ -123,7 +122,7 @@ jobs:
           if [ ! -z "$NEW_MERGED" ]; then
             echo "📝 Updating tracking file with new PRs..."
             for PR in $NEW_MERGED; do
-              echo "$PR" >> .github/merged_prs.txt
+              echo "$PR" >> merged_prs.txt
             done
           fi
 
@@ -138,8 +137,8 @@ jobs:
 
       - name: Commit tracking file if updated
         run: |
-          if ! git diff --quiet .github/merged_prs.txt; then
-            git add .github/merged_prs.txt
+          if ! git diff --quiet merged_prs.txt; then
+            git add merged_prs.txt
             git commit -m "chore: update merged PRs tracking [skip ci]"
           fi
 
@@ -158,4 +157,4 @@ jobs:
           echo "=========================================="
           echo ""
           echo "📋 PRs currently merged into test branch:"
-          cat .github/merged_prs.txt 2>/dev/null || echo "   (No tracking file found)"
+          cat merged_prs.txt 2>/dev/null || echo "   (No tracking file found)"
