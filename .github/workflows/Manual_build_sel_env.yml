@@ -11,14 +11,15 @@ on:
       version_name:
         description: 'Version name (Ninja-Jr 1.0, Ninja-Jr dev, etc)'
         required: true
-        default: 'Ninja-Jr dev'
+        default: 'Ninja-Jr'
         type: string
       environment:
         description: 'Select environment to build'
         required: true
-        default: 'lilygo-t-embed-cc1101'
+        default: 'm5stack-cardputer'
         type: choice
         options:
+          - "arduino-nesso-n1"
           - "lilygo-t-embed-cc1101"
           - "lilygo-t-embed"
           - "lilygo-t-deck"
@@ -41,9 +42,12 @@ on:
           - "m5stack-core16mb"
           - "m5stack-core4mb"
           - "m5stack-cores3"
+          - "m5stack-dinmeter"
           - "esp32-s3-devkitc-1"
+          - "esp32-s3-devkitc-1-psram"
           - "esp32-c5"
           - "esp32-c5-tft"
+          - "nm-cyd-c5"
           - "CYD-2432S028"
           - "CYD-2USB"
           - "CYD-2432W328C"
@@ -57,6 +61,9 @@ on:
           - "LAUNCHER_CYD-2432W328C"
           - "LAUNCHER_CYD-3248S035R"
           - "LAUNCHER_CYD-3248S035C"
+          - "elecrow-24B"
+          - "elecrow-28B"
+          - "elecrow-advance-35-s3"
           - "smoochiee-board"
           - "reaper"
           - "Phantom_S024R"
