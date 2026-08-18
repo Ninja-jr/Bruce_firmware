@@ -1,0 +1,82 @@
+name: Merge PRs to Test Branch
+
+on:
+  workflow_dispatch:
+    inputs:
+      pr_numbers:
+        description: 'PR numbers to merge (comma separated, e.g., "123,456,789")'
+        required: true
+        default: ''
+      test_branch:
+        description: 'Target test branch name'
+        required: true
+        default: 'test-prs'
+      base_branch:
+        description: 'Base branch to start from'
+        required: true
+        default: 'dev'
+
+permissions:
+  contents: write
+
+jobs:
+  merge-prs-to-test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout your fork
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.SYNC_PAT }}
+          ref: ${{ github.event.inputs.base_branch }}
+          fetch-depth: 0
+
+      - name: Configure Git
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+      - name: Add upstream remote
+        run: |
+          git remote add upstream https://github.com/PR3Y/Bruce.git 2>/dev/null || git remote set-url upstream https://github.com/PR3Y/Bruce.git
+          git fetch upstream --tags --prune
+
+      - name: Create/update test branch
+        run: |
+          git checkout -b ${{ github.event.inputs.test_branch }} 2>/dev/null || git checkout ${{ github.event.inputs.test_branch }}
+          git reset --hard origin/${{ github.event.inputs.base_branch }}
+
+      - name: Merge PRs sequentially
+        env:
+          PR_NUMBERS: ${{ github.event.inputs.pr_numbers }}
+        run: |
+          IFS=',' read -ra PR_ARRAY <<< "$PR_NUMBERS"
+          for PR in "${PR_ARRAY[@]}"; do
+            PR=$(echo "$PR" | xargs)  # Trim whitespace
+            echo "=========================================="
+            echo "Processing PR #$PR"
+            echo "=========================================="
+            
+            # Fetch the PR branch using the magic ref
+            git fetch upstream pull/$PR/head:pr-$PR
+            
+            # Try to merge the PR branch
+            if git merge --no-edit --no-ff pr-$PR -m "chore: merge PR #$PR [skip ci]"; then
+              echo "✅ Successfully merged PR #$PR"
+            else
+              git merge --abort
+              echo "❌ Conflict detected in PR #$PR"
+              echo "Skipping this PR and continuing..."
+            fi
+          done
+
+      - name: Push test branch to your fork
+        run: |
+          git push origin ${{ github.event.inputs.test_branch }} --force-with-lease
+
+      - name: Display status
+        run: |
+          echo "✅ Test branch updated successfully!"
+          echo "Branch: ${{ github.event.inputs.test_branch }}"
+          echo "Base: ${{ github.event.inputs.base_branch }}"
+          echo "PRs processed: ${{ github.event.inputs.pr_numbers }}"
+          echo "Latest commit: $(git log -1 --pretty=format:'%h - %s')"
