@@ -12,7 +12,7 @@ on:
         required: true
         default: 'test'
       base_branch:
-        description: 'Base branch to start from (use "upstream/dev" for upstream)'
+        description: 'Base branch to start from'
         required: true
         default: 'dev'
 
@@ -44,47 +44,65 @@ jobs:
           BASE="${{ github.event.inputs.base_branch }}"
           TEST_BRANCH="${{ github.event.inputs.test_branch }}"
           
-          # Check if test branch already exists
           if git show-ref --verify --quiet refs/heads/$TEST_BRANCH; then
             echo "✅ Test branch '$TEST_BRANCH' already exists. Checking it out..."
             git checkout $TEST_BRANCH
-            echo "ℹ️  Keeping existing PRs in the branch."
           else
             echo "🆕 Creating new test branch '$TEST_BRANCH' from base..."
             if [[ "$BASE" == upstream/* ]]; then
-              # Fetch upstream branch
               BRANCH=${BASE#upstream/}
               git fetch upstream $BRANCH
               git checkout -b $TEST_BRANCH upstream/$BRANCH
             else
               git checkout -b $TEST_BRANCH origin/$BASE
             fi
+            # Create tracking file
+            echo "# PRs merged into $TEST_BRANCH" > .github/merged_prs.txt
+            echo "# Format: one PR number per line" >> .github/merged_prs.txt
+            echo "# Last updated: $(date)" >> .github/merged_prs.txt
+            echo "" >> .github/merged_prs.txt
+          fi
+
+      - name: Read existing merged PRs
+        id: read_merged
+        run: |
+          if [ -f .github/merged_prs.txt ]; then
+            echo "merged_prs=$(cat .github/merged_prs.txt | grep -E '^[0-9]+$' | tr '\n' ',' | sed 's/,$//')" >> $GITHUB_OUTPUT
+          else
+            echo "merged_prs=" >> $GITHUB_OUTPUT
           fi
 
       - name: Merge PRs sequentially
         env:
           PR_NUMBERS: ${{ github.event.inputs.pr_numbers }}
+          MERGED_PRS: ${{ steps.read_merged.outputs.merged_prs }}
         run: |
           IFS=',' read -ra PR_ARRAY <<< "$PR_NUMBERS"
           SUCCESS_COUNT=0
           FAIL_COUNT=0
           SKIPPED=""
+          NEW_MERGED=""
           
           for PR in "${PR_ARRAY[@]}"; do
-            PR=$(echo "$PR" | xargs)  # Trim whitespace
+            PR=$(echo "$PR" | xargs)
             if [ -z "$PR" ]; then continue; fi
+            
+            # Check if PR is already merged
+            if echo "$MERGED_PRS" | grep -q "\b$PR\b"; then
+              echo "ℹ️  PR #$PR already merged previously - skipping"
+              continue
+            fi
             
             echo "=========================================="
             echo "Processing PR #$PR"
             echo "=========================================="
             
-            # Fetch the PR branch
             git fetch upstream pull/$PR/head:pr-$PR
             
-            # Try to merge the PR branch
             if git merge --no-edit --no-ff pr-$PR -m "chore: merge PR #$PR [skip ci]"; then
               echo "✅ Successfully merged PR #$PR"
               SUCCESS_COUNT=$((SUCCESS_COUNT + 1))
+              NEW_MERGED="$NEW_MERGED $PR"
             else
               git merge --abort
               echo "❌ Conflict detected in PR #$PR - Skipping..."
@@ -92,6 +110,14 @@ jobs:
               SKIPPED="$SKIPPED $PR"
             fi
           done
+
+          # Update tracking file with new merged PRs
+          if [ ! -z "$NEW_MERGED" ]; then
+            echo "📝 Updating tracking file with new PRs..."
+            for PR in $NEW_MERGED; do
+              echo "$PR" >> .github/merged_prs.txt
+            done
+          fi
 
           echo "=========================================="
           echo "📊 Summary:"
@@ -101,6 +127,13 @@ jobs:
             echo "   ⚠️  Skipped PRs: $SKIPPED"
           fi
           echo "=========================================="
+
+      - name: Commit tracking file if updated
+        run: |
+          if ! git diff --quiet .github/merged_prs.txt; then
+            git add .github/merged_prs.txt
+            git commit -m "chore: update merged PRs tracking [skip ci]"
+          fi
 
       - name: Push test branch to our fork
         run: |
@@ -115,3 +148,6 @@ jobs:
           echo "   PRs processed: ${{ github.event.inputs.pr_numbers }}"
           echo "   Latest commit: $(git log -1 --pretty=format:'%h - %s')"
           echo "=========================================="
+          echo ""
+          echo "📋 PRs currently merged into test branch:"
+          cat .github/merged_prs.txt 2>/dev/null || echo "   (No tracking file found)"
