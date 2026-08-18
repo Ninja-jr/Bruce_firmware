@@ -14,7 +14,7 @@ on:
       base_branch:
         description: 'Base branch to start from (use "upstream/dev" for upstream)'
         required: true
-        default: 'dev'
+        default: 'upstream/dev'
       build_env:
         description: 'Select environment to build'
         required: true
