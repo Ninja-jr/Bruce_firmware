@@ -12,9 +12,9 @@ on:
         required: true
         default: 'test'
       base_branch:
-        description: 'Base branch to start from'
+        description: 'Base branch to start from (use "upstream/dev" for upstream)'
         required: true
-        default: 'dev'
+        default: 'upstream/dev'
 
 permissions:
   contents: write
@@ -47,6 +47,7 @@ jobs:
           if git show-ref --verify --quiet refs/heads/$TEST_BRANCH; then
             echo "✅ Test branch '$TEST_BRANCH' already exists. Checking it out..."
             git checkout $TEST_BRANCH
+            echo "ℹ️  Keeping existing PRs in the branch."
           else
             echo "🆕 Creating new test branch '$TEST_BRANCH' from base..."
             if [[ "$BASE" == upstream/* ]]; then
@@ -56,11 +57,18 @@ jobs:
             else
               git checkout -b $TEST_BRANCH origin/$BASE
             fi
-            # Create tracking file
-            echo "# PRs merged into $TEST_BRANCH" > .github/merged_prs.txt
+          fi
+
+      - name: Ensure tracking file exists
+        run: |
+          mkdir -p .github
+          if [ ! -f .github/merged_prs.txt ]; then
+            echo "# PRs merged into ${{ github.event.inputs.test_branch }}" > .github/merged_prs.txt
             echo "# Format: one PR number per line" >> .github/merged_prs.txt
             echo "# Last updated: $(date)" >> .github/merged_prs.txt
             echo "" >> .github/merged_prs.txt
+            git add .github/merged_prs.txt
+            git commit -m "chore: initialize merged PRs tracking [skip ci]"
           fi
 
       - name: Read existing merged PRs
