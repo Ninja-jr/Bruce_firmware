@@ -67,6 +67,7 @@ void ConfigMenu::displayUIMenu() {
             {"Dim Time",    [this]() { setDimmerTimeMenu(); }               },
             {"Deep Sleep Time", [this]() { setAutoDeepSleepMenu(); }        },
             {"Orientation", [this]() { lambdaHelper(gsetRotation, true)(); }},
+            {"Menu Layout", [this]() { setMainMenuStyleMenu(); }            },
             {"UI Color",    [this]() { setUIColor(); }                      },
             {"UI Theme",    [this]() { setTheme(); }                        },
             {"Back",        []() {}                                         },

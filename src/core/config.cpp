@@ -69,6 +69,7 @@ JsonDocument BruceConfig::toJson() const {
     setting["wdgwarsApiKey"] = wdgwarsApiKey;
     setting["devMode"] = devMode;
     setting["colorInverted"] = colorInverted;
+    setting["mainMenuStyle"] = mainMenuStyle;
 
     setting["badUSBBLEKeyboardLayout"] = badUSBBLEKeyboardLayout;
     setting["badUSBBLEKeyDelay"] = badUSBBLEKeyDelay;
@@ -393,6 +394,12 @@ void BruceConfig::fromFile(bool checkFS) {
         count++;
         log_e("Fail");
     }
+    if (!setting["mainMenuStyle"].isNull()) {
+        mainMenuStyle = setting["mainMenuStyle"].as<int>();
+    } else {
+        count++;
+        log_e("Fail");
+    }
 
     if (!setting["badUSBBLEKeyboardLayout"].isNull()) {
         badUSBBLEKeyboardLayout = setting["badUSBBLEKeyboardLayout"].as<int>();
@@ -491,6 +498,7 @@ void BruceConfig::validateConfig() {
     validateMifareKeysItems();
     validateDevModeValue();
     validateColorInverted();
+    validateMainMenuStyle();
     validateBadUSBBLEKeyboardLayout();
     validateBadUSBBLEKeyDelay();
     validateEvilEndpointCreds();
@@ -807,6 +815,17 @@ void BruceConfig::setColorInverted(int value) {
 
 void BruceConfig::validateColorInverted() {
     if (colorInverted > 1) colorInverted = 1;
+}
+
+void BruceConfig::setMainMenuStyle(int value) {
+    mainMenuStyle = value;
+    validateMainMenuStyle();
+    saveFile();
+}
+
+void BruceConfig::validateMainMenuStyle() {
+    if (mainMenuStyle < MAIN_MENU_CAROUSEL || mainMenuStyle > MAIN_MENU_GRID)
+        mainMenuStyle = MAIN_MENU_CAROUSEL;
 }
 
 void BruceConfig::setBadUSBBLEKeyboardLayout(int value) {
