@@ -20,6 +20,7 @@ jobs:
     runs-on: ubuntu-latest
     env:
       BOARD_ENV: "m5stack-cardputer"
+      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
     steps:
       - name: Checkout repository
