@@ -88,6 +88,7 @@ jobs:
     env:
       VERSION_NAME: ${{ github.event.inputs.version_name }}
       SELECTED_ENV: ${{ github.event.inputs.environment }}
+      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
     steps:
       - name: Checkout repository
