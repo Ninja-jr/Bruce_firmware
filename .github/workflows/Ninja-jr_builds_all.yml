@@ -26,6 +26,7 @@ jobs:
     continue-on-error: true
     env:
       VERSION_NAME: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.version_name || github.ref == 'refs/heads/main' && 'Ninja-Jr 1.0' || github.ref == 'refs/heads/dev' && 'Ninja-Jr dev' || github.ref_type == 'tag' && github.ref_name || 'Ninja-Jr' }}
+      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
     strategy:
       fail-fast: false
       matrix:
