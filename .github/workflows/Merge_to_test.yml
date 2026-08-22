@@ -94,6 +94,8 @@ permissions:
 jobs:
   merge-prs-to-test:
     runs-on: ubuntu-latest
+    env:
+      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
     outputs:
       new_merged_prs: ${{ steps.merge_prs.outputs.new_merged_prs }}
       success_count: ${{ steps.merge_prs.outputs.success_count }}
@@ -250,6 +252,7 @@ jobs:
     needs: merge-prs-to-test
     if: needs.merge-prs-to-test.outputs.success_count > 0
     env:
+      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
       SELECTED_ENV: ${{ github.event.inputs.build_env }}
       VERSION_NAME: ${{ github.event.inputs.version_name }}
     steps:
