@@ -111,12 +111,10 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-
       - name: Add upstream remote
         run: |
           git remote add upstream https://github.com/PR3Y/Bruce.git 2>/dev/null || git remote set-url upstream https://github.com/PR3Y/Bruce.git
           git fetch upstream --tags --prune
-
       - name: Setup test branch
         run: |
           BASE="${{ github.event.inputs.base_branch }}"
@@ -136,18 +134,17 @@ jobs:
               git checkout -b $TEST_BRANCH origin/$BASE
             fi
           fi
-
       - name: Ensure tracking file exists
         run: |
           if [ ! -f merged_prs.txt ]; then
             echo "# PRs merged into ${{ github.event.inputs.test_branch }}" > merged_prs.txt
             echo "# Format: one PR number per line" >> merged_prs.txt
             echo "# Last updated: $(date)" >> merged_prs.txt
+            echo "--------------------------" >> merged_prs.txt
             echo "" >> merged_prs.txt
             git add merged_prs.txt
             git commit -m "chore: initialize merged PRs tracking [skip ci]"
           fi
-
       - name: Read existing merged PRs
         id: read_merged
         run: |
@@ -156,7 +153,6 @@ jobs:
           else
             echo "merged_prs=" >> $GITHUB_OUTPUT
           fi
-
       - name: Merge PRs sequentially
         id: merge_prs
         env:
@@ -198,7 +194,6 @@ jobs:
               SKIPPED="$SKIPPED $PR"
             fi
           done
-
           # Update tracking file with new merged PRs
           if [ ! -z "$NEW_MERGED" ]; then
             echo "📝 Updating tracking file with new PRs..."
@@ -206,7 +201,6 @@ jobs:
               echo "$PR" >> merged_prs.txt
             done
           fi
-
           echo "=========================================="
           echo "📊 Merge Summary:"
           echo "   ✅ Successfully merged: $SUCCESS_COUNT PR(s)"
@@ -221,18 +215,15 @@ jobs:
           echo "new_merged_prs=$NEW_MERGED" >> $GITHUB_OUTPUT
           echo "success_count=$SUCCESS_COUNT" >> $GITHUB_OUTPUT
           echo "failed_count=$FAIL_COUNT" >> $GITHUB_OUTPUT
-
       - name: Commit tracking file if updated
         run: |
           if ! git diff --quiet merged_prs.txt; then
             git add merged_prs.txt
             git commit -m "chore: update merged PRs tracking [skip ci]"
           fi
-
       - name: Push test branch to our fork
         run: |
           git push origin ${{ github.event.inputs.test_branch }} --force-with-lease
-
       - name: Display status
         run: |
           echo "=========================================="
@@ -245,7 +236,6 @@ jobs:
           echo ""
           echo "📋 PRs currently merged into test branch:"
           cat merged_prs.txt 2>/dev/null || echo "   (No tracking file found)"
-
   build:
     name: Build ${{ github.event.inputs.build_env }}
     runs-on: ubuntu-latest
@@ -272,7 +262,6 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y --no-install-recommends gcc-multilib libc6-dev-i386
-
       - name: Cache pip
         uses: actions/cache@v4
         with:
@@ -280,11 +269,9 @@ jobs:
           key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements.txt') }}
           restore-keys: |
             ${{ runner.os }}-pip-
-
       - name: Install dependencies
         run: |
           pip install requests esptool intelhex
-
       - name: Cache PlatformIO
         uses: actions/cache@v4
         with:
@@ -299,19 +286,16 @@ jobs:
           key: Bruce-pio-${{ env.SELECTED_ENV }}-${{ github.run_id }}-${{ github.run_attempt }}
           restore-keys: |
             Bruce-pio-${{ env.SELECTED_ENV }}-
-
       - name: Install PlatformIO Core
         run: |
           pip install platformio
           sed -i "s/-DBRUCE_VERSION=/-DBRUCE_VERSION='\"${{ env.VERSION_NAME }}\"' ; /g" ./platformio.ini
           GIT_HASH=$(git describe --always --dirty)
           sed -i "s|-DGIT_COMMIT_HASH='\"Homebrew\"'|!echo '-DGIT_COMMIT_HASH=\\\\\\\\\"${GIT_HASH}\\\\\\\\\"'|g" ./platformio.ini
-
       - name: Run Compile for selected environment
         run: |
           echo "Building environment: ${{ env.SELECTED_ENV }}"
           platformio run -e "${{ env.SELECTED_ENV }}"
-
       - name: Save PIO Build Cache
         uses: actions/cache/save@v4
         with:
@@ -336,7 +320,6 @@ jobs:
           echo "   Git Hash: $(git describe --always --dirty)"
           echo "=========================================="
           ls -la Bruce-*.* 2>/dev/null || echo "No Bruce files found"
-
   skip-build:
     name: Skip Build (No PRs Merged)
     runs-on: ubuntu-latest
