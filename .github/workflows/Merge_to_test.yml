@@ -317,7 +317,7 @@ jobs:
           echo "   Environment: ${{ env.SELECTED_ENV }}"
           echo "   Version: ${{ env.VERSION_NAME }}"
           echo "   Branch: ${{ github.event.inputs.test_branch }}"
-          echo "   Git Hash: $(git describe --always --dirty)"
+          echo "   Git Hash: $(git describe --always)"
           echo "=========================================="
           ls -la Bruce-*.* 2>/dev/null || echo "No Bruce files found"
   skip-build:
