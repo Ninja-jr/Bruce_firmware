@@ -5,11 +5,7 @@ on:
     inputs:
       pr_numbers:
         description: 'PR numbers to merge (comma separated, e.g., "123,456,789")'
-        required: false
-        default: ''
-      commit_hashes:
-        description: 'Commit hashes to cherry-pick (comma separated, e.g., "abc123,def456")'
-        required: false
+        required: true
         default: ''
       version_name:
         description: 'Version name (Ninja-Jr 1.0, Ninja-Jr dev, etc)'
@@ -101,7 +97,7 @@ jobs:
     env:
       FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
     outputs:
-      new_merged_items: ${{ steps.merge_prs.outputs.new_merged_items }}
+      new_merged_prs: ${{ steps.merge_prs.outputs.new_merged_prs }}
       success_count: ${{ steps.merge_prs.outputs.success_count }}
       failed_count: ${{ steps.merge_prs.outputs.failed_count }}
     steps:
@@ -115,21 +111,19 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-
       - name: Add upstream remote
         run: |
           git remote add upstream https://github.com/PR3Y/Bruce.git 2>/dev/null || git remote set-url upstream https://github.com/PR3Y/Bruce.git
           git fetch upstream --tags --prune
-
       - name: Setup test branch
         run: |
           BASE="${{ github.event.inputs.base_branch }}"
           TEST_BRANCH="${{ github.event.inputs.test_branch }}"
-
+          
           if git show-ref --verify --quiet refs/heads/$TEST_BRANCH; then
             echo "✅ Test branch '$TEST_BRANCH' already exists. Checking it out..."
             git checkout $TEST_BRANCH
-            echo "ℹ️  Keeping existing items in the branch."
+            echo "ℹ️  Keeping existing PRs in the branch."
           else
             echo "🆕 Creating new test branch '$TEST_BRANCH' from base..."
             if [[ "$BASE" == upstream/* ]]; then
@@ -140,181 +134,108 @@ jobs:
               git checkout -b $TEST_BRANCH origin/$BASE
             fi
           fi
-
       - name: Ensure tracking file exists
         run: |
-          if [ ! -f merged_items.txt ]; then
-            cat > merged_items.txt << "EOF"
-        # PRs and commits merged into ${{ github.event.inputs.test_branch }}
-        # Format: PRs are numbers, commits are 7+ char hex strings
-        # Example:
-        #   123  (PR #123)
-        #   abc123  (commit)
-        # Last updated: $(date)
-        --------------------------
-
-        # ── PRs ──
-
-        # ── Commits ──
-        EOF
-            git add merged_items.txt
-            git commit -m "chore: initialize merged items tracking [skip ci]"
+          if [ ! -f merged_prs.txt ]; then
+            echo "# PRs merged into ${{ github.event.inputs.test_branch }}" > merged_prs.txt
+            echo "# Format: one PR number per line" >> merged_prs.txt
+            echo "# Last updated: $(date)" >> merged_prs.txt
+            echo "--------------------------" >> merged_prs.txt
+            echo "" >> merged_prs.txt
+            git add merged_prs.txt
+            git commit -m "chore: initialize merged PRs tracking [skip ci]"
           fi
-
-      - name: Read existing merged items
+      - name: Read existing merged PRs
         id: read_merged
         run: |
-          if [ -f merged_items.txt ]; then
-            PRS=$(grep -E '^[0-9]+$' merged_items.txt | tr '\n' ',' | sed 's/,$//')
-            COMMITS=$(grep -E '^[a-f0-9]{7,}$' merged_items.txt | tr '\n' ',' | sed 's/,$//')
-            echo "existing_prs=$PRS" >> $GITHUB_OUTPUT
-            echo "existing_commits=$COMMITS" >> $GITHUB_OUTPUT
+          if [ -f merged_prs.txt ]; then
+            echo "merged_prs=$(cat merged_prs.txt | grep -E '^[0-9]+$' | tr '\n' ',' | sed 's/,$//')" >> $GITHUB_OUTPUT
           else
-            echo "existing_prs=" >> $GITHUB_OUTPUT
-            echo "existing_commits=" >> $GITHUB_OUTPUT
+            echo "merged_prs=" >> $GITHUB_OUTPUT
           fi
-
-      - name: Merge PRs and cherry-pick commits
+      - name: Merge PRs sequentially
         id: merge_prs
         env:
           PR_NUMBERS: ${{ github.event.inputs.pr_numbers }}
-          COMMIT_HASHES: ${{ github.event.inputs.commit_hashes }}
-          EXISTING_PRS: ${{ steps.read_merged.outputs.existing_prs }}
-          EXISTING_COMMITS: ${{ steps.read_merged.outputs.existing_commits }}
+          MERGED_PRS: ${{ steps.read_merged.outputs.merged_prs }}
         run: |
+          IFS=',' read -ra PR_ARRAY <<< "$PR_NUMBERS"
           SUCCESS_COUNT=0
           FAIL_COUNT=0
+          SKIPPED=""
+          NEW_MERGED=""
           ALREADY_MERGED=0
-          NEW_ITEMS=""
-          PRS_TO_ADD=""
-          COMMITS_TO_ADD=""
-
-          IFS=',' read -ra PR_ARRAY <<< "$PR_NUMBERS"
+          
           for PR in "${PR_ARRAY[@]}"; do
             PR=$(echo "$PR" | xargs)
             if [ -z "$PR" ]; then continue; fi
-
-            if echo "$EXISTING_PRS" | grep -q "\b$PR\b"; then
-              echo "ℹ️  PR #$PR already merged - skipping"
+            
+            # Check if PR is already merged
+            if echo "$MERGED_PRS" | grep -q "\b$PR\b"; then
+              echo "ℹ️  PR #$PR already merged previously - skipping"
               ALREADY_MERGED=$((ALREADY_MERGED + 1))
               continue
             fi
-
+            
             echo "=========================================="
             echo "Processing PR #$PR"
             echo "=========================================="
-
+            
             git fetch upstream pull/$PR/head:pr-$PR
-
+            
             if git merge --no-edit --no-ff pr-$PR -m "chore: merge PR #$PR [skip ci]"; then
               echo "✅ Successfully merged PR #$PR"
               SUCCESS_COUNT=$((SUCCESS_COUNT + 1))
-              NEW_ITEMS="$NEW_ITEMS PR#$PR"
-              PRS_TO_ADD="$PRS_TO_ADD $PR"
+              NEW_MERGED="$NEW_MERGED $PR"
             else
               git merge --abort
-              echo "❌ Conflict in PR #$PR - Skipping..."
+              echo "❌ Conflict detected in PR #$PR - Skipping..."
               FAIL_COUNT=$((FAIL_COUNT + 1))
+              SKIPPED="$SKIPPED $PR"
             fi
           done
-
-          IFS=',' read -ra COMMIT_ARRAY <<< "$COMMIT_HASHES"
-          for COMMIT in "${COMMIT_ARRAY[@]}"; do
-            COMMIT=$(echo "$COMMIT" | xargs)
-            if [ -z "$COMMIT" ]; then continue; fi
-
-            if echo "$EXISTING_COMMITS" | grep -q "\b$COMMIT\b"; then
-              echo "ℹ️  Commit $COMMIT already cherry-picked - skipping"
-              ALREADY_MERGED=$((ALREADY_MERGED + 1))
-              continue
-            fi
-
-            echo "=========================================="
-            echo "Cherry-picking commit: $COMMIT"
-            echo "=========================================="
-
-            git fetch upstream
-
-            if git cherry-pick $COMMIT; then
-              echo "✅ Successfully cherry-picked $COMMIT"
-              SUCCESS_COUNT=$((SUCCESS_COUNT + 1))
-              NEW_ITEMS="$NEW_ITEMS commit#$COMMIT"
-              COMMITS_TO_ADD="$COMMITS_TO_ADD $COMMIT"
-            else
-              git cherry-pick --abort
-              echo "❌ Conflict in commit $COMMIT - Skipping..."
-              FAIL_COUNT=$((FAIL_COUNT + 1))
-            fi
-          done
-
-          if [ ! -z "$PRS_TO_ADD" ] || [ ! -z "$COMMITS_TO_ADD" ]; then
-            echo "📝 Updating tracking file..."
-
-            rm -f merged_items.txt
-
-            cat > merged_items.txt << "EOF"
-        # PRs and commits merged into ${{ github.event.inputs.test_branch }}
-        # Format: PRs are numbers, commits are 7+ char hex strings
-        # Example:
-        #   123  (PR #123)
-        #   abc123  (commit)
-        # Last updated: $(date)
-        --------------------------
-
-        # ── PRs ──
-        EOF
-
-            if [ ! -z "$EXISTING_PRS" ]; then
-              echo "$EXISTING_PRS" | tr ',' '\n' >> merged_items.txt
-            fi
-            for PR in $PRS_TO_ADD; do
-              echo "$PR" >> merged_items.txt
+          # Update tracking file with new merged PRs
+          if [ ! -z "$NEW_MERGED" ]; then
+            echo "📝 Updating tracking file with new PRs..."
+            for PR in $NEW_MERGED; do
+              echo "$PR" >> merged_prs.txt
             done
-
-            echo "" >> merged_items.txt
-            echo "# ── Commits ──" >> merged_items.txt
-
-            if [ ! -z "$EXISTING_COMMITS" ]; then
-              echo "$EXISTING_COMMITS" | tr ',' '\n' >> merged_items.txt
-            fi
-            for COMMIT in $COMMITS_TO_ADD; do
-              echo "$COMMIT" >> merged_items.txt
-            done
-
-            git add merged_items.txt
-            git commit -m "chore: update merged items tracking [skip ci]"
           fi
-
           echo "=========================================="
           echo "📊 Merge Summary:"
-          echo "   ✅ Successfully merged: $SUCCESS_COUNT item(s)"
-          echo "   ❌ Failed/Skipped: $FAIL_COUNT item(s)"
-          echo "   ⏩ Already merged: $ALREADY_MERGED item(s)"
-          if [ ! -z "$NEW_ITEMS" ]; then
-            echo "   📝 New items: $NEW_ITEMS"
+          echo "   ✅ Successfully merged: $SUCCESS_COUNT PR(s)"
+          echo "   ❌ Failed/Skipped: $FAIL_COUNT PR(s)"
+          echo "   ⏩ Already merged: $ALREADY_MERGED PR(s)"
+          if [ ! -z "$SKIPPED" ]; then
+            echo "   ⚠️  Skipped PRs: $SKIPPED"
           fi
           echo "=========================================="
-
-          echo "new_merged_items=$NEW_ITEMS" >> $GITHUB_OUTPUT
+          
+          # Set outputs
+          echo "new_merged_prs=$NEW_MERGED" >> $GITHUB_OUTPUT
           echo "success_count=$SUCCESS_COUNT" >> $GITHUB_OUTPUT
           echo "failed_count=$FAIL_COUNT" >> $GITHUB_OUTPUT
-
+      - name: Commit tracking file if updated
+        run: |
+          if ! git diff --quiet merged_prs.txt; then
+            git add merged_prs.txt
+            git commit -m "chore: update merged PRs tracking [skip ci]"
+          fi
       - name: Push test branch to our fork
         run: |
           git push origin ${{ github.event.inputs.test_branch }} --force-with-lease
-
       - name: Display status
         run: |
           echo "=========================================="
           echo "✅ Test branch updated successfully!"
           echo "   Branch: ${{ github.event.inputs.test_branch }}"
           echo "   Base: ${{ github.event.inputs.base_branch }}"
+          echo "   PRs processed: ${{ github.event.inputs.pr_numbers }}"
           echo "   Latest commit: $(git log -1 --pretty=format:'%h - %s')"
           echo "=========================================="
           echo ""
-          echo "📋 Items currently merged into test branch:"
-          cat merged_items.txt 2>/dev/null || echo "   (No tracking file found)"
-
+          echo "📋 PRs currently merged into test branch:"
+          cat merged_prs.txt 2>/dev/null || echo "   (No tracking file found)"
   build:
     name: Build ${{ github.event.inputs.build_env }}
     runs-on: ubuntu-latest
@@ -341,7 +262,6 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y --no-install-recommends gcc-multilib libc6-dev-i386
-
       - name: Cache pip
         uses: actions/cache@v4
         with:
@@ -349,11 +269,9 @@ jobs:
           key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements.txt') }}
           restore-keys: |
             ${{ runner.os }}-pip-
-
       - name: Install dependencies
         run: |
           pip install requests esptool intelhex
-
       - name: Cache PlatformIO
         uses: actions/cache@v4
         with:
@@ -368,19 +286,16 @@ jobs:
           key: Bruce-pio-${{ env.SELECTED_ENV }}-${{ github.run_id }}-${{ github.run_attempt }}
           restore-keys: |
             Bruce-pio-${{ env.SELECTED_ENV }}-
-
       - name: Install PlatformIO Core
         run: |
           pip install platformio
           sed -i "s/-DBRUCE_VERSION=/-DBRUCE_VERSION='\"${{ env.VERSION_NAME }}\"' ; /g" ./platformio.ini
           GIT_HASH=$(git describe --always --dirty)
           sed -i "s|-DGIT_COMMIT_HASH='\"Homebrew\"'|!echo '-DGIT_COMMIT_HASH=\\\\\\\\\"${GIT_HASH}\\\\\\\\\"'|g" ./platformio.ini
-
       - name: Run Compile for selected environment
         run: |
           echo "Building environment: ${{ env.SELECTED_ENV }}"
           platformio run -e "${{ env.SELECTED_ENV }}"
-
       - name: Save PIO Build Cache
         uses: actions/cache/save@v4
         with:
@@ -405,9 +320,8 @@ jobs:
           echo "   Git Hash: $(git describe --always)"
           echo "=========================================="
           ls -la Bruce-*.* 2>/dev/null || echo "No Bruce files found"
-
   skip-build:
-    name: Skip Build (No Items Merged)
+    name: Skip Build (No PRs Merged)
     runs-on: ubuntu-latest
     needs: merge-prs-to-test
     if: needs.merge-prs-to-test.outputs.success_count == 0
@@ -415,6 +329,6 @@ jobs:
       - name: Display skip message
         run: |
           echo "=========================================="
-          echo "ℹ️  No new items were merged."
+          echo "ℹ️  No new PRs were merged."
           echo "ℹ️  Skipping build step."
           echo "=========================================="
