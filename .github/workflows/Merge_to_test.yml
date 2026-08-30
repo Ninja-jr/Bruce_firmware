@@ -144,19 +144,19 @@ jobs:
       - name: Ensure tracking file exists
         run: |
           if [ ! -f merged_items.txt ]; then
-            cat > merged_items.txt << 'EOF'
-          # PRs and commits merged into ${{ github.event.inputs.test_branch }}
-          # Format: PRs are numbers, commits are 7+ char hex strings
-          # Example:
-          #   123  (PR #123)
-          #   abc123  (commit)
-          # Last updated: $(date)
-          --------------------------
-          
-          # ── PRs ──
-          
-          # ── Commits ──
-          EOF
+            cat > merged_items.txt << "EOF"
+        # PRs and commits merged into ${{ github.event.inputs.test_branch }}
+        # Format: PRs are numbers, commits are 7+ char hex strings
+        # Example:
+        #   123  (PR #123)
+        #   abc123  (commit)
+        # Last updated: $(date)
+        --------------------------
+        
+        # ── PRs ──
+        
+        # ── Commits ──
+        EOF
             git add merged_items.txt
             git commit -m "chore: initialize merged items tracking [skip ci]"
           fi
@@ -266,17 +266,17 @@ jobs:
             # Rebuild the file from scratch (clean format)
             rm -f merged_items.txt
             
-            cat > merged_items.txt << 'EOF'
-          # PRs and commits merged into ${{ github.event.inputs.test_branch }}
-          # Format: PRs are numbers, commits are 7+ char hex strings
-          # Example:
-          #   123  (PR #123)
-          #   abc123  (commit)
-          # Last updated: $(date)
-          --------------------------
-          
-          # ── PRs ──
-          EOF
+            cat > merged_items.txt << "EOF"
+        # PRs and commits merged into ${{ github.event.inputs.test_branch }}
+        # Format: PRs are numbers, commits are 7+ char hex strings
+        # Example:
+        #   123  (PR #123)
+        #   abc123  (commit)
+        # Last updated: $(date)
+        --------------------------
+        
+        # ── PRs ──
+        EOF
             
             # Add all PRs (existing + new)
             if [ ! -z "$EXISTING_PRS" ]; then
