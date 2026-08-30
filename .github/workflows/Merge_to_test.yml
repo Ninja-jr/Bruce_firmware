@@ -115,17 +115,17 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          
+
       - name: Add upstream remote
         run: |
           git remote add upstream https://github.com/PR3Y/Bruce.git 2>/dev/null || git remote set-url upstream https://github.com/PR3Y/Bruce.git
           git fetch upstream --tags --prune
-          
+
       - name: Setup test branch
         run: |
           BASE="${{ github.event.inputs.base_branch }}"
           TEST_BRANCH="${{ github.event.inputs.test_branch }}"
-          
+
           if git show-ref --verify --quiet refs/heads/$TEST_BRANCH; then
             echo "✅ Test branch '$TEST_BRANCH' already exists. Checking it out..."
             git checkout $TEST_BRANCH
@@ -140,7 +140,7 @@ jobs:
               git checkout -b $TEST_BRANCH origin/$BASE
             fi
           fi
-          
+
       - name: Ensure tracking file exists
         run: |
           if [ ! -f merged_items.txt ]; then
@@ -152,22 +152,20 @@ jobs:
         #   abc123  (commit)
         # Last updated: $(date)
         --------------------------
-        
+
         # ── PRs ──
-        
+
         # ── Commits ──
         EOF
             git add merged_items.txt
             git commit -m "chore: initialize merged items tracking [skip ci]"
           fi
-          
+
       - name: Read existing merged items
         id: read_merged
         run: |
           if [ -f merged_items.txt ]; then
-            # Extract PR numbers (lines that are just numbers)
             PRS=$(grep -E '^[0-9]+$' merged_items.txt | tr '\n' ',' | sed 's/,$//')
-            # Extract commit hashes (lines that are 7+ hex chars)
             COMMITS=$(grep -E '^[a-f0-9]{7,}$' merged_items.txt | tr '\n' ',' | sed 's/,$//')
             echo "existing_prs=$PRS" >> $GITHUB_OUTPUT
             echo "existing_commits=$COMMITS" >> $GITHUB_OUTPUT
@@ -175,7 +173,7 @@ jobs:
             echo "existing_prs=" >> $GITHUB_OUTPUT
             echo "existing_commits=" >> $GITHUB_OUTPUT
           fi
-          
+
       - name: Merge PRs and cherry-pick commits
         id: merge_prs
         env:
@@ -190,28 +188,24 @@ jobs:
           NEW_ITEMS=""
           PRS_TO_ADD=""
           COMMITS_TO_ADD=""
-          
-          # ──────────────────────────────────────────
-          # MERGE PRs
-          # ──────────────────────────────────────────
+
           IFS=',' read -ra PR_ARRAY <<< "$PR_NUMBERS"
           for PR in "${PR_ARRAY[@]}"; do
             PR=$(echo "$PR" | xargs)
             if [ -z "$PR" ]; then continue; fi
-            
-            # Check if PR already merged
+
             if echo "$EXISTING_PRS" | grep -q "\b$PR\b"; then
               echo "ℹ️  PR #$PR already merged - skipping"
               ALREADY_MERGED=$((ALREADY_MERGED + 1))
               continue
             fi
-            
+
             echo "=========================================="
             echo "Processing PR #$PR"
             echo "=========================================="
-            
+
             git fetch upstream pull/$PR/head:pr-$PR
-            
+
             if git merge --no-edit --no-ff pr-$PR -m "chore: merge PR #$PR [skip ci]"; then
               echo "✅ Successfully merged PR #$PR"
               SUCCESS_COUNT=$((SUCCESS_COUNT + 1))
@@ -223,28 +217,24 @@ jobs:
               FAIL_COUNT=$((FAIL_COUNT + 1))
             fi
           done
-          
-          # ──────────────────────────────────────────
-          # CHERRY-PICK COMMITS
-          # ──────────────────────────────────────────
+
           IFS=',' read -ra COMMIT_ARRAY <<< "$COMMIT_HASHES"
           for COMMIT in "${COMMIT_ARRAY[@]}"; do
             COMMIT=$(echo "$COMMIT" | xargs)
             if [ -z "$COMMIT" ]; then continue; fi
-            
-            # Check if commit already cherry-picked
+
             if echo "$EXISTING_COMMITS" | grep -q "\b$COMMIT\b"; then
               echo "ℹ️  Commit $COMMIT already cherry-picked - skipping"
               ALREADY_MERGED=$((ALREADY_MERGED + 1))
               continue
             fi
-            
+
             echo "=========================================="
             echo "Cherry-picking commit: $COMMIT"
             echo "=========================================="
-            
+
             git fetch upstream
-            
+
             if git cherry-pick $COMMIT; then
               echo "✅ Successfully cherry-picked $COMMIT"
               SUCCESS_COUNT=$((SUCCESS_COUNT + 1))
@@ -256,16 +246,12 @@ jobs:
               FAIL_COUNT=$((FAIL_COUNT + 1))
             fi
           done
-          
-          # ──────────────────────────────────────────
-          # UPDATE TRACKING FILE
-          # ──────────────────────────────────────────
+
           if [ ! -z "$PRS_TO_ADD" ] || [ ! -z "$COMMITS_TO_ADD" ]; then
             echo "📝 Updating tracking file..."
-            
-            # Rebuild the file from scratch (clean format)
+
             rm -f merged_items.txt
-            
+
             cat > merged_items.txt << "EOF"
         # PRs and commits merged into ${{ github.event.inputs.test_branch }}
         # Format: PRs are numbers, commits are 7+ char hex strings
@@ -274,36 +260,31 @@ jobs:
         #   abc123  (commit)
         # Last updated: $(date)
         --------------------------
-        
+
         # ── PRs ──
         EOF
-            
-            # Add all PRs (existing + new)
+
             if [ ! -z "$EXISTING_PRS" ]; then
               echo "$EXISTING_PRS" | tr ',' '\n' >> merged_items.txt
             fi
             for PR in $PRS_TO_ADD; do
               echo "$PR" >> merged_items.txt
             done
-            
+
             echo "" >> merged_items.txt
             echo "# ── Commits ──" >> merged_items.txt
-            
-            # Add all commits (existing + new)
+
             if [ ! -z "$EXISTING_COMMITS" ]; then
               echo "$EXISTING_COMMITS" | tr ',' '\n' >> merged_items.txt
             fi
             for COMMIT in $COMMITS_TO_ADD; do
               echo "$COMMIT" >> merged_items.txt
             done
-            
+
             git add merged_items.txt
             git commit -m "chore: update merged items tracking [skip ci]"
           fi
-          
-          # ──────────────────────────────────────────
-          # SUMMARY
-          # ──────────────────────────────────────────
+
           echo "=========================================="
           echo "📊 Merge Summary:"
           echo "   ✅ Successfully merged: $SUCCESS_COUNT item(s)"
@@ -313,15 +294,15 @@ jobs:
             echo "   📝 New items: $NEW_ITEMS"
           fi
           echo "=========================================="
-          
+
           echo "new_merged_items=$NEW_ITEMS" >> $GITHUB_OUTPUT
           echo "success_count=$SUCCESS_COUNT" >> $GITHUB_OUTPUT
           echo "failed_count=$FAIL_COUNT" >> $GITHUB_OUTPUT
-          
+
       - name: Push test branch to our fork
         run: |
           git push origin ${{ github.event.inputs.test_branch }} --force-with-lease
-          
+
       - name: Display status
         run: |
           echo "=========================================="
@@ -360,7 +341,7 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y --no-install-recommends gcc-multilib libc6-dev-i386
-          
+
       - name: Cache pip
         uses: actions/cache@v4
         with:
@@ -368,11 +349,11 @@ jobs:
           key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements.txt') }}
           restore-keys: |
             ${{ runner.os }}-pip-
-            
+
       - name: Install dependencies
         run: |
           pip install requests esptool intelhex
-          
+
       - name: Cache PlatformIO
         uses: actions/cache@v4
         with:
@@ -387,19 +368,19 @@ jobs:
           key: Bruce-pio-${{ env.SELECTED_ENV }}-${{ github.run_id }}-${{ github.run_attempt }}
           restore-keys: |
             Bruce-pio-${{ env.SELECTED_ENV }}-
-            
+
       - name: Install PlatformIO Core
         run: |
           pip install platformio
           sed -i "s/-DBRUCE_VERSION=/-DBRUCE_VERSION='\"${{ env.VERSION_NAME }}\"' ; /g" ./platformio.ini
           GIT_HASH=$(git describe --always --dirty)
           sed -i "s|-DGIT_COMMIT_HASH='\"Homebrew\"'|!echo '-DGIT_COMMIT_HASH=\\\\\\\\\"${GIT_HASH}\\\\\\\\\"'|g" ./platformio.ini
-          
+
       - name: Run Compile for selected environment
         run: |
           echo "Building environment: ${{ env.SELECTED_ENV }}"
           platformio run -e "${{ env.SELECTED_ENV }}"
-          
+
       - name: Save PIO Build Cache
         uses: actions/cache/save@v4
         with:
@@ -424,7 +405,7 @@ jobs:
           echo "   Git Hash: $(git describe --always)"
           echo "=========================================="
           ls -la Bruce-*.* 2>/dev/null || echo "No Bruce files found"
-          
+
   skip-build:
     name: Skip Build (No Items Merged)
     runs-on: ubuntu-latest
