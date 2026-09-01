@@ -20,6 +20,18 @@ on:
         description: 'Base branch to start from (use "upstream/dev" for upstream)'
         required: true
         default: 'upstream/dev'
+      conflict_resolution:
+        description: 'Conflict resolution strategy'
+        required: true
+        default: 'auto-merge'
+        type: choice
+        options:
+          - "abort"
+          - "ours"
+          - "theirs"
+          - "auto-merge"
+          - "manual"
+          - "per-file"
       build_env:
         description: 'Select environment to build'
         required: true
@@ -100,6 +112,9 @@ jobs:
       new_merged_prs: ${{ steps.merge_prs.outputs.new_merged_prs }}
       success_count: ${{ steps.merge_prs.outputs.success_count }}
       failed_count: ${{ steps.merge_prs.outputs.failed_count }}
+      skipped_count: ${{ steps.merge_prs.outputs.skipped_count }}
+      conflict_strategy_used: ${{ steps.merge_prs.outputs.strategy_used }}
+      skipped_prs: ${{ steps.merge_prs.outputs.skipped_prs }}
     steps:
       - name: Checkout our fork
         uses: actions/checkout@v4
@@ -111,10 +126,12 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
+
       - name: Add upstream remote
         run: |
           git remote add upstream https://github.com/PR3Y/Bruce.git 2>/dev/null || git remote set-url upstream https://github.com/PR3Y/Bruce.git
           git fetch upstream --tags --prune
+
       - name: Setup test branch
         run: |
           BASE="${{ github.event.inputs.base_branch }}"
@@ -134,6 +151,7 @@ jobs:
               git checkout -b $TEST_BRANCH origin/$BASE
             fi
           fi
+
       - name: Ensure tracking file exists
         run: |
           if [ ! -f merged_prs.txt ]; then
@@ -145,6 +163,7 @@ jobs:
             git add merged_prs.txt
             git commit -m "chore: initialize merged PRs tracking [skip ci]"
           fi
+
       - name: Read existing merged PRs
         id: read_merged
         run: |
@@ -153,11 +172,27 @@ jobs:
           else
             echo "merged_prs=" >> $GITHUB_OUTPUT
           fi
-      - name: Merge PRs sequentially
+
+      - name: Check for conflict rules file
+        id: check_rules
+        run: |
+          if [ -f .github/conflict-rules.json ]; then
+            echo "📋 Found conflict rules file"
+            echo "has_rules=true" >> $GITHUB_OUTPUT
+            STRATEGY=$(jq -r '.default_strategy // "auto-merge"' .github/conflict-rules.json 2>/dev/null || echo "auto-merge")
+            echo "default_strategy=$STRATEGY" >> $GITHUB_OUTPUT
+          else
+            echo "has_rules=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Merge PRs with conflict resolution
         id: merge_prs
         env:
           PR_NUMBERS: ${{ github.event.inputs.pr_numbers }}
           MERGED_PRS: ${{ steps.read_merged.outputs.merged_prs }}
+          CONFLICT_STRATEGY: ${{ github.event.inputs.conflict_resolution }}
+          HAS_RULES: ${{ steps.check_rules.outputs.has_rules }}
+          DEFAULT_STRATEGY: ${{ steps.check_rules.outputs.default_strategy }}
         run: |
           IFS=',' read -ra PR_ARRAY <<< "$PR_NUMBERS"
           SUCCESS_COUNT=0
@@ -165,6 +200,119 @@ jobs:
           SKIPPED=""
           NEW_MERGED=""
           ALREADY_MERGED=0
+          STRATEGY_USED="$CONFLICT_STRATEGY"
+          
+          # Function to merge with strategy
+          merge_with_strategy() {
+            local PR=$1
+            local STRATEGY=$2
+            
+            # If per-file strategy, we need special handling
+            if [ "$STRATEGY" = "per-file" ]; then
+              echo "📋 Using per-file conflict resolution"
+              if [ -f .github/conflict-rules.json ]; then
+                # Read files that should use 'ours'
+                OURS_FILES=$(jq -r '.files | to_entries[] | select(.value == "ours") | .key' .github/conflict-rules.json 2>/dev/null)
+                THEIRS_FILES=$(jq -r '.files | to_entries[] | select(.value == "theirs") | .key' .github/conflict-rules.json 2>/dev/null)
+                
+                # First try normal merge
+                if git merge --no-edit --no-ff pr-$PR -m "chore: merge PR #$PR [skip ci]" 2>/dev/null; then
+                  return 0
+                else
+                  git merge --abort
+                  echo "⚠️  Conflicts detected, applying per-file strategies..."
+                  
+                  # For each file that should use 'ours'
+                  for FILE in $OURS_FILES; do
+                    if git diff --name-only --diff-filter=U | grep -q "$FILE"; then
+                      echo "   📄 Keeping our version for: $FILE"
+                      git checkout --ours -- "$FILE"
+                      git add "$FILE"
+                    fi
+                  done
+                  
+                  # For each file that should use 'theirs'
+                  for FILE in $THEIRS_FILES; do
+                    if git diff --name-only --diff-filter=U | grep -q "$FILE"; then
+                      echo "   📄 Taking PR version for: $FILE"
+                      git checkout --theirs -- "$FILE"
+                      git add "$FILE"
+                    fi
+                  done
+                  
+                  # Auto-resolve remaining conflicts with default strategy
+                  if git diff --name-only --diff-filter=U | grep -q "."; then
+                    echo "   🔄 Auto-resolving remaining conflicts with 'ours'"
+                    git checkout --ours -- .
+                    git add .
+                  fi
+                  
+                  # Commit the resolved merge
+                  git commit --no-edit -m "chore: merge PR #$PR (per-file resolution) [skip ci]"
+                  return $?
+                fi
+              else
+                echo "❌ No conflict-rules.json found for per-file strategy"
+                return 1
+              fi
+            fi
+            
+            # Standard strategies
+            case "$STRATEGY" in
+              "ours")
+                echo "🔒 Using 'ours' strategy - keeping our version"
+                if git merge --no-edit --no-ff pr-$PR -m "chore: merge PR #$PR [skip ci]" 2>/dev/null; then
+                  return 0
+                else
+                  git merge --abort
+                  echo "⚠️  Conflict detected, applying 'ours' strategy..."
+                  git merge -X ours --no-edit --no-ff pr-$PR -m "chore: merge PR #$PR (ours strategy) [skip ci]"
+                  return $?
+                fi
+                ;;
+              "theirs")
+                echo "🔒 Using 'theirs' strategy - taking PR version"
+                if git merge --no-edit --no-ff pr-$PR -m "chore: merge PR #$PR [skip ci]" 2>/dev/null; then
+                  return 0
+                else
+                  git merge --abort
+                  echo "⚠️  Conflict detected, applying 'theirs' strategy..."
+                  git merge -X theirs --no-edit --no-ff pr-$PR -m "chore: merge PR #$PR (theirs strategy) [skip ci]"
+                  return $?
+                fi
+                ;;
+              "auto-merge")
+                echo "🔄 Using 'auto-merge' - try merge, fallback to ours"
+                if git merge --no-edit --no-ff pr-$PR -m "chore: merge PR #$PR [skip ci]" 2>/dev/null; then
+                  return 0
+                else
+                  git merge --abort
+                  echo "⚠️  Conflict detected, falling back to 'ours' strategy..."
+                  git merge -X ours --no-edit --no-ff pr-$PR -m "chore: merge PR #$PR (auto-merge fallback) [skip ci]"
+                  return $?
+                fi
+                ;;
+              "manual")
+                echo "🛑 Manual merge required for PR #$PR"
+                return 2
+                ;;
+              "abort")
+                echo "❌ Aborting merge of PR #$PR due to conflict"
+                return 1
+                ;;
+              *)
+                echo "❌ Unknown strategy: $STRATEGY"
+                return 1
+                ;;
+            esac
+          }
+          
+          echo "=========================================="
+          echo "📋 Using conflict strategy: $CONFLICT_STRATEGY"
+          if [ "$HAS_RULES" = "true" ]; then
+            echo "📋 Per-file rules available"
+          fi
+          echo "=========================================="
           
           for PR in "${PR_ARRAY[@]}"; do
             PR=$(echo "$PR" | xargs)
@@ -183,17 +331,28 @@ jobs:
             
             git fetch upstream pull/$PR/head:pr-$PR
             
-            if git merge --no-edit --no-ff pr-$PR -m "chore: merge PR #$PR [skip ci]"; then
+            # Determine which strategy to use
+            STRATEGY="$CONFLICT_STRATEGY"
+            if [ "$STRATEGY" = "per-file" ] && [ "$HAS_RULES" != "true" ]; then
+              echo "⚠️  Per-file strategy selected but no rules file found, falling back to auto-merge"
+              STRATEGY="auto-merge"
+            fi
+            
+            if merge_with_strategy $PR "$STRATEGY"; then
               echo "✅ Successfully merged PR #$PR"
               SUCCESS_COUNT=$((SUCCESS_COUNT + 1))
               NEW_MERGED="$NEW_MERGED $PR"
+            elif [ $? -eq 2 ]; then
+              echo "🛑 PR #$PR requires manual resolution - skipping"
+              FAIL_COUNT=$((FAIL_COUNT + 1))
+              SKIPPED="$SKIPPED $PR"
             else
-              git merge --abort
-              echo "❌ Conflict detected in PR #$PR - Skipping..."
+              echo "❌ Failed to merge PR #$PR"
               FAIL_COUNT=$((FAIL_COUNT + 1))
               SKIPPED="$SKIPPED $PR"
             fi
           done
+          
           # Update tracking file with new merged PRs
           if [ ! -z "$NEW_MERGED" ]; then
             echo "📝 Updating tracking file with new PRs..."
@@ -201,11 +360,13 @@ jobs:
               echo "$PR" >> merged_prs.txt
             done
           fi
+          
           echo "=========================================="
           echo "📊 Merge Summary:"
           echo "   ✅ Successfully merged: $SUCCESS_COUNT PR(s)"
           echo "   ❌ Failed/Skipped: $FAIL_COUNT PR(s)"
           echo "   ⏩ Already merged: $ALREADY_MERGED PR(s)"
+          echo "   🛠️  Strategy used: $STRATEGY_USED"
           if [ ! -z "$SKIPPED" ]; then
             echo "   ⚠️  Skipped PRs: $SKIPPED"
           fi
@@ -215,27 +376,35 @@ jobs:
           echo "new_merged_prs=$NEW_MERGED" >> $GITHUB_OUTPUT
           echo "success_count=$SUCCESS_COUNT" >> $GITHUB_OUTPUT
           echo "failed_count=$FAIL_COUNT" >> $GITHUB_OUTPUT
+          echo "skipped_count=$FAIL_COUNT" >> $GITHUB_OUTPUT
+          echo "strategy_used=$STRATEGY_USED" >> $GITHUB_OUTPUT
+          echo "skipped_prs=$SKIPPED" >> $GITHUB_OUTPUT
+
       - name: Commit tracking file if updated
         run: |
           if ! git diff --quiet merged_prs.txt; then
             git add merged_prs.txt
             git commit -m "chore: update merged PRs tracking [skip ci]"
           fi
+
       - name: Push test branch to our fork
         run: |
           git push origin ${{ github.event.inputs.test_branch }} --force-with-lease
+
       - name: Display status
         run: |
           echo "=========================================="
           echo "✅ Test branch updated successfully!"
           echo "   Branch: ${{ github.event.inputs.test_branch }}"
           echo "   Base: ${{ github.event.inputs.base_branch }}"
+          echo "   Conflict Strategy: ${{ steps.merge_prs.outputs.strategy_used }}"
           echo "   PRs processed: ${{ github.event.inputs.pr_numbers }}"
           echo "   Latest commit: $(git log -1 --pretty=format:'%h - %s')"
           echo "=========================================="
           echo ""
           echo "📋 PRs currently merged into test branch:"
           cat merged_prs.txt 2>/dev/null || echo "   (No tracking file found)"
+
   build:
     name: Build ${{ github.event.inputs.build_env }}
     runs-on: ubuntu-latest
@@ -262,6 +431,7 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y --no-install-recommends gcc-multilib libc6-dev-i386
+
       - name: Cache pip
         uses: actions/cache@v4
         with:
@@ -269,9 +439,11 @@ jobs:
           key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements.txt') }}
           restore-keys: |
             ${{ runner.os }}-pip-
+
       - name: Install dependencies
         run: |
           pip install requests esptool intelhex
+
       - name: Cache PlatformIO
         uses: actions/cache@v4
         with:
@@ -286,16 +458,19 @@ jobs:
           key: Bruce-pio-${{ env.SELECTED_ENV }}-${{ github.run_id }}-${{ github.run_attempt }}
           restore-keys: |
             Bruce-pio-${{ env.SELECTED_ENV }}-
+
       - name: Install PlatformIO Core
         run: |
           pip install platformio
           sed -i "s/-DBRUCE_VERSION=/-DBRUCE_VERSION='\"${{ env.VERSION_NAME }}\"' ; /g" ./platformio.ini
           GIT_HASH=$(git describe --always --dirty)
           sed -i "s|-DGIT_COMMIT_HASH='\"Homebrew\"'|!echo '-DGIT_COMMIT_HASH=\\\\\\\\\"${GIT_HASH}\\\\\\\\\"'|g" ./platformio.ini
+
       - name: Run Compile for selected environment
         run: |
           echo "Building environment: ${{ env.SELECTED_ENV }}"
           platformio run -e "${{ env.SELECTED_ENV }}"
+
       - name: Save PIO Build Cache
         uses: actions/cache/save@v4
         with:
@@ -320,6 +495,7 @@ jobs:
           echo "   Git Hash: $(git describe --always)"
           echo "=========================================="
           ls -la Bruce-*.* 2>/dev/null || echo "No Bruce files found"
+
   skip-build:
     name: Skip Build (No PRs Merged)
     runs-on: ubuntu-latest
