@@ -66,11 +66,15 @@ char strAddl[200];
 void ble_info(const String &name, const String &address, const String &signal) {
     drawMainBorder();
     tft.setTextColor(bruceConfig.priColor);
-    tft.drawCentreString("-=Information=-", tftWidth / 2, 28, SMOOTH_FONT);
-    tft.drawString("Name: " + name, 10, 48);
-    tft.drawString("Adresse: " + address, 10, 66);
-    tft.drawString("Signal: " + String(signal) + " dBm", 10, 84);
-    tft.drawCentreString("   Press " + String(BTN_ALIAS) + " to act", tftWidth / 2, tftHeight - 20, 1);
+    int rowStep = LH * FP + 10;
+    int row1Y = BORDER_PAD_Y + FM * LH + 4;
+    tft.drawCentreString("-=Information=-", tftWidth / 2, BORDER_PAD_Y, SMOOTH_FONT);
+    tft.drawString("Name: " + name, BORDER_PAD_X, row1Y);
+    tft.drawString("Adresse: " + address, BORDER_PAD_X, row1Y + rowStep);
+    tft.drawString("Signal: " + String(signal) + " dBm", BORDER_PAD_X, row1Y + 2 * rowStep);
+    tft.drawCentreString(
+        "   Press " + String(BTN_ALIAS) + " to act", tftWidth / 2, tftHeight - BORDER_PAD_X - LH * FP, 1
+    );
 
     delay(300);
     while (!check(SelPress)) {
@@ -174,6 +178,60 @@ bool ble_scan_setup() {
     return true;
 }
 
+String resolveBleDeviceName(const NimBLEAdvertisedDevice *dev) {
+    if (!dev) return "";
+
+    String name = dev->getName().c_str();
+    if (!name.isEmpty() && name != "(null)" && name != "null" && name != "NULL" && name != "<no name>") {
+        return name;
+    }
+
+#if !defined(LITE_VERSION)
+    if (dev->haveServiceData()) {
+        std::string serviceData = dev->getServiceData(NimBLEUUID((uint16_t)0xFE2C));
+        if (serviceData.length() >= 3) {
+            uint32_t modelId =
+                ((uint8_t)serviceData[0] << 16) | ((uint8_t)serviceData[1] << 8) | (uint8_t)serviceData[2];
+            for (size_t i = 0; fastpair_models[i].name != nullptr; i++) {
+                if (fastpair_models[i].modelId == modelId) {
+                    return String(fastpair_models[i].name);
+                }
+            }
+            char modelBuf[32];
+            snprintf(modelBuf, sizeof(modelBuf), "FastPair 0x%06X", (unsigned int)modelId);
+            return String(modelBuf);
+        }
+    }
+#endif
+
+    if (dev->haveManufacturerData()) {
+        std::string manuf = dev->getManufacturerData();
+        if (manuf.length() >= 2) {
+            uint16_t company = (uint8_t)manuf[0] | ((uint8_t)manuf[1] << 8);
+            if (company == 0x004C) {
+                if (manuf.length() >= 3) {
+                    uint8_t type = (uint8_t)manuf[2];
+                    if (type == 0x07) return "Apple AirPods/Audio";
+                    if (type == 0x10) return "Apple AirTag/Nearby";
+                    if (type == 0x0F) return "Apple Device";
+                    if (type == 0x05) return "Apple AirDrop";
+                }
+                return "Apple Device";
+            } else if (company == 0x0075) {
+                if (manuf.length() >= 4) {
+                    if ((uint8_t)manuf[2] == 0x42 && (uint8_t)manuf[3] == 0x09) return "Samsung Galaxy Buds";
+                    if ((uint8_t)manuf[2] == 0x01 && (uint8_t)manuf[3] == 0x00) return "Samsung Galaxy Watch";
+                }
+                return "Samsung Galaxy Device";
+            } else if (company == 0x0006) {
+                return "Microsoft Device";
+            }
+        }
+    }
+
+    return "";
+}
+
 void ble_scan() {
     displayTextLine("Scanning..");
 
@@ -208,7 +266,7 @@ void ble_scan() {
             String bt_address;
             String bt_signal;
 
-            bt_name = advertisedDevice->getName().c_str();
+            bt_name = resolveBleDeviceName(advertisedDevice);
             bt_address = advertisedDevice->getAddress().toString().c_str();
             bt_signal = String(advertisedDevice->getRSSI());
 
@@ -294,7 +352,12 @@ void disPlayBLESend() {
     uint8_t senddata[2] = {0};
     tft.fillScreen(bruceConfig.bgColor);
     drawMainBorder();
-    tft.setTextSize(1);
+    tft.setTextSize(FP);
+    int contentY = STATUS_BAR_HEIGHT - 4;
+    int contentH = tftHeight - contentY - 10;
+    int textX = BORDER_PAD_X + 2;
+    int rowStep = FM * LH + 9;
+    int row1Y = contentY + FM * LH + 8;
 
     if (!pServer) {
         if (!initBLEServer()) {
@@ -315,16 +378,16 @@ void disPlayBLESend() {
     while (!check(EscPress)) {
         if (deviceConnected) {
             if (!wasConnected) {
-                tft.fillRect(10, 26, tftWidth - 20, tftHeight - 36, TFT_BLACK);
-                drawBLE_beacon(180, 28, TFT_BLUE);
+                tft.fillRect(BORDER_PAD_X, contentY, tftWidth - 2 * BORDER_PAD_X, contentH, TFT_BLACK);
+                drawBLE_beacon(180, contentY + 2, TFT_BLUE);
                 tft.setTextColor(bruceConfig.priColor, bruceConfig.bgColor);
                 tft.setTextSize(FM);
-                tft.setCursor(12, 50);
+                tft.setCursor(textX, row1Y);
                 tft.printf("BLE Send\n");
                 tft.setTextSize(FM);
             }
-            tft.fillRect(10, 100, tftWidth - 20, 28, TFT_BLACK);
-            tft.setCursor(12, 100);
+            tft.fillRect(BORDER_PAD_X, row1Y + 2 * rowStep, tftWidth - 2 * BORDER_PAD_X, LH * FM + 12, TFT_BLACK);
+            tft.setCursor(textX, row1Y + 2 * rowStep);
             if (senddata[0] % 4 == 0) {
                 tft.printf("0x%02X>    ", senddata[0]);
             } else if (senddata[0] % 4 == 1) {
@@ -346,16 +409,16 @@ void disPlayBLESend() {
         } else {
             if (wasConnected or first_run) {
                 first_run = false;
-                tft.fillRect(10, 26, tftWidth - 20, tftHeight - 36, TFT_BLACK);
+                tft.fillRect(BORDER_PAD_X, contentY, tftWidth - 2 * BORDER_PAD_X, contentH, TFT_BLACK);
                 tft.setTextSize(FM);
-                tft.setCursor(12, 50);
+                tft.setCursor(textX, row1Y);
                 tft.setTextColor(TFT_RED);
                 tft.printf("BLE disconnect\n");
-                tft.setCursor(12, 75);
+                tft.setCursor(textX, row1Y + rowStep);
                 tft.setTextColor(tft.color565(18, 150, 219));
 
                 tft.printf(String("Name:" + blename + "\n").c_str());
-                tft.setCursor(12, 100);
+                tft.setCursor(textX, row1Y + 2 * rowStep);
                 tft.printf("UUID:1bc68b2a\n");
                 drawBLE_beacon(180, 40, TFT_DARKGREY);
             }
