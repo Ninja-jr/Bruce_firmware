@@ -1,3 +1,17 @@
+/*
+ * BLE Suite v4.0 - Complete BLE attack and analysis toolkit
+ * Author: Ninja-jr
+ * Version: 4.0
+ * Last Updated: 07/09/2026
+ *
+ * Contains: Smart device recon, connection caching, graduated connection
+ *           strategies, robust GATT client, device fingerprinting,
+ *           attack orchestration with rollback, BLE mirage/spoofing,
+ *           attack scheduler, attack logging with JSON export,
+ *           vulnerability scanning, HID attacks, FastPair exploits,
+ *           HFP attacks, Audio attacks, DuckyScript injection,
+ *           BLE Sniffer, Samsung detection, and expanded model database.
+ */
 #ifndef BLE_SUITE_H
 #define BLE_SUITE_H
 #if !defined(LITE_VERSION)
@@ -68,6 +82,7 @@ typedef FastPairProtocolVersion FastPairVersion;
 
 struct DeviceInfo {
     String address;
+    uint8_t addressType = BLE_ADDR_PUBLIC;
     String name;
     int rssi;
     bool hasFastPair;
@@ -81,6 +96,7 @@ struct DeviceSnapshot {
     uint32_t timestamp;
     std::vector<String> names;
     std::vector<String> addresses;
+    std::vector<uint8_t> addressTypes;
     std::vector<int> rssi;
     std::vector<bool> fastPair;
     std::vector<bool> hfp;
@@ -171,6 +187,7 @@ struct AttackLogEntry {
 
 struct SelectedDevice {
     String address;
+    uint8_t addressType = BLE_ADDR_PUBLIC;
     String name;
     int rssi;
     bool hasFastPair;
@@ -185,6 +202,7 @@ struct SelectedDevice {
 struct ScannerData {
     std::vector<String> deviceNames;
     std::vector<String> deviceAddresses;
+    std::vector<uint8_t> deviceAddressTypes;
     std::vector<int> deviceRssi;
     std::vector<bool> deviceFastPair;
     std::vector<bool> deviceHasHFP;
@@ -199,7 +217,7 @@ struct ScannerData {
     ScannerData();
     ~ScannerData();
     void
-    addDevice(const String &name, const String &address, int rssi, bool fastPair, bool hasHFP, uint8_t type);
+    addDevice(const String &name, const String &address, int rssi, bool fastPair, bool hasHFP, uint8_t type, uint8_t addrType = BLE_ADDR_PUBLIC);
     void clear();
     size_t size();
     DeviceSnapshot *getSnapshot();
@@ -216,6 +234,8 @@ struct CharacteristicInfo {
 struct DeviceProfile {
     String address;
     bool connected;
+    int errorCode = 0;
+    String errorReason = "";
     bool hasFastPair;
     bool hasAVRCP;
     bool hasHID;
@@ -303,9 +323,9 @@ public:
 
 class BLEAttackManager {
 public:
-    void prepareForConnection();
+    void prepareForConnection(bool enableAuth = false);
     void cleanupAfterAttack();
-    bool connectToDevice(NimBLEAddress target, NimBLEClient **outClient, bool useExploitHandshake = false);
+    bool connectToDevice(NimBLEAddress target, NimBLEClient **outClient, bool useExploitHandshake = false, int *outError = nullptr);
     DeviceProfile profileDevice(NimBLEAddress target);
 };
 
@@ -721,6 +741,10 @@ void runAttackScheduler(NimBLEAddress target);
 
 void cleanupBLEStack();
 
+extern int g_lastBleError;
+extern int g_lastBleDisconnectReason;
+String getBleErrorDescription(int reason);
+
 NimBLEClient *attemptConnectionWithStrategies(NimBLEAddress target, String &connectionMethod);
 void BleSuiteMenu();
 void showAttackMenuWithTarget(NimBLEAddress target);
@@ -775,10 +799,11 @@ void executeAudioTest(int testIndex, NimBLEAddress target);
 void showAttackProgress(const char *message, uint16_t color = bruceConfig.priColor);
 void showAttackResult(bool success, const char *message = nullptr);
 bool confirmAttack(const char *targetName);
+bool performBleScan(const char *title = "SELECT TARGET");
 String selectTargetFromScan(const char *title);
 String selectMultipleTargetsFromScan(const char *title, std::vector<NimBLEAddress> &targets);
 String getScriptFromUser();
-NimBLEAddress parseAddress(const String &addressInfo);
+NimBLEAddress parseAddress(const String &addressInfo, uint8_t defaultType = 0xFF);
 bool requireSimpleConfirmation(const char *message);
 int8_t showAdaptiveMessage(
     const char *line1, const char *btn1, const char *btn2, const char *btn3, uint16_t color,
