@@ -45,8 +45,8 @@ bool check(int key);
 
 #define ACTIVE_SCAN_TIME 10
 #define PASSIVE_SCAN_TIME 8
-#define SCAN_INT 97
-#define SCAN_WINDOW 67
+
+// SCAN_INT and SCAN_WINDOW are defined in ble_common.h
 
 //=============================================================================
 // Enums
@@ -734,6 +734,12 @@ void runOrchestratedAttack(NimBLEAddress target);
 void runMirageAttack(NimBLEAddress target);
 void runDeviceFingerprinting(NimBLEAddress target);
 void runAttackScheduler(NimBLEAddress target);
+
+//=============================================================================
+// Device Name Resolution
+//=============================================================================
+
+String resolveBleDeviceName(const NimBLEAdvertisedDevice* device);
 
 //=============================================================================
 // Function Declarations
