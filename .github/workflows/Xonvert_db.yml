@@ -1,0 +1,74 @@
+name: Tag SSID Database
+
+on:
+  workflow_dispatch:
+    inputs:
+      branch:
+        description: 'Branch to run against (checkout + commit back)'
+        required: true
+        default: 'main'
+      input_file:
+        description: 'Path to raw SSID list in repo'
+        required: true
+        default: 'ssid_list_raw.txt'
+      output_file:
+        description: 'Path for tagged output'
+        required: true
+        default: 'ssid_list.txt'
+  push:
+    paths:
+      - 'ssid_list_raw.txt'
+      - 'tools/tag_ssids.py'
+
+permissions:
+  contents: write
+
+jobs:
+  tag:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Resolve branch
+        id: ref
+        run: |
+          # Manual dispatch: use the input branch.
+          # Push event: use the branch that was pushed.
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "branch=${{ github.event.inputs.branch }}" >> "$GITHUB_OUTPUT"
+          else
+            echo "branch=${{ github.ref_name }}" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ steps.ref.outputs.branch }}
+          token: ${{ secrets.SYNC_PAT }}
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Run tagger
+        run: |
+          python3 tools/tag_ssids.py \
+            "${{ github.event.inputs.input_file || 'ssid_list_raw.txt' }}" \
+            "${{ github.event.inputs.output_file || 'ssid_list.txt' }}"
+
+      - name: Commit tagged file
+        run: |
+          git config user.name  "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          OUT="${{ github.event.inputs.output_file || 'ssid_list.txt' }}"
+          if [ -f "$OUT" ]; then
+            git add "$OUT"
+            if git diff --cached --quiet; then
+              echo "No changes to commit."
+            else
+              git commit -m "chore: regenerate region-tagged SSID database"
+              git push origin "HEAD:${{ steps.ref.outputs.branch }}"
+            fi
+          else
+            echo "ERROR: $OUT was not produced" >&2
+            exit 1
+          fi
