@@ -44,6 +44,8 @@
 #include "../lilygo-t-display-s3-pro/pins_arduino.h"
 #elif TTGO
 #include "../lilygo-t-display-ttgo/pins_arduino.h"
+#elif LILYGO_T4
+#include "../lilygo-t4/pins_arduino.h"
 #elif MARAUDER_TOUCH
 #include "../marauder-touch/pins_arduino.h"
 #elif MARAUDER_MINI
@@ -56,8 +58,16 @@
 #include "../ESP32-C5-tft/pins_arduino.h"
 #elif ESP32C5_DEVKITC_1
 #include "../ESP32-C5/pins_arduino.h"
+#elif MADARA_BOARD
+#include "../S3_supermini_madara/pins_arduino.h"
+#elif WAVESHARE_C5_TFT
+#include "../waveshare-c5-tft/pins_arduino.h"
 #elif NM_CYD_ESP32C5
 #include "../nm-cyd-c5/pins_arduino.h"
+#elif LILKA_BOARD
+#include "../lilka/pins_arduino.h"
+#elif FREENOVE_FNK0103
+#include "../freenove-fnk0103/pins_arduino.h"
 #elif CONFIG_IDF_TARGET_ESP32P4
 #include "../m5stack-tab5/pins_arduino.h"
 #endif
