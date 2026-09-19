@@ -920,10 +920,7 @@ void beaconAttack() {
                 if (fs != nullptr) beaconFile = loopSD(*fs, true, "TXT");
                 else return;
                 file = fs->open(beaconFile, FILE_READ);
-                if (file) {
-                    beaconFile = file.readString();
-                    file.close();
-                }
+                beaconFile = file.readString();
                 beaconFile.replace("\r\n", "\n");
                 tft.drawPixel(0, 0, 0);
                 drawMainBorderWithTitle("WiFi: Beacon SPAM");
@@ -935,6 +932,7 @@ void beaconAttack() {
         }
 #endif
         if (check(EscPress) || returnToMenu) {
+            if (BeaconMode == 3) file.close();
             break;
         }
     }
