@@ -11,12 +11,12 @@ on:
       version_name:
         description: 'Version name (Ninja-Jr 1.0, Ninja-Jr dev, etc)'
         required: true
-        default: 'Ninja-Jr dev'
+        default: 'Ninja-Jr'
         type: string
       append_hash:
         description: 'Append short commit hash to version'
         required: false
-        default: false
+        default: true
         type: boolean
 
 jobs:
