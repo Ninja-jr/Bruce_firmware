@@ -13,6 +13,11 @@ on:
         required: true
         default: 'Ninja-Jr dev'
         type: string
+      append_hash:
+        description: 'Append short commit hash to version'
+        required: false
+        default: false
+        type: boolean
 
 jobs:
   compile_sketch:
@@ -27,6 +32,18 @@ jobs:
         uses: actions/checkout@v4
         with:
           ref: ${{ github.event.inputs.target_branch }}
+
+      - name: Resolve version string
+        id: version
+        run: |
+          GIT_HASH=$(git rev-parse --short HEAD)
+          if [ "${{ github.event.inputs.append_hash }}" = "true" ]; then
+            VERSION="${{ github.event.inputs.version_name }} (${GIT_HASH})"
+          else
+            VERSION="${{ github.event.inputs.version_name }}"
+          fi
+          echo "resolved=${VERSION}" >> "$GITHUB_OUTPUT"
+          echo "Final version: ${VERSION}"
 
       - name: Setup Python
         uses: actions/setup-python@v5
@@ -68,8 +85,8 @@ jobs:
       - name: Install PlatformIO and configure version
         run: |
           pip install platformio
-          sed -i "s/-DBRUCE_VERSION=/-DBRUCE_VERSION='\"${{ github.event.inputs.version_name }}\"' ; /g" ./platformio.ini
-          GIT_HASH=$(git describe --always --dirty)
+          sed -i "s/-DBRUCE_VERSION=/-DBRUCE_VERSION='\"${{ steps.version.outputs.resolved }}\"' ; /g" ./platformio.ini
+          GIT_HASH=$(git rev-parse --short HEAD)
           sed -i "s|-DGIT_COMMIT_HASH='\"Homebrew\"'|!echo '-DGIT_COMMIT_HASH=\\\\\\\\\"${GIT_HASH}\\\\\\\\\"'|g" ./platformio.ini
 
       - name: Compile for m5stack-cardputer
@@ -85,7 +102,7 @@ jobs:
       - name: Upload Binary Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: Bruce-${{ env.BOARD_ENV }}-${{ github.event.inputs.version_name }}
+          name: Bruce-${{ env.BOARD_ENV }}-${{ steps.version.outputs.resolved }}
           path: |
             Bruce-*.bin
             Bruce-*.elf
@@ -97,6 +114,6 @@ jobs:
         run: |
           echo "Build completed successfully!"
           echo "Environment: ${{ env.BOARD_ENV }}"
-          echo "Version: ${{ github.event.inputs.version_name }}"
-          echo "Git Hash: $(git describe --always --dirty)"
+          echo "Version: ${{ steps.version.outputs.resolved }}"
+          echo "Git Hash: $(git rev-parse --short HEAD)"
           ls -la Bruce-*.* 2>/dev/null || echo "No Bruce files found"
