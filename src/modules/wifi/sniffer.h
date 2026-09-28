@@ -1,5 +1,4 @@
 #pragma once
-#if !defined(LITE_VERSION)
 #include <Arduino.h>
 #include <FS.h>
 #include <SD.h>
