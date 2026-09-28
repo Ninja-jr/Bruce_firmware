@@ -1722,4 +1722,3 @@ void setHandshakeSniffer() {
     esp_wifi_set_promiscuous_rx_cb(NULL);
     esp_wifi_set_promiscuous_rx_cb(sniffer);
 }
-#endif
