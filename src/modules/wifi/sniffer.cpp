@@ -4,7 +4,7 @@
               github.com/spacehuhn
   ===========================================
 */
-#if !defined(LITE_VERSION)
+
 #include "sniffer.h"
 /* include all necessary libraries */
 #include "esp_wifi.h"
