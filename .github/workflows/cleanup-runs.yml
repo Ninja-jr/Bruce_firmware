@@ -1,0 +1,184 @@
+name: Cleanup Workflow Runs
+
+on:
+  workflow_dispatch:
+    inputs:
+      keep_count:
+        description: 'Number of most recent runs to keep per workflow (0 = delete all)'
+        required: true
+        default: '0'
+        type: string
+      status_filter:
+        description: 'Only delete runs with this status (completed, failure, cancelled, success, or "all")'
+        required: true
+        default: 'all'
+        type: string
+      workflow_name:
+        description: 'Only delete runs from this workflow file (e.g. build.yml), or "all"'
+        required: true
+        default: 'all'
+        type: string
+      max_age_days:
+        description: 'Only delete runs older than this many days (0 = no age limit)'
+        required: true
+        default: '0'
+        type: string
+      dry_run:
+        description: 'Dry run (only list, do not delete)'
+        required: true
+        default: true
+        type: boolean
+
+permissions:
+  actions: write
+  contents: read
+
+jobs:
+  cleanup:
+    name: Delete workflow runs
+    runs-on: ubuntu-latest
+    env:
+      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
+    steps:
+      - name: Cleanup runs
+        env:
+          GH_TOKEN: ${{ secrets.SYNC_PAT }}
+          REPO: ${{ github.repository }}
+          KEEP_COUNT: ${{ github.event.inputs.keep_count }}
+          STATUS_FILTER: ${{ github.event.inputs.status_filter }}
+          WORKFLOW_NAME: ${{ github.event.inputs.workflow_name }}
+          MAX_AGE_DAYS: ${{ github.event.inputs.max_age_days }}
+          DRY_RUN: ${{ github.event.inputs.dry_run }}
+        run: |
+          set -euo pipefail
+
+          echo "=========================================="
+          echo "Cleanup Configuration"
+          echo "=========================================="
+          echo "Repository:      $REPO"
+          echo "Keep count:      $KEEP_COUNT per workflow"
+          echo "Status filter:   $STATUS_FILTER"
+          echo "Workflow filter: $WORKFLOW_NAME"
+          echo "Max age (days):  $MAX_AGE_DAYS"
+          echo "Dry run:         $DRY_RUN"
+          echo "=========================================="
+
+          # Install gh CLI if missing
+          if ! command -v gh &> /dev/null; then
+            echo "Installing gh CLI..."
+            type -p curl >/dev/null || sudo apt install curl -y
+            curl -fsSL https://cli.github.com/packages/githubcli-archive-keyring.gpg | sudo dd of=/usr/share/keyrings/githubcli-archive-keyring.gpg
+            sudo chmod go+r /usr/share/keyrings/githubcli-archive-keyring.gpg
+            echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/githubcli-archive-keyring.gpg] https://cli.github.com/packages stable main" | sudo tee /etc/apt/sources.list.d/github-cli.list > /dev/null
+            sudo apt update
+            sudo apt install gh -y
+          fi
+
+          CUTOFF_DATE=""
+          if [ "$MAX_AGE_DAYS" -gt 0 ]; then
+            CUTOFF_DATE=$(date -u -d "$MAX_AGE_DAYS days ago" +%Y-%m-%dT%H:%M:%SZ)
+            echo "Cutoff date: $CUTOFF_DATE"
+          fi
+
+          # Get list of workflows to process
+          if [ "$WORKFLOW_NAME" = "all" ]; then
+            WORKFLOWS=$(gh workflow list --all --json path --jq '.[].path' -R "$REPO")
+          else
+            WORKFLOWS="$WORKFLOW_NAME"
+          fi
+
+          TOTAL_DELETED=0
+          TOTAL_SKIPPED=0
+
+          for WF in $WORKFLOWS; do
+            WF_BASENAME=$(basename "$WF")
+            echo ""
+            echo "=========================================="
+            echo "Processing workflow: $WF_BASENAME"
+            echo "=========================================="
+
+            # Build API query params
+            PARAMS="per_page=100"
+            if [ "$STATUS_FILTER" != "all" ]; then
+              PARAMS="$PARAMS&status=$STATUS_FILTER"
+            fi
+
+            # Fetch runs (paginated manually since we just want to delete them)
+            PAGE=1
+            WF_DELETED=0
+            WF_SKIPPED=0
+            RUN_INDEX=0
+
+            while true; do
+              RESPONSE=$(gh api "repos/$REPO/actions/workflows/$WF_BASENAME/runs?$PARAMS&page=$PAGE" --paginate 2>/dev/null || echo "")
+
+              if [ -z "$RESPONSE" ]; then
+                break
+              fi
+
+              # Parse run IDs and creation dates from the JSON
+              RUNS=$(echo "$RESPONSE" | jq -r '.workflow_runs[] | "\(.id)|\(.created_at)"')
+
+              if [ -z "$RUNS" ]; then
+                break
+              fi
+
+              PAGE_COUNT=0
+              while IFS='|' read -r RUN_ID RUN_DATE; do
+                [ -z "$RUN_ID" ] && continue
+                PAGE_COUNT=$((PAGE_COUNT + 1))
+                RUN_INDEX=$((RUN_INDEX + 1))
+
+                # Skip the first KEEP_COUNT runs
+                if [ "$RUN_INDEX" -le "$KEEP_COUNT" ]; then
+                  WF_SKIPPED=$((WF_SKIPPED + 1))
+                  continue
+                fi
+
+                # Age filter
+                if [ -n "$CUTOFF_DATE" ]; then
+                  if [[ "$RUN_DATE" > "$CUTOFF_DATE" ]]; then
+                    WF_SKIPPED=$((WF_SKIPPED + 1))
+                    continue
+                  fi
+                fi
+
+                if [ "$DRY_RUN" = "true" ]; then
+                  echo "[DRY RUN] Would delete run $RUN_ID (created $RUN_DATE)"
+                else
+                  if gh api -X DELETE "repos/$REPO/actions/runs/$RUN_ID" 2>/dev/null; then
+                    WF_DELETED=$((WF_DELETED + 1))
+                    if [ $((WF_DELETED % 50)) -eq 0 ]; then
+                      echo "  Deleted $WF_DELETED runs from $WF_BASENAME..."
+                    fi
+                  else
+                    echo "  Failed to delete run $RUN_ID"
+                  fi
+                fi
+
+                # Rate limit protection
+                sleep 0.1
+              done <<< "$RUNS"
+
+              if [ "$PAGE_COUNT" -lt 100 ]; then
+                break
+              fi
+              PAGE=$((PAGE + 1))
+            done
+
+            echo "Workflow $WF_BASENAME: deleted=$WF_DELETED, skipped=$WF_SKIPPED"
+            TOTAL_DELETED=$((TOTAL_DELETED + WF_DELETED))
+            TOTAL_SKIPPED=$((TOTAL_SKIPPED + WF_SKIPPED))
+          done
+
+          echo ""
+          echo "=========================================="
+          echo "Summary"
+          echo "=========================================="
+          if [ "$DRY_RUN" = "true" ]; then
+            echo "DRY RUN - no runs were actually deleted"
+          fi
+          echo "Total deleted: $TOTAL_DELETED"
+          echo "Total skipped: $TOTAL_SKIPPED"
+          echo "=========================================="
