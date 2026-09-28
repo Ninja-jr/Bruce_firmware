@@ -4,6 +4,7 @@
               github.com/spacehuhn
   ===========================================
 */
+#if !defined(LITE_VERSION)
 #include "sniffer.h"
 /* include all necessary libraries */
 #include "esp_wifi.h"
@@ -29,9 +30,9 @@
 #include "core/display.h"
 #include "core/mykeyboard.h"
 #include "core/sd_functions.h"
+#include "core/wifi/webInterface.h"
 #include "core/wifi/wifi_common.h"
 #include <Arduino.h>
-#include <TimeLib.h>
 #include <globals.h>
 #if defined(ESP32)
 #include "FS.h"
@@ -91,6 +92,59 @@ const size_t SNIFFER_QUEUE_DEPTH = 48;
 std::set<uint64_t> handshakeReadyBssids;
 portMUX_TYPE handshakeReadyMux = portMUX_INITIALIZER_UNLOCKED;
 std::set<uint64_t> handshakeBeaconLogged;
+std::map<uint64_t, HandshakeTracker> perApHandshakeTracker;
+
+// --- Observed clients per AP (powers the Client Scanner census) ---
+// apKey -> (clientKey -> info). Updated for data frames in analyzeFrame().
+// Bounded per AP and globally; stalest entry evicted on overflow.
+struct ClientInfo {
+    uint8_t mac[6] = {0, 0, 0, 0, 0, 0};
+    uint8_t ip[4] = {0, 0, 0, 0}; // last IP seen with this MAC (0.0.0.0 = unknown)
+    uint32_t frames = 0;
+    uint32_t lastSeen = 0;
+};
+static std::map<uint64_t, std::map<uint64_t, ClientInfo>> apClients;
+static constexpr size_t MAX_CLIENTS_PER_AP = 24;
+static constexpr size_t MAX_TRACKED_APS = 48;
+// First channel each AP key was heard on (lets callers target APs whose
+// beacon was never decoded).
+static std::map<uint64_t, uint8_t> apFirstChannel;
+
+// --- 4-way handshake frame buffer ---
+// Buffer M1, M2, and M3 in memory; flush all 4 frames when M4 arrives.
+constexpr size_t EAPOL_BUF_SIZE = 256;
+struct EapolFrame {
+    uint8_t data[EAPOL_BUF_SIZE] = {0};
+    uint16_t len = 0;
+    uint32_t timestamp_sec = 0;
+    uint32_t timestamp_usec = 0;
+};
+struct Eapol4WayBuffer {
+    EapolFrame m1;
+    EapolFrame m2;
+    EapolFrame m3;
+};
+std::map<uint64_t, Eapol4WayBuffer> eapol4WayBuffer;
+
+// --- Raw beacon cache (per AP) ---
+// Keeps the last beacon frame seen for an AP so it can be written as the
+// FIRST record of a handshake pcap (before M1..M4). wifi_recover.cpp's
+// parser stops reading once it has M2+M3, so a beacon appended only after
+// the handshake completes would never be seen; writing it up front fixes
+// that without needing a live beacon after the handshake.
+constexpr size_t BEACON_BUF_SIZE = 512;
+// Cap on how many APs we keep raw beacons for at once. At ~570 B/entry this
+// bounds the cache to ~36 KB even in very dense environments (hundreds of
+// networks). Stale entries are also pruned by time in cleanupStaleBeacons();
+// this cap only guards against bursts of many simultaneously-active APs.
+constexpr size_t MAX_BEACON_CACHE = 64;
+struct BeaconFrame {
+    uint8_t data[BEACON_BUF_SIZE] = {0};
+    uint16_t len = 0;
+    uint32_t timestamp_sec = 0;
+    uint32_t timestamp_usec = 0;
+};
+std::map<uint64_t, BeaconFrame> beaconRawCache;
 
 // --- New globals for beacon last-seen tracking & cleanup ---
 std::map<uint64_t, uint32_t> beaconLastSeen; // key = macToKey(mac) -> last seen millis()
@@ -156,6 +210,12 @@ static bool deauthCaptureEnabled();
 static FrameInfo analyzeFrame(wifi_promiscuous_pkt_t *pkt);
 static String resolveSsidForFrame(FrameInfo &info, const wifi_promiscuous_pkt_t *packet);
 static void registerBeacon(const uint8_t *apAddr);
+static void observeClient(uint64_t apKey, const uint8_t client[6], const uint8_t ip[4], uint8_t channel);
+// Parse the client IP out of a data frame (ARP or IPv4 over LLC/SNAP).
+// Returns true and fills ipOut when an address belonging to client was found.
+static bool parseClientIp(
+    const uint8_t *frame, uint16_t len, const uint8_t client[6], uint8_t ipOut[4]
+);
 
 // --- New helper prototypes ---
 static void cleanupStaleBeacons();
@@ -179,6 +239,13 @@ const uint16_t DEAUTH_BG = TFT_BLACK; // background color used to clear the text
 // Thank you 7h30th3r0n3 for helping me solve this issue! and for sharing your EAPOL/Handshake sniffer
 // please, give stars to his project: https://github.com/7h30th3r0n3/Evil-M5Core2/
 
+static bool isQosDataFrame(const uint8_t *payload) {
+    const uint8_t frameControl = payload[0];
+    const bool isData = (frameControl & 0x0C) == 0x08;
+    const bool hasQosSubtype = (frameControl & 0x80) != 0;
+    return isData && hasQosSubtype;
+}
+
 // Handshake detection
 bool isItEAPOL(const wifi_promiscuous_pkt_t *packet) {
     const uint8_t *payload = packet->payload;
@@ -197,8 +264,8 @@ bool isItEAPOL(const wifi_promiscuous_pkt_t *packet) {
     }
 
     // handle QoS tagging which shifts the start of the LLC/SNAP headers by 2 bytes
-    // check if the frame control field's subtype indicates a QoS data subtype (0x08)
-    if ((payload[0] & 0x0F) == 0x08) {
+    // QoS data subtypes have the data type bits and subtype bit 3 set.
+    if (isQosDataFrame(payload)) {
         // Adjust for the QoS Control field and recheck for LLC/SNAP header
         if (payload[26] == 0xAA && payload[27] == 0xAA && payload[28] == 0x03 && payload[29] == 0x00 &&
             payload[30] == 0x00 && payload[31] == 0x00 && payload[32] == 0x88 && payload[33] == 0x8E) {
@@ -211,15 +278,13 @@ bool isItEAPOL(const wifi_promiscuous_pkt_t *packet) {
 
 HandshakeTracker hsTracker;
 
-bool handshakeUsable(const HandshakeTracker &hs) { // EAPOL Messages needed: 1+2 or 3+4
-    return (hs.msg1 && hs.msg2) || (hs.msg3 && hs.msg4);
-}
+bool handshakeUsable(const HandshakeTracker &hs) { return hs.msg1 && hs.msg2 && hs.msg3 && hs.msg4; }
 
 // Analyze the EAPOL Message Number
 int classifyEapolMessage(const wifi_promiscuous_pkt_t *pkt) {
     const uint8_t *payload = pkt->payload;
     // QoS frames add 2 bytes to MAC header
-    int qosOffset = ((payload[0] & 0x0F) == 0x08) ? 2 : 0;
+    int qosOffset = isQosDataFrame(payload) ? 2 : 0;
 
     // Offset to Key Information field:
     // MAC header (24 + qosOffset) + LLC/SNAP (8) + EAPOL header (4) + Descriptor Type (1)
@@ -262,10 +327,9 @@ typedef struct pcaprec_hdr_s {
 } pcaprec_hdr_t;
 
 void saveHandshake(const wifi_promiscuous_pkt_t *packet, bool beacon, FS &Fs, const char *ssidLabel) {
-    // Construire le nom du fichier en utilisant les adresses MAC de l'AP et du client
-    const uint8_t *addr1 = packet->payload + 4;  // Adresse du destinataire (Adresse 1)
-    const uint8_t *addr2 = packet->payload + 10; // Adresse de l'expéditeur (Adresse 2)
-    const uint8_t *bssid = packet->payload + 16; // Adresse BSSID (Adresse 3)
+    const uint8_t *addr1 = packet->payload + 4;
+    const uint8_t *addr2 = packet->payload + 10;
+    const uint8_t *bssid = packet->payload + 16;
     const uint8_t *apAddr;
 
     if (memcmp(addr1, bssid, 6) == 0) {
@@ -274,53 +338,141 @@ void saveHandshake(const wifi_promiscuous_pkt_t *packet, bool beacon, FS &Fs, co
         apAddr = addr2;
     }
 
+    uint64_t apKey = macToKey(apAddr);
     String sanitizedSsid = sanitizeSsid(ssidLabel);
     String filePath = buildHandshakePath(apAddr, sanitizedSsid.c_str());
-
-    // Vérifier si le fichier existe déjà
     bool fichierExiste = handshakeFileExists(filePath);
 
-    // Si probe est true et que le fichier n'existe pas, ignorer l'enregistrement
-    if (beacon && !fichierExiste) { return; }
+    // Beacon: only save if handshake file already exists (handshake was captured)
+    if (beacon) {
+        if (!fichierExiste) { return; }
+        uint64_t beaconKey = apKey;
+        if (handshakeBeaconRecorded(beaconKey)) { return; }
+        registerHandshakeBeacon(beaconKey);
 
-    // Ouvrir le fichier en mode ajout si existant sinon en mode écriture
-    File fichierPcap = Fs.open(
-        filePath, fichierExiste ? FILE_APPEND : FILE_WRITE
-    ); // if the file already exists in the new session, will overwrite it
-    if (!fichierPcap) {
-        Serial.println("Fail creating the EAPOL/Handshake PCAP file");
+        File f = Fs.open(filePath, FILE_APPEND);
+        if (!f) { return; }
+        pcaprec_hdr_t hdr;
+        hdr.ts_sec = packet->rx_ctrl.timestamp / 1000000;
+        hdr.ts_usec = packet->rx_ctrl.timestamp % 1000000;
+        hdr.incl_len = packet->rx_ctrl.sig_len;
+        hdr.orig_len = packet->rx_ctrl.sig_len;
+        f.write((const byte *)&hdr, sizeof(pcaprec_hdr_t));
+        f.write(packet->payload, packet->rx_ctrl.sig_len);
+        f.close();
         return;
     }
 
-    if (!beacon && !fichierExiste) {
-        // Serial.println("New EAPOL/Handshake PCAP file, writing header");
-        registerHandshakeRecord(filePath);
-        num_HS++;
-        writeHeader(fichierPcap);
-        markHandshakeReady(macToKey(apAddr));
+    // --- EAPOL frame handling (require M1+M2+M3+M4) ---
+    int eapolMsg = classifyEapolMessage(packet);
+    if (eapolMsg < 1 || eapolMsg > 4) { return; }
+
+    auto &tracker = perApHandshakeTracker[apKey];
+    auto &buf = eapol4WayBuffer[apKey];
+    uint16_t dataLen = std::min<uint16_t>(packet->rx_ctrl.sig_len, EAPOL_BUF_SIZE);
+
+    // M1: buffer — don't write to file yet
+    if (eapolMsg == 1) {
+        if (tracker.msg1) { return; }
+        tracker.msg1 = true;
+        memcpy(buf.m1.data, packet->payload, dataLen);
+        buf.m1.len = dataLen;
+        buf.m1.timestamp_sec = packet->rx_ctrl.timestamp / 1000000;
+        buf.m1.timestamp_usec = packet->rx_ctrl.timestamp % 1000000;
+        return;
     }
-    if (beacon && fichierExiste) {
-        uint64_t beaconKey = macToKey(apAddr);
-        if (handshakeBeaconRecorded(beaconKey)) {
-            fichierPcap.close();
+
+    // M2: buffer — don't write to file yet
+    if (eapolMsg == 2) {
+        if (!tracker.msg1 || tracker.msg2) { return; }
+        tracker.msg2 = true;
+        memcpy(buf.m2.data, packet->payload, dataLen);
+        buf.m2.len = dataLen;
+        buf.m2.timestamp_sec = packet->rx_ctrl.timestamp / 1000000;
+        buf.m2.timestamp_usec = packet->rx_ctrl.timestamp % 1000000;
+        return;
+    }
+
+    // M3: buffer — don't write to file yet
+    if (eapolMsg == 3) {
+        if (!tracker.msg2 || tracker.msg3) { return; }
+        tracker.msg3 = true;
+        memcpy(buf.m3.data, packet->payload, dataLen);
+        buf.m3.len = dataLen;
+        buf.m3.timestamp_sec = packet->rx_ctrl.timestamp / 1000000;
+        buf.m3.timestamp_usec = packet->rx_ctrl.timestamp % 1000000;
+        return;
+    }
+
+    // M4: flush all 4 frames to file, mark handshake valid
+    if (eapolMsg == 4) {
+        if (!tracker.msg3 || tracker.msg4) { return; }
+        tracker.msg4 = true;
+
+        if (!Fs.exists("/BrucePCAP")) { Fs.mkdir("/BrucePCAP"); }
+        if (!Fs.exists("/BrucePCAP/handshakes")) { Fs.mkdir("/BrucePCAP/handshakes"); }
+
+        registerHandshakeRecord(filePath);
+
+        File f = Fs.open(filePath, FILE_APPEND);
+        if (!f) {
+            eapol4WayBuffer.erase(apKey);
             return;
         }
-        registerHandshakeBeacon(beaconKey);
-    }
 
-    // Écrire l'en-tête du paquet et le paquet lui-même dans le fichier
-    pcaprec_hdr_t pcap_packet_header;
-    pcap_packet_header.ts_sec = packet->rx_ctrl.timestamp / 1000000;
-    pcap_packet_header.ts_usec = packet->rx_ctrl.timestamp % 1000000;
-    pcap_packet_header.incl_len = packet->rx_ctrl.sig_len;
-    pcap_packet_header.orig_len = packet->rx_ctrl.sig_len;
-    fichierPcap.write((const byte *)&pcap_packet_header, sizeof(pcaprec_hdr_t));
-    fichierPcap.write(packet->payload, packet->rx_ctrl.sig_len);
-    fichierPcap.close();
+        if (f.size() == 0) {
+            writeHeader(f);
+            // Write the last-seen beacon for this AP first, so the SSID is
+            // available to the cracker before it stops reading at M2+M3.
+            auto beaconIt = beaconRawCache.find(apKey);
+            if (beaconIt != beaconRawCache.end() && beaconIt->second.len > 0) {
+                pcaprec_hdr_t bhdr;
+                bhdr.ts_sec = beaconIt->second.timestamp_sec;
+                bhdr.ts_usec = beaconIt->second.timestamp_usec;
+                bhdr.incl_len = beaconIt->second.len;
+                bhdr.orig_len = beaconIt->second.len;
+                f.write((const byte *)&bhdr, sizeof(pcaprec_hdr_t));
+                f.write(beaconIt->second.data, beaconIt->second.len);
+                registerHandshakeBeacon(apKey);
+            }
+        }
+
+        pcaprec_hdr_t hdr;
+        auto writeFrame = [&](const EapolFrame &frame) {
+            hdr.ts_sec = frame.timestamp_sec;
+            hdr.ts_usec = frame.timestamp_usec;
+            hdr.incl_len = frame.len;
+            hdr.orig_len = frame.len;
+            f.write((const byte *)&hdr, sizeof(pcaprec_hdr_t));
+            f.write(frame.data, frame.len);
+        };
+
+        writeFrame(buf.m1);
+        writeFrame(buf.m2);
+        writeFrame(buf.m3);
+
+        uint16_t m4Len = dataLen;
+        hdr.ts_sec = packet->rx_ctrl.timestamp / 1000000;
+        hdr.ts_usec = packet->rx_ctrl.timestamp % 1000000;
+        hdr.incl_len = m4Len;
+        hdr.orig_len = m4Len;
+        f.write((const byte *)&hdr, sizeof(pcaprec_hdr_t));
+        f.write(packet->payload, m4Len);
+
+        f.close();
+        eapol4WayBuffer.erase(apKey);
+
+        if (handshakeReadyBssids.find(apKey) == handshakeReadyBssids.end()) { num_HS++; }
+        markHandshakeReady(apKey);
+        return;
+    }
 }
 
+// Returns "" when the SSID is unknown, so buildHandshakePath() falls back to
+// a MAC-based (per-AP unique) filename instead of bucketing every AP with an
+// unresolved SSID into the same file.
 static String sanitizeSsid(const char *ssid) {
-    if (!ssid || ssid[0] == '\0') { return "UNKNOWN"; }
+    if (!ssid || ssid[0] == '\0') { return ""; }
     String sanitized = "";
     for (size_t i = 0; ssid[i] != '\0' && i < MAX_CAPTURE_SSID_LEN; ++i) {
         const char c = ssid[i];
@@ -331,22 +483,26 @@ static String sanitizeSsid(const char *ssid) {
             sanitized += '_';
         }
     }
-    if (sanitized.length() == 0) { sanitized = "UNKNOWN"; }
     return sanitized;
 }
 
 static String macToHex(const uint8_t *mac) {
     char buffer[13] = {0};
-    sprintf(buffer, "%02X%02X%02X%02X%02X%02X", mac[0], mac[1], mac[2], mac[3], mac[4], mac[5]);
+    snprintf(
+        buffer, sizeof(buffer), "%02X%02X%02X%02X%02X%02X", mac[0], mac[1], mac[2], mac[3], mac[4], mac[5]
+    );
     return String(buffer);
 }
 
 static bool handshakeFileExists(const String &path) { return handshakeRecordExists(path); }
 
 static String buildHandshakePath(const uint8_t *mac, const char *ssid) {
-    String path = "/BrucePCAP/handshakes/HS_" + macToHex(mac);
+    // Always prefix with the MAC (unique per AP), then append the SSID when
+    // it's known: HS_{MAC}_{SSID}.pcap, or HS_{MAC}.pcap when unresolved.
+    String path = "/BrucePCAP/handshakes/HS_";
+    path += macToHex(mac);
     if (ssid && ssid[0] != '\0') {
-        path += "_";
+        path += '_';
         path += ssid;
     }
     path += ".pcap";
@@ -363,10 +519,110 @@ static bool shouldSaveBeaconForHandshake(const uint8_t *mac) {
     return ready;
 }
 
+static bool hasCompleteHandshake(uint64_t apKey) {
+    bool ready = false;
+    portENTER_CRITICAL(&handshakeReadyMux);
+    ready = handshakeReadyBssids.find(apKey) != handshakeReadyBssids.end();
+    portEXIT_CRITICAL(&handshakeReadyMux);
+    return ready;
+}
+
 void markHandshakeReady(uint64_t key) {
     portENTER_CRITICAL(&handshakeReadyMux);
     handshakeReadyBssids.insert(key);
     portEXIT_CRITICAL(&handshakeReadyMux);
+}
+
+bool sniffer_is_handshake_ready(uint64_t key) {
+    bool ready = false;
+    portENTER_CRITICAL(&handshakeReadyMux);
+    ready = handshakeReadyBssids.find(key) != handshakeReadyBssids.end();
+    portEXIT_CRITICAL(&handshakeReadyMux);
+    return ready;
+}
+
+bool handshakeCrackable(const HandshakeTracker &hs) {
+    return (hs.msg1 && hs.msg2) || (hs.msg2 && hs.msg3);
+}
+
+bool sniffer_is_handshake_crackable(uint64_t key) {
+    auto it = perApHandshakeTracker.find(key);
+    if (it == perApHandshakeTracker.end()) return false;
+    if (sniffer_is_handshake_ready(key)) return true;
+    return handshakeCrackable(it->second);
+}
+
+bool sniffer_ap_has_partial(uint64_t key) {
+    if (sniffer_is_handshake_ready(key)) return false;
+    auto it = perApHandshakeTracker.find(key);
+    if (it == perApHandshakeTracker.end()) return false;
+    const HandshakeTracker &t = it->second;
+    return t.msg1 || t.msg2 || t.msg3;
+}
+
+uint16_t sniffer_count_clients(const uint8_t bssid[6]) {
+    if (!bssid) return 0;
+    uint64_t apKey = 0;
+    for (int i = 0; i < 6; i++) { apKey = (apKey << 8) | bssid[i]; }
+    auto it = apClients.find(apKey);
+    if (it == apClients.end()) return 0;
+    return (uint16_t)it->second.size();
+}
+
+uint32_t sniffer_total_clients() {
+    uint32_t total = 0;
+    for (const auto &kv : apClients) total += (uint32_t)kv.second.size();
+    return total;
+}
+
+uint8_t sniffer_list_client_aps(uint8_t outBssid[][6], uint8_t outCh[], uint8_t maxOut) {
+    if (!outBssid || !outCh || maxOut == 0) return 0;
+    uint8_t n = 0;
+    for (const auto &kv : apClients) {
+        if (n >= maxOut) break;
+        if (kv.second.empty()) continue;
+        uint64_t key = kv.first;
+        for (int i = 5; i >= 0; i--) {
+            outBssid[n][i] = (uint8_t)(key & 0xFF);
+            key >>= 8;
+        }
+        auto chIt = apFirstChannel.find(kv.first);
+        outCh[n] = (chIt != apFirstChannel.end()) ? chIt->second : 0;
+        n++;
+    }
+    return n;
+}
+
+uint8_t sniffer_get_client_details(uint64_t apKey, ClientDetail *out, uint8_t maxOut) {
+    if (!out || maxOut == 0) return 0;
+    auto it = apClients.find(apKey);
+    if (it == apClients.end() || it->second.empty()) return 0;
+    std::vector<const ClientInfo *> sorted;
+    sorted.reserve(it->second.size());
+    for (const auto &kv : it->second) sorted.push_back(&kv.second);
+    std::sort(sorted.begin(), sorted.end(), [](const ClientInfo *a, const ClientInfo *b) {
+        return a->frames > b->frames;
+    });
+    uint8_t n = 0;
+    for (const ClientInfo *ci : sorted) {
+        if (n >= maxOut) break;
+        memcpy(out[n].mac, ci->mac, 6);
+        memcpy(out[n].ip, ci->ip, 4);
+        out[n].frames = ci->frames;
+        n++;
+    }
+    return n;
+}
+
+uint16_t sniffer_get_beacon_frame(const uint8_t bssid[6], uint8_t *out, uint16_t outLen) {
+    if (!bssid || !out || outLen == 0) return 0;
+    uint64_t apKey = 0;
+    for (int i = 0; i < 6; i++) { apKey = (apKey << 8) | bssid[i]; }
+    auto it = beaconRawCache.find(apKey);
+    if (it == beaconRawCache.end() || it->second.len == 0) return 0;
+    uint16_t n = it->second.len < outLen ? it->second.len : outLen;
+    memcpy(out, it->second.data, n);
+    return n;
 }
 
 static void resetHandshakeTracking() {
@@ -438,8 +694,21 @@ static void registerBeacon(const uint8_t *apAddr) {
     if (!apAddr) return;
     BeaconList beacon;
     memcpy(beacon.MAC, apAddr, sizeof(beacon.MAC));
-    beacon.channel = ch;
+    beacon.channel = all_wifi_channels[ch];
     registeredBeacons.insert(beacon);
+}
+
+static void cacheBeaconFrame(uint64_t apKey, const wifi_promiscuous_pkt_t *packet) {
+    if (!packet) return;
+    if (beaconRawCache.find(apKey) == beaconRawCache.end() && beaconRawCache.size() >= MAX_BEACON_CACHE) {
+        return;
+    }
+    uint16_t len = std::min<uint16_t>(packet->rx_ctrl.sig_len, BEACON_BUF_SIZE);
+    BeaconFrame &frame = beaconRawCache[apKey];
+    memcpy(frame.data, packet->payload, len);
+    frame.len = len;
+    frame.timestamp_sec = packet->rx_ctrl.timestamp / 1000000;
+    frame.timestamp_usec = packet->rx_ctrl.timestamp % 1000000;
 }
 
 static String resolveSsidForFrame(FrameInfo &info, const wifi_promiscuous_pkt_t *packet) {
@@ -448,6 +717,7 @@ static String resolveSsidForFrame(FrameInfo &info, const wifi_promiscuous_pkt_t 
         beacon_frames++;
         String ssid = extractSsid(packet);
         beaconSsidCache[info.apKey] = ssid;
+        cacheBeaconFrame(info.apKey, packet);
         return ssid;
     }
     auto it = beaconSsidCache.find(info.apKey);
@@ -477,6 +747,46 @@ static FrameInfo analyzeFrame(wifi_promiscuous_pkt_t *pkt) {
     info.isBeacon = (frameType == 0x00 && frameSubType == 0x08);
     info.isDeauth = (frameType == 0x00) && (frameSubType == 0x0C || frameSubType == 0x0A);
     info.isEapol = isItEAPOL(pkt);
+
+    if (frameType == 0x02) { // data frame: learn the client side
+        const uint8_t *client = (memcmp(addr1, bssid, 6) == 0) ? addr2 : addr1;
+        if (!(client[0] & 0x01)) { // skip broadcast/multicast
+            uint8_t ip[4] = {0, 0, 0, 0};
+            parseClientIp(frame, len, client, ip);
+            const uint8_t curCh = (ch < sizeof(all_wifi_channels)) ? all_wifi_channels[ch] : 0;
+            observeClient(info.apKey, client, ip, curCh);
+        }
+    }
+
+    if (frameType == 0x00 && frameSubType == 0x04 && len >= 26) {
+        // Probe request: idle clients reveal themselves by probing for known
+        // networks. Attribute directed probes (real SSID) to the matching AP
+        // so quiet clients are still counted.
+        uint8_t tagId = frame[24];
+        uint8_t tagLen = frame[25];
+        if (tagId == 0 && tagLen > 0 && tagLen <= 32 && len >= (uint16_t)(26 + tagLen)) {
+            char probed[33];
+            memcpy(probed, frame + 26, tagLen);
+            probed[tagLen] = '\0';
+            bool printable = true;
+            for (uint8_t i = 0; i < tagLen; i++) {
+                if (!isprint((unsigned char)probed[i])) {
+                    printable = false;
+                    break;
+                }
+            }
+            if (printable) {
+                for (const auto &kv : beaconSsidCache) {
+                    if (kv.second == probed) {
+                        const uint8_t curCh =
+                            (ch < sizeof(all_wifi_channels)) ? all_wifi_channels[ch] : 0;
+                        observeClient(kv.first, frame + 10, nullptr, curCh);
+                        break;
+                    }
+                }
+            }
+        }
+    }
 
     if (info.isEapol && matchesTargetAP(pkt, targetBssid)) {
         int msg = classifyEapolMessage(pkt);
@@ -508,6 +818,96 @@ static uint64_t macToKey(const void *mac) {
 }
 
 static void copyMac(uint8_t *dest, const uint8_t *src) { memcpy(dest, src, 6); }
+
+static void observeClient(uint64_t apKey, const uint8_t client[6], const uint8_t ip[4], uint8_t channel) {
+    if (!client) return;
+    const uint64_t ckey = macToKey(client);
+    if (apFirstChannel.find(apKey) == apFirstChannel.end()) { apFirstChannel[apKey] = channel; }
+    auto apIt = apClients.find(apKey);
+    if (apIt == apClients.end()) {
+        // New AP: enforce the global cap first (evict stalest AP).
+        if (apClients.size() >= MAX_TRACKED_APS) {
+            auto oldestAp = apClients.begin();
+            uint32_t oldestSeen = UINT32_MAX;
+            for (auto a = apClients.begin(); a != apClients.end(); ++a) {
+                uint32_t apSeen = 0;
+                for (const auto &kv : a->second) {
+                    if (kv.second.lastSeen > apSeen) apSeen = kv.second.lastSeen;
+                }
+                if (apSeen < oldestSeen) {
+                    oldestSeen = apSeen;
+                    oldestAp = a;
+                }
+            }
+            apClients.erase(oldestAp);
+        }
+    }
+    auto &inner = apClients[apKey];
+    auto it = inner.find(ckey);
+    if (it != inner.end()) {
+        it->second.frames++;
+        it->second.lastSeen = millis();
+        if (ip && (ip[0] || ip[1] || ip[2] || ip[3])) { memcpy(it->second.ip, ip, 4); }
+        return;
+    }
+    if (inner.size() >= MAX_CLIENTS_PER_AP) {
+        auto oldest = inner.begin();
+        for (auto e = inner.begin(); e != inner.end(); ++e) {
+            if (e->second.lastSeen < oldest->second.lastSeen) oldest = e;
+        }
+        inner.erase(oldest);
+    }
+    ClientInfo ci;
+    memcpy(ci.mac, client, 6);
+    if (ip) memcpy(ci.ip, ip, 4);
+    ci.frames = 1;
+    ci.lastSeen = millis();
+    inner.emplace(ckey, ci);
+}
+
+static bool parseClientIp(const uint8_t *frame, uint16_t len, const uint8_t client[6], uint8_t ipOut[4]) {
+    if (!frame || !client || !ipOut || len < 34) return false;
+    const int qos = isQosDataFrame(frame) ? 2 : 0;
+    const int llc = 24 + qos;
+    if (len < (uint16_t)(llc + 8)) return false;
+    if (!(frame[llc] == 0xAA && frame[llc + 1] == 0xAA && frame[llc + 2] == 0x03 && frame[llc + 3] == 0x00 &&
+          frame[llc + 4] == 0x00 && frame[llc + 5] == 0x00)) {
+        return false;
+    }
+    const int nh = llc + 8; // network-layer header starts after LLC/SNAP+ethertype
+    if (len < (uint16_t)(nh + 2)) return false;
+    const uint16_t eth = ((uint16_t)frame[nh - 2] << 8) | frame[nh - 1];
+    const uint8_t *a1 = frame + 4;
+    const uint8_t *a2 = frame + 10;
+    const bool clientIsA1 = memcmp(a1, client, 6) == 0;
+    if (!clientIsA1 && memcmp(a2, client, 6) != 0) return false;
+    if (eth == 0x0806) { // ARP: sender/target protocol addresses
+        if (len < (uint16_t)(nh + 28)) return false;
+        const uint8_t *sha = frame + nh + 8;
+        const uint8_t *spa = frame + nh + 14;
+        const uint8_t *tha = frame + nh + 18;
+        const uint8_t *tpa = frame + nh + 24;
+        if (memcmp(sha, client, 6) == 0) {
+            memcpy(ipOut, spa, 4);
+            return true;
+        }
+        if (memcmp(tha, client, 6) == 0) {
+            memcpy(ipOut, tpa, 4);
+            return true;
+        }
+        return false;
+    }
+    if (eth == 0x0800) { // IPv4
+        if (len < (uint16_t)(nh + 20)) return false;
+        const uint8_t ihl = (frame[nh] & 0x0F) * 4;
+        if (ihl < 20 || len < (uint16_t)(nh + ihl)) return false;
+        const uint8_t *sip = frame + nh + 12;
+        const uint8_t *dip = frame + nh + 16;
+        memcpy(ipOut, clientIsA1 ? sip : dip, 4);
+        return true;
+    }
+    return false;
+}
 
 static void copySsidToBuffer(const String &ssid, char *buffer, size_t len) {
     if (!buffer || len == 0) return;
@@ -611,7 +1011,7 @@ static void closeDeauthFile() {
 }
 
 static bool rawCaptureEnabled() { return currentMode == SnifferMode::Full && rawFileOpen && _pcap_file; }
-static bool handshakeCaptureEnabled() { return currentMode != SnifferMode::DeauthOnly; }
+static bool handshakeCaptureEnabled() { return currentMode != SnifferMode::DeauthOnly && currentMode != SnifferMode::Passive; }
 static bool deauthCaptureEnabled() {
     return currentMode == SnifferMode::DeauthOnly && deauthFileOpen && _deauth_file;
 }
@@ -731,6 +1131,10 @@ void sniffer_reset_handshake_cache() {
     }
     resetHandshakeTracking();
     resetHandshakeBeaconCache();
+    perApHandshakeTracker.clear();
+    eapol4WayBuffer.clear();
+    apClients.clear();
+    apFirstChannel.clear();
 }
 
 void printAddress(const uint8_t *addr) {
@@ -805,9 +1209,14 @@ void sniffer(void *buf, wifi_promiscuous_pkt_type_t type) {
     if (frameInfo.isEapol) { num_EAPOL++; }
 
     bool saveRaw = rawCaptureEnabled();
-    bool saveHandshake =
-        handshakeCaptureEnabled() &&
-        (frameInfo.isEapol || (frameInfo.isBeacon && shouldSaveBeaconForHandshake(frameInfo.apAddr)));
+    bool saveHandshake = false;
+    if (handshakeCaptureEnabled()) {
+        if (frameInfo.isEapol && !hasCompleteHandshake(frameInfo.apKey)) {
+            saveHandshake = true;
+        } else if (frameInfo.isBeacon && shouldSaveBeaconForHandshake(frameInfo.apAddr)) {
+            saveHandshake = true;
+        }
+    }
     bool saveDeauth = deauthCaptureEnabled() && frameInfo.isDeauth;
 
     if (!saveRaw && !saveHandshake && !saveDeauth) { return; }
@@ -831,8 +1240,10 @@ void sniffer(void *buf, wifi_promiscuous_pkt_type_t type) {
     item.saveHandshake = saveHandshake;
     item.saveDeauth = saveDeauth;
     copyMac(item.bssid, frameInfo.apAddr);
-    String ssidLabel = frameInfo.ssid.length() == 0 ? "UNKNOWN" : frameInfo.ssid;
-    copySsidToBuffer(ssidLabel, item.ssid, sizeof(item.ssid));
+    // Leave empty when unresolved: saveHandshake()/buildHandshakePath() then
+    // fall back to a per-AP MAC-based filename instead of forcing "UNKNOWN",
+    // which would collide different APs into the same handshake pcap.
+    copySsidToBuffer(frameInfo.ssid, item.ssid, sizeof(item.ssid));
 
     BaseType_t taskWoken = pdFALSE;
     if (xQueueSendFromISR(snifferQueue, &item, &taskWoken) != pdTRUE) {
@@ -901,6 +1312,7 @@ static void cleanupStaleBeacons() {
         uint64_t key = macToKey(b.MAC);
         beaconSsidCache.erase(key);
         beaconLastSeen.erase(key);
+        beaconRawCache.erase(key);
     }
 }
 
@@ -943,8 +1355,34 @@ static std::vector<String> recentSsidsOnChannel(uint8_t channel, size_t maxItems
     return out;
 }
 
+static void sendDeauthNow() {
+    bool deauth_sent = false;
+    if (registeredBeacons.size() > 40) registeredBeacons.clear();
+    Serial.println("<<---- Sending deauth packets ---->>");
+    for (const auto &registeredBeacon : registeredBeacons) {
+        if (registeredBeacon.channel == all_wifi_channels[ch]) {
+            memcpy(&ap_record.bssid, registeredBeacon.MAC, 6);
+            wsl_bypasser_send_raw_frame(&ap_record, registeredBeacon.channel);
+            send_raw_frame(deauth_frame, 26);
+            deauth_sent = true;
+            deauth_counter++;
+            vTaskDelay(pdMS_TO_TICKS(2));
+        }
+    }
+    if (deauth_sent) {
+        tft.setTextSize(FP);
+        tft.setTextDatum(0);
+        tft.drawString("Deauth sent.", DEAUTH_MSG_X, DEAUTH_MSG_Y);
+        deauth_displayed = true;
+        deauth_display_ts = millis();
+    }
+}
+
 //===== SETUP =====//
 void sniffer_setup() {
+    // Stop WebUI before setting WiFi mode for sniffer
+    cleanlyStopWebUiForWiFiFeature();
+
     FS *Fs;
     int redraw = true;
     bool clearScreen = true;
@@ -975,14 +1413,16 @@ void sniffer_setup() {
     SnifferMode startMode = sniffer_full_mode_available() ? SnifferMode::Full : SnifferMode::HandshakesOnly;
     sniffer_set_mode(startMode);
 
-    displayTextLine("Sniffing Started");
     tft.setTextSize(FP);
-    tft.setCursor(80, 100);
+    tft.setTextColor(bruceConfig.priColor, bruceConfig.bgColor);
+    tft.setCursor(10, BORDER_PAD_Y + FM * LH);
+    tft.println("Sniffing Started");
 
     sniffer_reset_handshake_cache(); // Need to clear to restart HS count
     registeredBeacons.clear();
     beaconSsidCache.clear();
     beaconLastSeen.clear(); // ensure starts empty
+    beaconRawCache.clear();
 
     /* setup wifi */
     ensureWifiPlatform();
@@ -992,8 +1432,8 @@ void sniffer_setup() {
     ESP_ERROR_CHECK(esp_wifi_set_storage(WIFI_STORAGE_RAM));
 
     wifi_config_t wifi_config;
-    strcpy((char *)wifi_config.ap.ssid, "BruceSniffer");
-    strcpy((char *)wifi_config.ap.password, "brucenet");
+    strlcpy((char *)wifi_config.ap.ssid, "BruceSniffer", sizeof(wifi_config.ap.ssid));
+    strlcpy((char *)wifi_config.ap.password, "brucenet", sizeof(wifi_config.ap.password));
     wifi_config.ap.ssid_len = strlen("BruceSniffer");
     wifi_config.ap.channel = 1;                   // Channel
     wifi_config.ap.authmode = WIFI_AUTH_WPA2_PSK; // auth mode
@@ -1138,6 +1578,7 @@ void sniffer_setup() {
                      redraw = true;
                  }                                                                                        },
                 {deauth ? "Disable deauth attack" : "Enable deauth attack", [&]() { deauth = !deauth; }   },
+                {"Deauth Now",                                              [&]() { sendDeauthNow(); }    },
                 {"Reset Counters",
                  [&]() {
                      packet_counter = 0;
@@ -1147,6 +1588,7 @@ void sniffer_setup() {
                      beacon_frames = 0;
                      registeredBeacons.clear();
                      beaconSsidCache.clear();
+                     beaconRawCache.clear();
                      sniffer_reset_handshake_cache();
                      deauth_tmp = millis();
                  }                                                                                        },
@@ -1245,33 +1687,7 @@ void sniffer_setup() {
         }
 
         if (deauth && (millis() - deauth_tmp) > DEAUTH_INTERVAL) {
-            bool deauth_sent = false;
-            if (registeredBeacons.size() > 40)
-                registeredBeacons.clear(); // Clear registered beacons to restart search and avoid restarts
-            Serial.println("<<---- Starting Deauthentication Process ---->>");
-            for (auto registeredBeacon : registeredBeacons) {
-                if (registeredBeacon.channel == ch) {
-                    memcpy(&ap_record.bssid, registeredBeacon.MAC, 6);
-                    wsl_bypasser_send_raw_frame(
-                        &ap_record, registeredBeacon.channel
-                    ); // writes the buffer with the information
-                    // XXX: ap_record reused between this and wifi_atks.h
-                    send_raw_frame(deauth_frame, 26);
-                    deauth_sent = true;
-                    deauth_counter++;
-                    vTaskDelay(2 / portTICK_RATE_MS);
-                }
-            }
-
-            if (deauth_sent) {
-                // draw the message and start the timer
-                tft.setTextSize(1);  // optional, keep consistent with your UI
-                tft.setTextDatum(0); // optional: ensure text draws from top-left if using TFT_eSPI-like API
-                tft.drawString("Deauth sent.", DEAUTH_MSG_X, DEAUTH_MSG_Y);
-                deauth_displayed = true;
-                deauth_display_ts = millis();
-            }
-
+            sendDeauthNow();
             deauth_tmp = millis();
         }
 
@@ -1294,7 +1710,7 @@ Exit:
     esp_wifi_set_promiscuous(false);
     esp_wifi_stop();
     esp_wifi_set_promiscuous_rx_cb(NULL);
-    esp_wifi_deinit();
+    // DO NOT call esp_wifi_deinit() here - let wifi_common.h handle it
     sniffer_wait_for_flush(1000);
     closeRawFile();
     closeDeauthFile();
@@ -1306,3 +1722,4 @@ void setHandshakeSniffer() {
     esp_wifi_set_promiscuous_rx_cb(NULL);
     esp_wifi_set_promiscuous_rx_cb(sniffer);
 }
+#endif
