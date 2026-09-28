@@ -11,8 +11,13 @@ on:
       version_name:
         description: 'Version name (Ninja-Jr 1.0, Ninja-Jr dev, etc)'
         required: true
-        default: 'Ninja-Jr dev'
+        default: 'Ninja-Jr'
         type: string
+      append_hash:
+        description: 'Append short commit hash to version'
+        required: false
+        default: true
+        type: boolean
   push:
     branches:
       - dev
@@ -25,7 +30,6 @@ jobs:
     runs-on: ubuntu-latest
     continue-on-error: true
     env:
-      VERSION_NAME: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.version_name || github.ref == 'refs/heads/main' && 'Ninja-Jr 1.0' || github.ref == 'refs/heads/dev' && 'Ninja-Jr dev' || github.ref_type == 'tag' && github.ref_name || 'Ninja-Jr' }}
       FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
     strategy:
       fail-fast: false
@@ -99,11 +103,40 @@ jobs:
         with:
           ref: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.target_branch || github.ref }}
 
+      - name: Resolve version string
+        id: version
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            BASE_NAME="${{ github.event.inputs.version_name }}"
+            APPEND_HASH="${{ github.event.inputs.append_hash }}"
+          elif [ "${{ github.ref_type }}" = "tag" ]; then
+            BASE_NAME="${{ github.ref_name }}"
+            APPEND_HASH="false"
+          elif [ "${{ github.ref }}" = "refs/heads/main" ]; then
+            BASE_NAME="Ninja-Jr"
+            APPEND_HASH="true"
+          elif [ "${{ github.ref }}" = "refs/heads/dev" ]; then
+            BASE_NAME="Ninja-Jr dev"
+            APPEND_HASH="true"
+          else
+            BASE_NAME="Ninja-Jr"
+            APPEND_HASH="true"
+          fi
+
+          GIT_HASH=$(git rev-parse --short HEAD)
+          if [ "$APPEND_HASH" = "true" ]; then
+            VERSION="${BASE_NAME} (${GIT_HASH})"
+          else
+            VERSION="${BASE_NAME}"
+          fi
+          echo "resolved=${VERSION}" >> "$GITHUB_OUTPUT"
+          echo "Final version: ${VERSION}"
+
       - name: Install build deps (multilib)
         run: |
           sudo apt-get update
           sudo apt-get install -y --no-install-recommends gcc-multilib libc6-dev-i386
-          
+
       - name: Setup Python
         uses: actions/setup-python@v5
         with:
@@ -116,9 +149,11 @@ jobs:
           key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements.txt') }}
           restore-keys: |
             ${{ runner.os }}-pip-
+
       - name: Install dependencies
         run: |
           pip install requests esptool intelhex
+
       - name: Cache PlatformIO
         uses: actions/cache@v4
         with:
@@ -133,15 +168,18 @@ jobs:
           key: Bruce-pio-${{ matrix.board.env }}-${{ github.run_id }}-${{ github.run_attempt }}
           restore-keys: |
             Bruce-pio-${{ matrix.board.env }}-
-      - name: Install PlatformIO Core
+
+      - name: Install PlatformIO and configure version
         run: |
           pip install platformio
-          sed -i "s/-DBRUCE_VERSION=/-DBRUCE_VERSION='\"${{ env.VERSION_NAME }}\"' ; /g" ./platformio.ini
-          GIT_HASH=$(git describe --always --dirty)
+          sed -i "s/-DBRUCE_VERSION=/-DBRUCE_VERSION='\"${{ steps.version.outputs.resolved }}\"' ; /g" ./platformio.ini
+          GIT_HASH=$(git rev-parse --short HEAD)
           sed -i "s|-DGIT_COMMIT_HASH='\"Homebrew\"'|!echo '-DGIT_COMMIT_HASH=\\\\\\\\\"${GIT_HASH}\\\\\\\\\"'|g" ./platformio.ini
+
       - name: Run Compile
         run: |
           platformio run -e ${{ matrix.board.env }}
+
       - name: Save PIO Build Cache
         uses: actions/cache/save@v4
         with:
@@ -152,7 +190,7 @@ jobs:
         uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: Bruce-${{ matrix.board.env }}
+          name: Bruce-${{ matrix.board.env }}-${{ steps.version.outputs.resolved }}
           path: Bruce-*.*
           retention-days: 5
           if-no-files-found: ignore
@@ -221,7 +259,8 @@ jobs:
               }
             }
             core.setOutput('beta', betaId.toString());
-            core.setOutput('last', lastId.toString());
+            core.setOutput('last', lastId.toString())
+
       - name: Delete old betaRelease assets
         uses: actions/github-script@v6
         with:
@@ -239,6 +278,7 @@ jobs:
                 asset_id: asset.id
               });
             }
+
       - name: Upload new betaRelease assets
         uses: softprops/action-gh-release@v2
         with:
@@ -259,8 +299,8 @@ jobs:
             const release_id = ${{ steps.get_release.outputs.last }};
             const assets = await github.rest.repos.listReleaseAssets({
               owner: context.repo.owner,
-                repo: context.repo.repo,
-                release_id: release_id
+              repo: context.repo.repo,
+              release_id: release_id
             });
             for (const asset of assets.data) {
               await github.rest.repos.deleteReleaseAsset({
@@ -269,6 +309,7 @@ jobs:
                 asset_id: asset.id
               });
             }
+
       - name: Upload new lastRelease assets
         uses: softprops/action-gh-release@v2
         if: github.ref_type == 'tag'
