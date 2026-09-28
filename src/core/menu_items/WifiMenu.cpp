@@ -16,11 +16,11 @@
 #include "modules/wifi/scan_hosts.h"
 #include "modules/wifi/sniffer.h"
 #include "modules/wifi/wifi_atks.h"
+#include "modules/wifi/client_scanner.h"
 
 #ifndef LITE_VERSION
 #include "modules/pwnagotchi/pwnagotchi.h"
 #include "modules/wifi/channel_analyzer.h"
-#include "modules/wifi/client_scanner.h"
 #if defined(NM_CYD_ESP32C5)
 #include "modules/wifi/dual_band_analyzer.h"
 #endif
