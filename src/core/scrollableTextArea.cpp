@@ -73,14 +73,12 @@ size_t ScrollableTextArea::getMaxLines() { return linesBuffer.size(); }
 
 void ScrollableTextArea::show(bool force) {
     draw(force);
-    delay(200); // drain input buffer
 
-    // Flush any stale SelPress
-    while (check(SelPress)) { update(force); }
-
-    // Wait for SelPress or EscPress to exit
-    while (!check(SelPress)) {
-        if (check(EscPress)) break;
+    while (check(SelPress) || check(EscPress)) {
+        update(force);
+        yield();
+    }
+    while (!check(SelPress) && !check(EscPress)) {
         update(force);
         yield();
     }
