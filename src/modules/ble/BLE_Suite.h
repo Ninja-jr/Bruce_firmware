@@ -367,7 +367,6 @@ struct FastPairModelInfo {
 
 extern const FastPairModelInfo fastpair_models[];
 
-// v3.1: Samsung MAC OUI detection
 extern const char *SAMSUNG_MAC_OUIS[];
 extern const int SAMSUNG_MAC_OUIS_COUNT;
 bool isSamsungDevice(const NimBLEAddress &address);
