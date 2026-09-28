@@ -190,9 +190,9 @@ void loopEmulate(RfCodes &data) {
             blinkLed();
 
             if (data.serial == 0) {
-                for (int i = 0; uint64_t key : keyList) {
-                    data.Bit = bitList[i++];
-                    data.key = key;
+                for (size_t i = 0; i < keyList.size(); i++) {
+                    data.Bit = (i < bitList.size()) ? bitList[i] : 24;
+                    data.key = keyList[i];
                     sendRfCommand(data);
                 }
             } else {
@@ -441,17 +441,18 @@ void sendRfCommand(struct RfCodes rfcode, bool hideDefaultUI) {
     }
 
     if (protocol == "RAW") {
-        // count the number of elements of RAW_Data
-        int buff_size = 0;
-        int index = 0;
-        while (index >= 0) {
-            index = data.indexOf(' ', index + 1);
-            buff_size++;
+        std::vector<int> timings;
+        int start = 0;
+        int len = data.length();
+        while (start < len) {
+            while (start < len && data[start] == ' ') start++;
+            if (start >= len) break;
+            int end = data.indexOf(' ', start);
+            if (end == -1) end = len;
+            timings.push_back(data.substring(start, end).toInt());
+            start = end + 1;
         }
-        // alloc buffer for transmittimings
-        int *transmittimings =
-            (int *)calloc(sizeof(int), buff_size + 1); // should be smaller the data.length()
-        size_t transmittimings_idx = 0;
+        timings.push_back(0);
 
         // split data into words, convert to int, and store them in transmittimings
         int startIndex = 0;
