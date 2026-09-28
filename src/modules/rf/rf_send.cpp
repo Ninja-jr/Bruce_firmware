@@ -28,19 +28,15 @@ void sendCustomRF() {
     returnToMenu = true; // make sure menu is redrawn when quitting in any point
 
     options = {
-        {"Recent",   [&]() { yield(); }               },
-        {"LittleFS", [&]() { filesystem = &LittleFS; }},
+        {"Recent",   [&]() { selected_code = selectRecentRfMenu(); }},
+        {"LittleFS", [&]() { filesystem = &LittleFS; }              },
     };
-    if (setupSdCard()) options.insert(options.begin() + 1, {"SD Card", [&]() { filesystem = &SD; }});
+    if (setupSdCard()) options.insert(options.begin(), {"SD Card", [&]() { filesystem = &SD; }});
 
     loopOptions(options);
 
-    if (filesystem == NULL) {
-        selected_code = selectRecentRfMenu();
-        while (selected_code.frequency != 0) {
-            if (selected_code.filepath != "") sendRfCommand(selected_code); // a code was selected
-            selected_code = selectRecentRfMenu();                           // recent menu was selected
-        }
+    if (filesystem == NULL) {                                           // recent menu was selected
+        if (selected_code.filepath != "") sendRfCommand(selected_code); // a code was selected
         return;
         // no need to proceed, go back
     }
@@ -199,8 +195,8 @@ void loopEmulate(RfCodes &data) {
                 sendRfCommand(data);
                 data.keeloq_step(num_steps_keeloq);
                 keeloq_save(data);
+                display_info(data);
             }
-            display_info(data);
         }
         vTaskDelay(pdMS_TO_TICKS(1));
     }
@@ -373,7 +369,6 @@ void sendRfCommand(struct RfCodes rfcode, bool hideDefaultUI) {
                              Serial.println(protocol);
                            */
 
-    if (!hideDefaultUI) { displayTextLine("Sending.."); }
     // Radio preset name (configures modulation, bandwidth, filters, etc.).
     /*  supported flipper presets:
         FuriHalSubGhzPresetIDLE, // < default configuration
@@ -454,23 +449,8 @@ void sendRfCommand(struct RfCodes rfcode, bool hideDefaultUI) {
         }
         timings.push_back(0);
 
-        // split data into words, convert to int, and store them in transmittimings
-        int startIndex = 0;
-        index = 0;
-        for (transmittimings_idx = 0; transmittimings_idx < buff_size; transmittimings_idx++) {
-            index = data.indexOf(' ', startIndex);
-            if (index == -1) {
-                transmittimings[transmittimings_idx] = data.substring(startIndex).toInt();
-            } else {
-                transmittimings[transmittimings_idx] = data.substring(startIndex, index).toInt();
-            }
-            startIndex = index + 1;
-        }
-        transmittimings[transmittimings_idx] = 0; // termination
-
-        // send rf command
-        rfTransmitRawTimings(transmittimings);
-        free(transmittimings);
+        if (!hideDefaultUI) { displayTextLine("Sending.."); }
+        rfTransmitRawTimings(timings.data());
     } else if (protocol == "BinRAW") {
         // transform from "00 01 02 ... FF" into "00000000 00000001 00000010 .... 11111111"
         rfcode.data = hexStrToBinStr(rfcode.data);
@@ -482,6 +462,7 @@ void sendRfCommand(struct RfCodes rfcode, bool hideDefaultUI) {
     else if (protocol == "KeeLoq") {
         // KeeLoq has dedicated framing (see rf_keeloq_durations). `rfcode.key` is
         // the 64-bit rolling code already assembled by keeloq_step.
+        if (!hideDefaultUI) { displayTextLine("Sending.."); }
         rf_tx_keeloq(rfcode.key, num_signal_repeat);
     }
 
