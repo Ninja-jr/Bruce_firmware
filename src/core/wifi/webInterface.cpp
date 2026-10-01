@@ -55,13 +55,6 @@ struct LongOpGuard {
 static const char *ZIP_TMP_DIR_SD = "/.bruce_tmp";
 static const char *ZIP_TMP_DIR_LFS = "/.bruce_tmp";
 
-// Upper bound for the in-memory fallback path in extractZipTo().
-static const size_t ZIP_MEM_FALLBACK_LIMIT = 2 * 1024 * 1024; // 2 MB
-
-// Diagnostic toggle: when true, the fallback (memory-based) extraction path
-// is disabled and extractZipTo() will return -1 if the fast path fails.
-static const bool DIAG_DISABLE_MEM_FALLBACK = false;
-
 // =============================================================================
 // Diagnostic logging
 // =============================================================================
@@ -273,6 +266,27 @@ static String basenameOf(const String &path) {
     return path;
 }
 
+// -----------------------------------------------------------------------------
+// Custom read callback for miniz
+// -----------------------------------------------------------------------------
+// miniz's built-in file layer (mz_zip_reader_init_file) uses POSIX fopen,
+// which on ESP32 doesn't necessarily see the same mount points as the
+// Arduino FS object. It returns MZ_ZIP_FILE_OPEN_FAILED as a result.
+// By supplying our own read callback that goes through the Arduino File
+// API, we bypass that mismatch entirely — and we avoid loading the whole
+// archive into RAM, which a 69KB zip can't afford on a Cardputer.
+
+struct ZipReadCtx {
+    File *file;
+};
+
+static size_t zipReadCb(void *pOpaque, mz_uint64 file_ofs, void *pBuf, size_t n) {
+    ZipReadCtx *ctx = (ZipReadCtx *)pOpaque;
+    if (!ctx || !ctx->file || !*ctx->file) return 0;
+    if (!ctx->file->seek((uint32_t)file_ofs)) return 0;
+    return ctx->file->read((uint8_t *)pBuf, n);
+}
+
 // Write callback for mz_zip_reader_extract_to_callback — streams decompressed
 // bytes straight to the target File without buffering the whole entry in RAM.
 struct ZipWriteCtx {
@@ -292,12 +306,10 @@ static size_t zipWriteCb(void *pOpaque, mz_uint64 file_ofs, const void *pBuf, si
     return n;
 }
 
-// extractZipTo — tries mz_zip_reader_init_file first (fast, no extra RAM);
-// if that fails, falls back to loading the whole archive into heap and using
-// mz_zip_reader_init_mem (capped at ZIP_MEM_FALLBACK_LIMIT).
-//
-// Diagnostic output goes to both serial and /extract_log.txt on SD via
-// extractLog(). See the comment on that helper for details.
+// extractZipTo — opens the archive via the custom read callback (bypasses
+// miniz's own file layer and doesn't load the archive into RAM). Extracts
+// each entry via the write callback, which streams decompressed bytes
+// straight to disk.
 int extractZipTo(FS &fs, const String &zipPath, const String &targetFolder, bool deleteAfter) {
     if (!fs.exists(zipPath)) {
         extractLog("zip not found at %s", zipPath.c_str());
@@ -310,66 +322,28 @@ int extractZipTo(FS &fs, const String &zipPath, const String &targetFolder, bool
     extractLog("zip path: %s", zipPath.c_str());
     extractLog("target:   %s", targetFolder.c_str());
 
+    File zipFile = fs.open(zipPath, FILE_READ);
+    if (!zipFile) {
+        extractLog("fs.open(%s) failed", zipPath.c_str());
+        return -1;
+    }
+    size_t zipSize = zipFile.size();
+    extractLog("opened file. size=%u", (unsigned)zipSize);
+
     mz_zip_archive zip;
     mz_zip_archive_file_stat stat;
-    uint8_t *memBuf = nullptr;
-
-    // --- Attempt 1: open by path (uses miniz's own file layer) ---
     memset(&zip, 0, sizeof(zip));
-    bool opened = mz_zip_reader_init_file(&zip, zipPath.c_str(), 0);
-    if (opened) {
-        extractLog("opened by path. free heap: %u", (unsigned)esp_get_free_heap_size());
-    } else if (DIAG_DISABLE_MEM_FALLBACK) {
-        extractLog("path init failed (fallback disabled). mz error: %d", (int)zip.m_last_error);
-        return -1;
-    } else {
-        extractLog("path init failed (mz error: %d). trying memory fallback. free: %u, largest: %u",
-                   (int)zip.m_last_error,
-                   (unsigned)esp_get_free_heap_size(),
-                   (unsigned)heap_caps_get_largest_free_block(MALLOC_CAP_8BIT));
 
-        // --- Attempt 2: load into memory via Arduino FS API ---
-        File zipFile = fs.open(zipPath, FILE_READ);
-        if (!zipFile) {
-            extractLog("fs.open failed too");
-            return -1;
-        }
-        size_t zipSize = zipFile.size();
-        extractLog("zip size on disk: %u bytes", (unsigned)zipSize);
-        if (zipSize == 0 || zipSize > ZIP_MEM_FALLBACK_LIMIT) {
-            extractLog("refusing fallback (size=%u, limit=%u)",
-                       (unsigned)zipSize, (unsigned)ZIP_MEM_FALLBACK_LIMIT);
-            zipFile.close();
-            return -1;
-        }
+    ZipReadCtx readCtx{&zipFile};
+    zip.m_pRead = zipReadCb;
+    zip.m_pIO_opaque = &readCtx;
 
-        memBuf = (uint8_t *)malloc(zipSize);
-        if (!memBuf) {
-            extractLog("malloc(%u) failed. free: %u, largest: %u",
-                       (unsigned)zipSize,
-                       (unsigned)esp_get_free_heap_size(),
-                       (unsigned)heap_caps_get_largest_free_block(MALLOC_CAP_8BIT));
-            zipFile.close();
-            return -1;
-        }
-        size_t got = zipFile.read(memBuf, zipSize);
+    if (!mz_zip_reader_init(&zip, zipSize, 0)) {
+        extractLog("mz_zip_reader_init failed. mz error: %d", (int)zip.m_last_error);
         zipFile.close();
-        if (got != zipSize) {
-            extractLog("read short (%u of %u)", (unsigned)got, (unsigned)zipSize);
-            free(memBuf);
-            return -1;
-        }
-
-        memset(&zip, 0, sizeof(zip));
-        opened = mz_zip_reader_init_mem(&zip, memBuf, zipSize, 0);
-        if (!opened) {
-            extractLog("memory init failed. mz error: %d", (int)zip.m_last_error);
-            free(memBuf);
-            return -1;
-        }
-        extractLog("opened by memory buffer (%u bytes). free heap: %u",
-                   (unsigned)zipSize, (unsigned)esp_get_free_heap_size());
+        return -1;
     }
+    extractLog("opened via callback. free heap: %u", (unsigned)esp_get_free_heap_size());
 
     // --- Extraction loop ---
     mz_uint numFiles = mz_zip_reader_get_num_files(&zip);
@@ -423,7 +397,7 @@ int extractZipTo(FS &fs, const String &zipPath, const String &targetFolder, bool
     }
 
     mz_zip_reader_end(&zip);
-    if (memBuf) free(memBuf);
+    zipFile.close();
 
     extractLog("done. extracted=%d, free heap: %u",
                extracted, (unsigned)esp_get_free_heap_size());
