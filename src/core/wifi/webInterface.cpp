@@ -60,8 +60,49 @@ static const size_t ZIP_MEM_FALLBACK_LIMIT = 2 * 1024 * 1024; // 2 MB
 
 // Diagnostic toggle: when true, the fallback (memory-based) extraction path
 // is disabled and extractZipTo() will return -1 if the fast path fails.
-// Useful for isolating which path is crashing. Set to false in normal use.
 static const bool DIAG_DISABLE_MEM_FALLBACK = false;
+
+// =============================================================================
+// Diagnostic logging
+// =============================================================================
+// Writes extraction diagnostics to both serial and /extract_log.txt on SD.
+// This makes it possible to capture what happened during an extraction even
+// without a serial monitor attached: eject the SD card afterward and open
+// the file. Falls back to serial-only when SD isn't mounted.
+
+static void extractLog(const char *fmt, ...) {
+    char buf[256];
+    va_list ap;
+    va_start(ap, fmt);
+    vsnprintf(buf, sizeof(buf), fmt, ap);
+    va_end(ap);
+
+    // Always print to serial
+    Serial.print("[extract] ");
+    Serial.println(buf);
+
+    // Try to also write to SD (once per session; handle stays open)
+    static File logFile;
+    static bool logAttempted = false;
+    if (!logAttempted) {
+        logAttempted = true;
+        if (setupSdCard()) {
+            // "w" truncates at start of session so each WebUI session gets a
+            // fresh log. If you'd rather accumulate, use FILE_APPEND.
+            logFile = SD.open("/extract_log.txt", "w");
+            if (logFile) {
+                logFile.println("=== Bruce WebUI extract diagnostic log ===");
+                logFile.flush();
+            }
+        }
+    }
+    if (logFile) {
+        logFile.print(millis());
+        logFile.print(": ");
+        logFile.println(buf);
+        logFile.flush(); // flush so the last lines survive a crash
+    }
+}
 
 // Generate random token
 String generateToken(int length = 24) {
@@ -255,12 +296,19 @@ static size_t zipWriteCb(void *pOpaque, mz_uint64 file_ofs, const void *pBuf, si
 // if that fails, falls back to loading the whole archive into heap and using
 // mz_zip_reader_init_mem (capped at ZIP_MEM_FALLBACK_LIMIT).
 //
-// Both mz_zip_archive and mz_zip_archive_file_stat are hoisted out of the
-// loop to keep the WebUI task's stack usage bounded.
+// Diagnostic output goes to both serial and /extract_log.txt on SD via
+// extractLog(). See the comment on that helper for details.
 int extractZipTo(FS &fs, const String &zipPath, const String &targetFolder, bool deleteAfter) {
-    if (!fs.exists(zipPath)) return -1;
+    if (!fs.exists(zipPath)) {
+        extractLog("zip not found at %s", zipPath.c_str());
+        return -1;
+    }
 
-    Serial.printf("[extract] free heap at start: %u\n", (unsigned)esp_get_free_heap_size());
+    extractLog("begin. free heap: %u, largest block: %u",
+               (unsigned)esp_get_free_heap_size(),
+               (unsigned)heap_caps_get_largest_free_block(MALLOC_CAP_8BIT));
+    extractLog("zip path: %s", zipPath.c_str());
+    extractLog("target:   %s", targetFolder.c_str());
 
     mz_zip_archive zip;
     mz_zip_archive_file_stat stat;
@@ -270,39 +318,44 @@ int extractZipTo(FS &fs, const String &zipPath, const String &targetFolder, bool
     memset(&zip, 0, sizeof(zip));
     bool opened = mz_zip_reader_init_file(&zip, zipPath.c_str(), 0);
     if (opened) {
-        Serial.printf("[extract] opened by path: %s, free heap: %u\n",
-                      zipPath.c_str(), (unsigned)esp_get_free_heap_size());
+        extractLog("opened by path. free heap: %u", (unsigned)esp_get_free_heap_size());
     } else if (DIAG_DISABLE_MEM_FALLBACK) {
-        Serial.println("[extract] path init failed (fallback disabled by diagnostic flag)");
+        extractLog("path init failed (fallback disabled). mz error: %d", (int)zip.m_last_error);
         return -1;
     } else {
-        Serial.printf("[extract] path init failed, trying memory fallback. free heap: %u\n",
-                      (unsigned)esp_get_free_heap_size());
+        extractLog("path init failed (mz error: %d). trying memory fallback. free: %u, largest: %u",
+                   (int)zip.m_last_error,
+                   (unsigned)esp_get_free_heap_size(),
+                   (unsigned)heap_caps_get_largest_free_block(MALLOC_CAP_8BIT));
 
         // --- Attempt 2: load into memory via Arduino FS API ---
         File zipFile = fs.open(zipPath, FILE_READ);
         if (!zipFile) {
-            Serial.println("[extract] fs.open failed too");
+            extractLog("fs.open failed too");
             return -1;
         }
         size_t zipSize = zipFile.size();
+        extractLog("zip size on disk: %u bytes", (unsigned)zipSize);
         if (zipSize == 0 || zipSize > ZIP_MEM_FALLBACK_LIMIT) {
-            Serial.printf("[extract] refusing memory fallback (size=%u, limit=%u)\n",
-                          (unsigned)zipSize, (unsigned)ZIP_MEM_FALLBACK_LIMIT);
+            extractLog("refusing fallback (size=%u, limit=%u)",
+                       (unsigned)zipSize, (unsigned)ZIP_MEM_FALLBACK_LIMIT);
             zipFile.close();
             return -1;
         }
+
         memBuf = (uint8_t *)malloc(zipSize);
         if (!memBuf) {
-            Serial.printf("[extract] malloc(%u) failed. free heap: %u\n",
-                          (unsigned)zipSize, (unsigned)esp_get_free_heap_size());
+            extractLog("malloc(%u) failed. free: %u, largest: %u",
+                       (unsigned)zipSize,
+                       (unsigned)esp_get_free_heap_size(),
+                       (unsigned)heap_caps_get_largest_free_block(MALLOC_CAP_8BIT));
             zipFile.close();
             return -1;
         }
         size_t got = zipFile.read(memBuf, zipSize);
         zipFile.close();
         if (got != zipSize) {
-            Serial.printf("[extract] read short (%u of %u)\n", (unsigned)got, (unsigned)zipSize);
+            extractLog("read short (%u of %u)", (unsigned)got, (unsigned)zipSize);
             free(memBuf);
             return -1;
         }
@@ -310,19 +363,19 @@ int extractZipTo(FS &fs, const String &zipPath, const String &targetFolder, bool
         memset(&zip, 0, sizeof(zip));
         opened = mz_zip_reader_init_mem(&zip, memBuf, zipSize, 0);
         if (!opened) {
-            Serial.println("[extract] memory init failed too");
+            extractLog("memory init failed. mz error: %d", (int)zip.m_last_error);
             free(memBuf);
             return -1;
         }
-        Serial.printf("[extract] opened by memory buffer (%u bytes). free heap: %u\n",
-                      (unsigned)zipSize, (unsigned)esp_get_free_heap_size());
+        extractLog("opened by memory buffer (%u bytes). free heap: %u",
+                   (unsigned)zipSize, (unsigned)esp_get_free_heap_size());
     }
 
-    // --- Extraction loop (same regardless of how we opened the archive) ---
+    // --- Extraction loop ---
     mz_uint numFiles = mz_zip_reader_get_num_files(&zip);
     int extracted = 0;
 
-    Serial.printf("[extract] %u file(s) in archive\n", (unsigned)numFiles);
+    extractLog("%u file(s) in archive", (unsigned)numFiles);
 
     String baseFolder = targetFolder;
     if (baseFolder.length() == 0 || baseFolder == "/") baseFolder = "";
@@ -331,17 +384,18 @@ int extractZipTo(FS &fs, const String &zipPath, const String &targetFolder, bool
     if (!fs.exists(baseFolder) && baseFolder.length() > 0) createDirRecursive(baseFolder, fs);
 
     for (mz_uint i = 0; i < numFiles; i++) {
-        Serial.printf("[extract] entry %u/%u. free heap: %u\n",
-                      (unsigned)(i + 1), (unsigned)numFiles, (unsigned)esp_get_free_heap_size());
-
         if (!mz_zip_reader_file_stat(&zip, i, &stat)) continue;
 
         String rawName = String(stat.m_filename);
         String entryName = sanitizeZipEntry(rawName);
         if (entryName.length() == 0) {
-            Serial.println("[extract]   (skipped: sanitized to empty)");
+            extractLog("  [%u] skipped (sanitized to empty): '%s'", (unsigned)i, rawName.c_str());
             continue;
         }
+
+        extractLog("  [%u/%u] '%s' (%u bytes compressed)",
+                   (unsigned)(i + 1), (unsigned)numFiles,
+                   entryName.c_str(), (unsigned)stat.m_comp_size);
 
         String fullPath = baseFolder + "/" + entryName;
         String dirPath = fullPath.substring(0, fullPath.lastIndexOf("/"));
@@ -349,7 +403,7 @@ int extractZipTo(FS &fs, const String &zipPath, const String &targetFolder, bool
 
         File out = fs.open(fullPath, FILE_WRITE);
         if (!out) {
-            Serial.printf("[extract]   fs.open(%s) failed\n", fullPath.c_str());
+            extractLog("    fs.open(%s) failed", fullPath.c_str());
             continue;
         }
 
@@ -360,21 +414,19 @@ int extractZipTo(FS &fs, const String &zipPath, const String &targetFolder, bool
         if (ok && !ctx.writeError) {
             extracted++;
         } else {
-            Serial.printf("[extract]   extraction of %s failed (ok=%d, writeError=%d)\n",
-                          fullPath.c_str(), (int)ok, (int)ctx.writeError);
+            extractLog("    extraction failed (ok=%d, writeError=%d)",
+                       (int)ok, (int)ctx.writeError);
             fs.remove(fullPath);
         }
 
-        // Yield to the RTOS so the watchdog doesn't fire during long
-        // extractions and so the WebUI task doesn't hog the CPU.
         vTaskDelay(pdMS_TO_TICKS(5));
     }
 
     mz_zip_reader_end(&zip);
     if (memBuf) free(memBuf);
 
-    Serial.printf("[extract] done. extracted=%d. free heap: %u\n",
-                  extracted, (unsigned)esp_get_free_heap_size());
+    extractLog("done. extracted=%d, free heap: %u",
+               extracted, (unsigned)esp_get_free_heap_size());
 
     if (deleteAfter && extracted >= 0) { fs.remove(zipPath); }
     return extracted;
@@ -436,6 +488,7 @@ void handleUpload(
             g_uploadTempPath = tempDir + "/" + safeName;
 
             request->_tempFile = tmpFs->open(g_uploadTempPath, "w");
+            extractLog("upload start: '%s' -> '%s'", filename.c_str(), g_uploadTempPath.c_str());
         } else {
             String relativePath = filename;
             String fullPath = uploadFolder + "/" + relativePath;
@@ -470,7 +523,7 @@ void handleUpload(
         if (g_uploadIsZip) {
             g_lastUploadWasZip = true;
             g_lastUploadZipPath = g_uploadTempPath;
-            Serial.printf("[upload] zip stored at %s\n", g_uploadTempPath.c_str());
+            extractLog("upload complete: '%s'", g_uploadTempPath.c_str());
 
             vTaskDelay(pdMS_TO_TICKS(200));
             g_longOpInProgress = false;
@@ -685,11 +738,9 @@ void configureWebServer() {
 
     server->on("/upload_state", HTTP_GET, [](AsyncWebServerRequest *request) {
         if (!checkUserWebAuth(request)) return;
-        Serial.printf(
-            "[upload_state] isZip=%d tempPath=%s\n",
-            (int)g_lastUploadWasZip,
-            g_lastUploadZipPath.c_str()
-        );
+        extractLog("upload_state query: isZip=%d tempPath=%s",
+                   (int)g_lastUploadWasZip,
+                   g_lastUploadZipPath.c_str());
         String json;
         if (g_lastUploadWasZip) {
             json = "{\"isZip\":true,\"tempPath\":\"" + g_lastUploadZipPath + "\"}";
@@ -914,6 +965,7 @@ void configureWebServer() {
         if (!checkUserWebAuth(request)) return;
 
         if (g_longOpInProgress) {
+            extractLog("extract refused: another long op in progress");
             request->send(409, "text/plain", "Another operation is in progress");
             return;
         }
@@ -933,13 +985,19 @@ void configureWebServer() {
             deleteAfter = (strcmp(request->arg("deleteAfter").c_str(), "1") == 0);
         }
 
+        extractLog("extract request: zip=%s target=%s fs=%s delete=%d",
+                   zipPath.c_str(), targetFolder.c_str(),
+                   useSD ? "SD" : "LittleFS", (int)deleteAfter);
+
         FS *fs = useSD ? (FS *)&SD : (FS *)&LittleFS;
         if (useSD && !setupSdCard()) {
+            extractLog("refused: SD not mounted");
             request->send(500, "text/plain", "SD not mounted");
             return;
         }
 
         if (!fs->exists(zipPath)) {
+            extractLog("refused: zip not found at %s", zipPath.c_str());
             request->send(404, "text/plain", "Zip not found at " + zipPath);
             return;
         }
@@ -953,10 +1011,12 @@ void configureWebServer() {
             dest += baseName;
 
             if (fs->rename(zipPath, dest)) {
+                extractLog("move-only: renamed to %s", dest.c_str());
                 request->send(200, "application/json", "{\"moved\":\"" + dest + "\"}");
                 return;
             }
 
+            extractLog("move-only: rename failed, falling back to copy");
             File src = fs->open(zipPath, FILE_READ);
             if (!src) {
                 request->send(500, "text/plain", "Source zip missing");
@@ -977,17 +1037,20 @@ void configureWebServer() {
             src.close();
             dst.close();
             fs->remove(zipPath);
+            extractLog("move-only: copied to %s", dest.c_str());
             request->send(200, "application/json", "{\"moved\":\"" + dest + "\"}");
             return;
         }
 
         int n = extractZipTo(*fs, zipPath, targetFolder, deleteAfter);
         if (n < 0) {
+            extractLog("extraction returned -1");
             request->send(500, "text/plain", "Extraction failed");
         } else {
             vTaskDelay(pdMS_TO_TICKS(200));
             char buf[96];
             snprintf(buf, sizeof(buf), "{\"extracted\":%d,\"target\":\"%s\"}", n, targetFolder.c_str());
+            extractLog("extraction ok: %d files", n);
             request->send(200, "application/json", buf);
         }
     });
