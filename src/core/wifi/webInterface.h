@@ -1,5 +1,3 @@
-#ifndef __WEB_INTERFACE_H__
-#define __WEB_INTERFACE_H__
 
 #include <AsyncTCP.h>
 #include <ESPAsyncWebServer.h>
@@ -27,10 +25,3 @@ void configureWebServer();
 void startWebUi(bool mode_ap = false);
 void stopWebUi();
 void cleanlyStopWebUiForWiFiFeature();
-
-// -----------------------------------------------------------------------------
-// ZIP extraction support
-// -----------------------------------------------------------------------------
-int extractZipTo(FS &fs, const String &zipPath, const String &targetFolder, bool deleteAfter);
-
-#endif
