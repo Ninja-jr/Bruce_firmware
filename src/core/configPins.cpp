@@ -125,6 +125,15 @@ void BruceConfigPins::fromJson(JsonObject obj) {
         log_e("Fail");
     }
 
+#ifdef CARDPUTER_GPS_MODULE_SELECT
+    if (!root["gpsModule"].isNull()) {
+        gpsModule = (GPSModules)root["gpsModule"].as<int>();
+    } else {
+        count++;
+        log_e("Fail");
+    }
+#endif
+
     if (!root["CC1101_Pins"].isNull()) {
         SPIPins def = CC1101_bus;
         CC1101_bus.fromJson(root["CC1101_Pins"].as<JsonObject>());
@@ -285,6 +294,10 @@ void BruceConfigPins::toJson(JsonObject obj) const {
     root["gpsBaudrate"] = gpsBaudrate;
     root["iButton"] = iButton;
 
+#ifdef CARDPUTER_GPS_MODULE_SELECT
+    root["gpsModule"] = (int)gpsModule;
+#endif
+
     JsonObject _CC1101 = root["CC1101_Pins"].to<JsonObject>();
     CC1101_bus.toJson(_CC1101);
 
@@ -424,6 +437,9 @@ void BruceConfigPins::validateConfig() {
     validateRfModuleValue();
     validateRfidModuleValue();
     validateGpsBaudrateValue();
+#ifdef CARDPUTER_GPS_MODULE_SELECT
+    validateGpsModuleValue();
+#endif
 #if !defined(LITE_VERSION)
     validateSpiPins(ST25R_bus);
     validateSpiPins(LoRa_bus);

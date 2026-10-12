@@ -190,6 +190,7 @@ void _post_setup_gpio() {
     bruceConfigPins.gps_bus.rx = (gpio_num_t)15;
     bruceConfigPins.gps_bus.tx = (gpio_num_t)13;
     bruceConfigPins.gpsBaudrate = 115200;
+#endif
 
     bruceConfigPins.CC1101_bus.sck = (gpio_num_t)40;
     bruceConfigPins.CC1101_bus.miso = (gpio_num_t)39;
