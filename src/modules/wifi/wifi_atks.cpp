@@ -29,9 +29,6 @@ const uint8_t _default_target[6] = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF};
 
 std::vector<wifi_ap_record_t> ap_records;
 
-// Forward declaration: extracted scan menu, defined after wifi_atk_menu helpers
-void wifi_atks_scan_menu();
-
 extern "C" int ieee80211_raw_frame_sanity_check(int32_t arg, int32_t arg2, int32_t arg3) {
     if (arg == 31337) return 1;
     else return 0;
@@ -248,70 +245,6 @@ bool wifi_atk_unsetWifi() {
     return true;
 }
 
-// =============================================================================
-// Extracted scan menu — reachable both from wifi_atk_menu() and from
-// target_atk_menu()'s Back, so AP actions -> Back returns to the scan list.
-// =============================================================================
-void wifi_atks_scan_menu() {
-    int nets;
-    displayTextLine("Scanning..");
-    nets = WiFi.scanNetworks(false, showHiddenNetworks);
-    ap_records.clear();
-    std::vector<Option> scanOptions = {};
-    for (int i = 0; i < nets; i++) {
-        wifi_ap_record_t record;
-        memset(&record, 0, sizeof(record));
-        memcpy(record.bssid, WiFi.BSSID(i), 6);
-        record.primary = static_cast<uint8_t>(WiFi.channel(i));
-        record.authmode = static_cast<wifi_auth_mode_t>(WiFi.encryptionType(i));
-        if (strlen(WiFi.SSID(i).c_str()) > 0) {
-            strncpy((char *)record.ssid, WiFi.SSID(i).c_str(), sizeof(record.ssid) - 1);
-            record.ssid[sizeof(record.ssid) - 1] = '\0';
-        } else {
-            record.ssid[0] = '\0';
-        }
-
-        ap_records.push_back(record);
-
-        String ssid = WiFi.SSID(i);
-        int encryptionType = WiFi.encryptionType(i);
-        int32_t rssi = WiFi.RSSI(i);
-        int32_t ch = WiFi.channel(i);
-        String encryptionPrefix = (encryptionType == WIFI_AUTH_OPEN) ? "" : "#";
-        String encryptionTypeStr;
-        switch (encryptionType) {
-            case WIFI_AUTH_OPEN: encryptionTypeStr = "Open"; break;
-            case WIFI_AUTH_WEP: encryptionTypeStr = "WEP"; break;
-            case WIFI_AUTH_WPA_PSK: encryptionTypeStr = "WPA/PSK"; break;
-            case WIFI_AUTH_WPA2_PSK: encryptionTypeStr = "WPA2/PSK"; break;
-            case WIFI_AUTH_WPA_WPA2_PSK: encryptionTypeStr = "WPA/WPA2/PSK"; break;
-            case WIFI_AUTH_WPA2_ENTERPRISE: encryptionTypeStr = "WPA2/Enterprise"; break;
-            case WIFI_AUTH_WPA3_PSK: encryptionTypeStr = "WPA3/PSK"; break;
-            case WIFI_AUTH_WPA2_WPA3_PSK: encryptionTypeStr = "WPA2/WPA3/PSK"; break;
-            default: encryptionTypeStr = "Unknown"; break;
-        }
-
-        String displaySSID = ssid;
-        if (displaySSID.length() == 0) { displaySSID = "<Hidden SSID> " + WiFi.BSSIDstr(i); }
-
-        String optionText = encryptionPrefix + displaySSID + " (" + String(rssi) + "|" +
-                            encryptionTypeStr + "|ch." + String(ch) + ")";
-
-        scanOptions.push_back({optionText.c_str(), [=]() {
-                                   ap_record = ap_records[i];
-                                   target_atk_menu(
-                                       WiFi.SSID(i).c_str(),
-                                       WiFi.BSSIDstr(i),
-                                       static_cast<uint8_t>(WiFi.channel(i))
-                                   );
-                               }});
-    }
-
-    scanOptions.push_back({"Back", []() {}});
-
-    loopOptions(scanOptions);
-}
-
 void wifi_atk_menu() {
     resetGlobalState();
 
@@ -320,7 +253,6 @@ void wifi_atk_menu() {
     checkHeap("Wifi menu start");
 
     bool scanAtks = false;
-    bool goBack = false;
     options = {
         {"Target Atks",     [&]() { scanAtks = true; }     },
 #ifndef LITE_VERSION
@@ -328,23 +260,74 @@ void wifi_atk_menu() {
 #endif
         {"Beacon SPAM",     [=]() { beaconAttack(); }      },
         {"Deauth Flood",    [=]() { deauthFloodAttack(); } },
-        {"Deauther",        [=]() { enhancedDeauthMenu(); }},
-        {"Back",            [&]() { goBack = true; }       },
-        {"Main Menu",       [=]() { returnToMenu = true; }},
+        {"Enhanced Deauth", [=]() { enhancedDeauthMenu(); }},
     };
+    addOptionToMainMenu();
     loopOptions(options);
-
-    if (goBack) {
-        resetGlobalState();
-        mainMenu.wifiMenu.optionsMenu();
-        return;
-    }
-
     if (!returnToMenu) {
         if (!wifi_atk_setWifi()) return;
     }
     if (scanAtks) {
-        wifi_atks_scan_menu();
+        int nets;
+        displayTextLine("Scanning..");
+        nets = WiFi.scanNetworks(false, showHiddenNetworks);
+        ap_records.clear();
+        options = {};
+        for (int i = 0; i < nets; i++) {
+            wifi_ap_record_t record;
+            memset(&record, 0, sizeof(record));
+            memcpy(record.bssid, WiFi.BSSID(i), 6);
+            record.primary = static_cast<uint8_t>(WiFi.channel(i));
+            record.authmode = static_cast<wifi_auth_mode_t>(WiFi.encryptionType(i));
+            if (strlen(WiFi.SSID(i).c_str()) > 0) {
+                strncpy((char *)record.ssid, WiFi.SSID(i).c_str(), sizeof(record.ssid) - 1);
+                record.ssid[sizeof(record.ssid) - 1] = '\0';
+            } else {
+                record.ssid[0] = '\0';
+            }
+
+            ap_records.push_back(record);
+
+            String ssid = WiFi.SSID(i);
+            int encryptionType = WiFi.encryptionType(i);
+            int32_t rssi = WiFi.RSSI(i);
+            int32_t ch = WiFi.channel(i);
+            String encryptionPrefix = (encryptionType == WIFI_AUTH_OPEN) ? "" : "#";
+            String encryptionTypeStr;
+            switch (encryptionType) {
+                case WIFI_AUTH_OPEN: encryptionTypeStr = "Open"; break;
+                case WIFI_AUTH_WEP: encryptionTypeStr = "WEP"; break;
+                case WIFI_AUTH_WPA_PSK: encryptionTypeStr = "WPA/PSK"; break;
+                case WIFI_AUTH_WPA2_PSK: encryptionTypeStr = "WPA2/PSK"; break;
+                case WIFI_AUTH_WPA_WPA2_PSK: encryptionTypeStr = "WPA/WPA2/PSK"; break;
+                case WIFI_AUTH_WPA2_ENTERPRISE: encryptionTypeStr = "WPA2/Enterprise"; break;
+                case WIFI_AUTH_WPA3_PSK: encryptionTypeStr = "WPA3/PSK"; break;
+                case WIFI_AUTH_WPA2_WPA3_PSK: encryptionTypeStr = "WPA2/WPA3/PSK"; break;
+                default: encryptionTypeStr = "Unknown"; break;
+            }
+
+            String displaySSID = ssid;
+            if (displaySSID.length() == 0) { displaySSID = "<Hidden SSID> " + WiFi.BSSIDstr(i); }
+
+            String optionText = encryptionPrefix + displaySSID + " (" + String(rssi) + "|" +
+                                encryptionTypeStr + "|ch." + String(ch) + ")";
+
+            options.push_back({optionText.c_str(), [=]() {
+                                   ap_record = ap_records[i];
+                                   target_atk_menu(
+                                       WiFi.SSID(i).c_str(),
+                                       WiFi.BSSIDstr(i),
+                                       static_cast<uint8_t>(WiFi.channel(i))
+                                   );
+                               }});
+        }
+
+        addOptionToMainMenu();
+
+        loopOptions(options);
+        options.clear();
+        ap_records.clear();
+        ap_records.shrink_to_fit();
     }
     wifi_atk_unsetWifi();
     checkHeap("Wifi menu end");
@@ -660,7 +643,7 @@ void capture_handshake(const String &tssid, const String &mac, uint8_t channel) 
 }
 
 void target_atk_menu(const String &tssid, const String &mac, uint8_t channel) {
-    bool goBack = false;
+AGAIN:
     options = {
         {"Information",         [=]() { wifi_atk_info(tssid, mac, channel); }      },
         {"Deauth",              [=]() { target_atk(tssid, mac, channel); }         },
@@ -670,10 +653,11 @@ void target_atk_menu(const String &tssid, const String &mac, uint8_t channel) {
         {"Clone Portal",        [=]() { EvilPortal(tssid, channel, false, false); }},
         {"Deauth+Clone",        [=]() { EvilPortal(tssid, channel, true, false); } },
         {"Deauth+Clone+Verify", [=]() { EvilPortal(tssid, channel, true, true); }  },
-        {"Back",                [&]() { goBack = true; }},
     };
+    addOptionToMainMenu();
+
     loopOptions(options);
-    if (goBack) { wifi_atks_scan_menu(); }
+    if (!returnToMenu) goto AGAIN;
 }
 
 void target_atk(const String &tssid, const String &mac, uint8_t channel) {
@@ -918,10 +902,7 @@ void beaconAttack() {
                 if (fs != nullptr) beaconFile = loopSD(*fs, true, "TXT");
                 else return;
                 file = fs->open(beaconFile, FILE_READ);
-                if (file) {
-                    beaconFile = file.readString();
-                    file.close();
-                }
+                beaconFile = file.readString();
                 beaconFile.replace("\r\n", "\n");
                 tft.drawPixel(0, 0, 0);
                 drawMainBorderWithTitle("WiFi: Beacon SPAM");
@@ -933,6 +914,7 @@ void beaconAttack() {
         }
 #endif
         if (check(EscPress) || returnToMenu) {
+            if (BeaconMode == 3) file.close();
             break;
         }
     }
@@ -941,16 +923,13 @@ void beaconAttack() {
 
 void enhancedDeauthMenu() {
     resetGlobalState();
-    bool goBack = false;
+
     options = {
         {"Station Deauth (Single)", [=]() { showTargetSelection(); } },
         {"Deauth All Clients",      [=]() { deauthAllMenu(); }       },
         {"Deauth Target List",      [=]() { deauthTargetListMenu(); }},
-        {"Back",                    [&]() { goBack = true; }         },
+        {"Back",                    [=]() { returnToMenu = true; }   },
     };
+    addOptionToMainMenu();
     loopOptions(options);
-    if (goBack) {
-        resetGlobalState();
-        wifi_atk_menu();
-    }
 }
