@@ -413,7 +413,6 @@ ScanNets:
 }
 
 uint8_t targetBssid[6];
-#if !defined(LITE_VERSION)
 void capture_handshake(const String &tssid, const String &mac, uint8_t channel) {
     cleanlyStopWebUiForWiFiFeature();
 
@@ -659,7 +658,6 @@ void capture_handshake(const String &tssid, const String &mac, uint8_t channel) 
     delay(100);
     returnToMenu = true;
 }
-#endif
 
 void target_atk_menu(const String &tssid, const String &mac, uint8_t channel) {
     bool goBack = false;
