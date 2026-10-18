@@ -260,7 +260,7 @@ void wifi_atk_menu() {
 #endif
         {"Beacon SPAM",     [=]() { beaconAttack(); }      },
         {"Deauth Flood",    [=]() { deauthFloodAttack(); } },
-        {"Enhanced Deauth", [=]() { enhancedDeauthMenu(); }},
+        {"Deauther", [=]() { enhancedDeauthMenu(); }},
     };
     addOptionToMainMenu();
     loopOptions(options);
