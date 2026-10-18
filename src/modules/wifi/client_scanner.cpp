@@ -438,15 +438,19 @@ void clientScannerMenu() {
 
         options.clear();
         options.push_back({"Information", []() {}});
+#ifndef LITE_VERSION
         options.push_back({"Capture Handshake", []() {}});
+#endif
         int act = loopOptions(options);
         if (act == 0) {
             showApInformation(ap);
             drawMainBorderWithTitle("Client Scanner");
         } else if (act == 1) {
+#ifndef LITE_VERSION
             char macStr[18];
             macToStr(ap.bssid, macStr, sizeof(macStr));
             capture_handshake(ap.ssid, String(macStr), ap.channel);
+#endif
             // capture tore the radio down; results need no radio, loop again.
             drawMainBorderWithTitle("Client Scanner");
         }
