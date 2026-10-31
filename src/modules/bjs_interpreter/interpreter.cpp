@@ -1,5 +1,6 @@
 #if !defined(LITE_VERSION) && !defined(DISABLE_INTERPRETER)
 #include "interpreter.h"
+#include "core/display.h"
 #include "core/utils.h"
 #include <algorithm>
 
@@ -35,6 +36,11 @@ void interpreterHandler(void *pvParameters) {
     while (interpreter_state != 2) { vTaskDelay(pdMS_TO_TICKS(500)); }
 
     tft.fillScreen(TFT_BLACK);
+#if defined(HAS_TOUCH)
+    // Script drawing uses tftHeight, which excludes the reserved touch footer.
+    // Restore its navigation labels after clearing the physical display.
+    TouchFooter(TFT_WHITE);
+#endif
     tft.setTextSize(FM);
     tft.setTextColor(TFT_WHITE);
     bool psramAvailable = psramFound();

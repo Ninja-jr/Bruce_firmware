@@ -16,6 +16,13 @@
 #include <functional>
 #include <string>
 #include <vector>
+// Native RF decoding runs beneath the menu callbacks on loopTask. The default
+// 8 KiB stack overflows on the full protocol path (including RAW fallback).
+// Keep the smaller framework default on Lite builds without stream codecs.
+#if !defined(LITE_VERSION)
+SET_LOOP_TASK_STACK_SIZE(16 * 1024);
+#endif
+
 io_expander ioExpander;
 BruceConfig bruceConfig;
 BruceConfigPins bruceConfigPins;
@@ -176,6 +183,7 @@ volatile int tftHeight = TFT_WIDTH;
 #include "modules/bjs_interpreter/interpreter.h" // for JavaScript interpreter
 #include "modules/others/audio.h"                // for playAudioFile
 #include "modules/rf/rf_utils.h"                 // for initCC1101once
+#include "modules/rf/protocols/rf_keystore.h" // for rf_keystore_load
 #include <Wire.h>
 
 /*********************************************************************
@@ -540,7 +548,9 @@ void setup() {
         }
     }
     RAM_LOG("after-storage"); // bruceConfig/bruceConfigPins loaded from FS
-    blindSpotBootStage = 4;
+    #if !defined(LITE_VERSION)
+    rf_keystore_load();
+#endif
     begin_tft();
     init_clock();
     init_led();
