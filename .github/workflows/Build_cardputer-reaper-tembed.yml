@@ -24,7 +24,7 @@ jobs:
     name: Build ${{ matrix.env }}
     runs-on: ubuntu-latest
     strategy:
-      fail-fast: false          # one board failing doesn't cancel the others
+      fail-fast: false
       matrix:
         env:
           - m5stack-cardputer
@@ -39,6 +39,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           ref: ${{ github.event.inputs.target_branch }}
+          submodules: true
 
       - name: Resolve version string
         id: version
@@ -88,6 +89,11 @@ jobs:
           key: Bruce-pio-${{ env.BOARD_ENV }}-${{ github.run_id }}-${{ github.run_attempt }}
           restore-keys: |
             Bruce-pio-${{ env.BOARD_ENV }}-
+
+      - name: Clean stale PlatformIO symlinks
+        run: |
+          rm -rf .pio/libdeps
+          find .pio -name "*.pio-link" -delete 2>/dev/null || true
 
       - name: Install PlatformIO and configure version
         run: |
