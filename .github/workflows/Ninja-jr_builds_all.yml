@@ -63,7 +63,7 @@ jobs:
           - { env: "LAUNCHER_CYD-2USB",               family: "ESP32",}
           - { env: "LAUNCHER_CYD-2432W328C",          family: "ESP32",}
           - { env: "LAUNCHER_CYD-3248S035R",          family: "ESP32",}
-          # - { env: "LAUNCHER_CYD-3248S035C",          family: "ESP32",}
+          # - { env: "LAUNCHER_CYD-3248S035C",          family: "ESP32",}          
           - { env: "lilygo-t-embed-cc1101",           family: "ESP32-S3",}
           - { env: "lilygo-t-embed",                  family: "ESP32-S3",}
           - { env: "lilygo-t-deck",                   family: "ESP32-S3",}
@@ -102,6 +102,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           ref: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.target_branch || github.ref }}
+          submodules: true
 
       - name: Resolve version string
         id: version
@@ -168,6 +169,11 @@ jobs:
           key: Bruce-pio-${{ matrix.board.env }}-${{ github.run_id }}-${{ github.run_attempt }}
           restore-keys: |
             Bruce-pio-${{ matrix.board.env }}-
+
+      - name: Clean stale PlatformIO symlinks
+        run: |
+          rm -rf .pio/libdeps
+          find .pio -name "*.pio-link" -delete 2>/dev/null || true
 
       - name: Install PlatformIO and configure version
         run: |
