@@ -1224,6 +1224,7 @@ void sniffer_setup() {
     cfg.static_rx_buf_num = 4;
     cfg.dynamic_rx_buf_num = 32;
     ESP_ERROR_CHECK(esp_wifi_init(&cfg));
+    applyWifiCountry();
     ESP_ERROR_CHECK(esp_wifi_set_storage(WIFI_STORAGE_RAM));
 
     // STA + promiscuous (same as the SDR feature) instead of AP mode: running an
