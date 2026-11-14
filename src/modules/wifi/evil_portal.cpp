@@ -2,6 +2,7 @@
 #include "core/config.h"
 #include "core/display.h"
 #include "core/mykeyboard.h"
+#include "core/radio_mem.h"
 #include "core/sd_functions.h"
 #include "core/utils.h"
 #include "core/wifi/webInterface.h"
@@ -27,6 +28,24 @@ EvilPortal::EvilPortal(
 
     if (!setup()) return;
     cleanlyStopWebUiForWiFiFeature();
+
+    // Free any leftover WiFi stack (e.g. from a prior scan/connect) so the AP +
+    // web server allocations have room, and refuse cleanly if it won't fit.
+    // The Cardputer has no PSRAM, so AP mode is memory-tight (same OOM that
+    // affected the sniffer).
+    if (WiFi.getMode() != WIFI_MODE_NULL) {
+        WiFi.mode(WIFI_OFF);
+        delay(150);
+    }
+    // Release the SDR jammer's reserved 64 KB bank: AP mode (hostapd) needs far
+    // more contiguous DMA than the ~31 KB left while the bank is fenced off.
+    // (The SDR jammer will require a reboot afterwards.)
+    sdrBankReleaseForRadio();
+    if (!radioHasMemForWifi()) {
+        displayError("Low RAM: reboot and retry", true);
+        return;
+    }
+
     beginAP();
     if (!_backgroundMode) { loop(); }
 }
