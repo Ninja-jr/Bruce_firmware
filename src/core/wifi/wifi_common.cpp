@@ -223,9 +223,6 @@ bool wifiConnectMenu(wifi_mode_t mode) {
                         uint8_t *bssidPtr = WiFi.BSSID(i);
                         std::array<uint8_t, 6> bssidArr;
                         if (bssidPtr) memcpy(bssidArr.data(), bssidPtr, 6);
-
-                        // Check if the network is secured
-                        String encryptionPrefix = (encryptionType == WIFI_AUTH_OPEN) ? "" : "#";
                         String encryptionTypeStr;
                         switch (encryptionType) {
                             case WIFI_AUTH_OPEN: encryptionTypeStr = "Open"; break;
@@ -239,8 +236,7 @@ bool wifiConnectMenu(wifi_mode_t mode) {
                             default: encryptionTypeStr = "Unknown"; break;
                         }
 
-                        String optionText = encryptionPrefix + ssid + "(" + String(rssi) + "|" +
-                                            encryptionTypeStr + "|ch." + String(ch) + ")";
+                        String optionText = ssid + " (" + encryptionTypeStr + "|ch." + String(ch) + ")";
 
                         options.push_back(
                             {optionText.c_str(),
