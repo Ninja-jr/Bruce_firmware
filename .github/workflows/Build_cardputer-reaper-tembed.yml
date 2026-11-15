@@ -102,7 +102,7 @@ jobs:
           GIT_HASH=$(git rev-parse --short HEAD)
           sed -i "s|-DGIT_COMMIT_HASH='\"Homebrew\"'|!echo '-DGIT_COMMIT_HASH=\\\\\\\\\"${GIT_HASH}\\\\\\\\\"'|g" ./platformio.ini
 
-      - name: Compile for ${{ env.BOARD_ENV }}
+      - name: Compile firmware
         run: |
           mkdir -p /tmp/full /tmp/issues
           platformio run -e ${{ env.BOARD_ENV }} 2>&1 | tee /tmp/full/${{ env.BOARD_ENV }}.log
