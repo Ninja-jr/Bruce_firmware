@@ -16,7 +16,17 @@ int gsetRotation(bool set = false);
 
 void setBrightnessMenu();
 
+#if defined(HAS_RESISTIVE_TOUCH)
+// Touchscreen calibration (XPT2046). Stored in the NVS namespace "touch_cal", the same one the
+// Launcher uses, so both firmwares share it.
+bool loadTouchCalibration();
+bool saveTouchCalibration(uint16_t x0, uint16_t x1, uint16_t y0, uint16_t y1, uint8_t rot);
+void calibrateTouch();
+#endif
+
 void setUIColor();
+
+void setMainMenuStyleMenu();
 
 bool setCustomUIColorMenu();
 
@@ -48,6 +58,8 @@ void setEvilAllowSetSsid();
 
 void setEvilPasswordMode();
 
+void setEvilGatewayIp();
+
 void setRFModuleMenu();
 
 void setRFFreqMenu();
@@ -62,7 +74,7 @@ void setDimmerTimeMenu();
 
 void setClock();
 
-void runClockLoop();
+void runClockLoop(bool showMenuHint = false);
 
 int gsetIrTxPin(bool set = false);
 
@@ -73,8 +85,6 @@ int gsetIrRxPin(bool set = false);
 int gsetRfTxPin(bool set = false);
 
 int gsetRfRxPin(bool set = false);
-
-void runClockLoop();
 
 void setSoundConfig();
 
@@ -95,6 +105,7 @@ void setNetworkCredsMenu();
 void setBadUSBBLEMenu();
 void setBadUSBBLEKeyboardLayoutMenu();
 void setBadUSBBLEKeyDelayMenu();
+void setBadUSBBLEShowOutputMenu();
 
 void setSPIPinsMenu(BruceConfigPins::SPIPins &value);
 
@@ -102,10 +113,22 @@ void setUARTPinsMenu(BruceConfigPins::UARTPins &value);
 
 void setI2CPinsMenu(BruceConfigPins::I2CPins &value);
 
+void setSpeakerPinsMenu(BruceConfigPins::SpeakerPins &value);
+
+void setMicPinsMenu(BruceConfigPins::MicPins &value);
+
+void setBuzzerPinMenu();
+
 void setTheme();
 
 void setMacAddressMenu();
 
+#if !defined(LITE_VERSION)
 void enableBLEAPI();
+
+bool appStoreInstalled();
+
+void installAppStoreJS();
+#endif
 
 #endif

@@ -21,14 +21,14 @@ GPSTracker::~GPSTracker() {
     if (gpsConnected) end();
     ioExpander.turnPinOnOff(IO_EXP_GPS, LOW);
 #ifdef USE_BOOST
-    PPM.disableOTG();
+    hal_pmic_disable_otg();
 #endif
 }
 
 void GPSTracker::setup() {
     ioExpander.turnPinOnOff(IO_EXP_GPS, HIGH);
 #ifdef USE_BOOST /// ENABLE 5V OUTPUT
-    PPM.enableOTG();
+    hal_pmic_enable_otg();
 #endif
     display_banner();
     padprintln("Initializing...");
@@ -40,6 +40,7 @@ void GPSTracker::setup() {
 
 bool GPSTracker::begin_gps() {
     releasePins();
+    pinMode(bruceConfigPins.gps_bus.rx, INPUT);
     GPSserial.begin(
         bruceConfigPins.gpsBaudrate, SERIAL_8N1, bruceConfigPins.gps_bus.rx, bruceConfigPins.gps_bus.tx
     );
@@ -103,7 +104,9 @@ void GPSTracker::loop() {
         int tmp = millis();
         while (millis() - tmp < MAX_WAIT && !gps.location.isUpdated()) {
             if (check(EscPress) || returnToMenu) return end();
+            vTaskDelay(pdMS_TO_TICKS(1));
         }
+        vTaskDelay(pdMS_TO_TICKS(1));
     }
 }
 

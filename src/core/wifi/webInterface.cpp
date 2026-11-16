@@ -2,7 +2,8 @@
 #include "core/display.h"
 #include "core/mykeyboard.h"
 #include "core/passwords.h"
-#include "core/sd_functions.h"
+#include "core/ram_profile.h"
+#include "core/sd_functions.h" // using sd functions called to rename and manage sd files
 #include "core/serialcmds.h"
 #include "core/settings.h"
 #include "core/utils.h"
@@ -10,16 +11,10 @@
 #include "esp_task_wdt.h"
 #include "webFiles.h"
 #include <MD5Builder.h>
+#include <cstddef>
+#include <esp32-hal-psram.h>
 #include <esp_heap_caps.h>
 #include <globals.h>
-
-#if defined(CONFIG_IDF_TARGET_ESP32) && !defined(BOARD_HAS_PSRAM)
-#define MOUNT_SD_CARD setupSdCard()
-#define UNMOUNT_SD_CARD closeSdCard()
-#else
-#define MOUNT_SD_CARD
-#define UNMOUNT_SD_CARD
-#endif
 
 File uploadFile;
 FS _webFS = LittleFS;
@@ -52,6 +47,40 @@ void stopWebUi() {
     }
 }
 
+/**********************************************************************
+**  Function: cleanlyStopWebUiForWiFiFeature
+**  Cleanly stop WebUI and AP mode before starting a WiFi feature
+**  This prevents WiFi mode conflicts when features need exclusive control
+**********************************************************************/
+void cleanlyStopWebUiForWiFiFeature() {
+    // Only proceed if WebUI is active
+    if (!isWebUIActive && !server) { return; }
+
+    // Brief notification (non-blocking)
+    Serial.println("Stopping WebUI for WiFi feature...");
+
+    // Stop the WebUI
+    if (server) {
+        stopWebUi();
+        // Give the web server time to fully shut down
+        vTaskDelay(pdMS_TO_TICKS(100));
+    }
+
+    // Disconnect WiFi AP mode if it's the WebUI's AP
+    // Check if we're in AP or APSTA mode (used by WebUI)
+    wifi_mode_t currentMode = WiFi.getMode();
+    if (currentMode == WIFI_MODE_AP || currentMode == WIFI_MODE_APSTA) {
+        wifiDisconnect();
+        // Give WiFi time to fully disconnect
+        vTaskDelay(pdMS_TO_TICKS(250));
+    }
+
+    Serial.println("WebUI stopped, starting WiFi feature...");
+}
+/**********************************************************************
+**  Function: loopOptionsWebUi
+**  Display options to launch the WebUI
+**********************************************************************/
 void loopOptionsWebUi() {
     if (isWebUIActive) {
         bool opt = WiFi.getMode() - 1;
@@ -77,9 +106,15 @@ String humanReadableSize(uint64_t bytes) {
     else return String(bytes / 1024.0 / 1024.0 / 1024.0) + " GB";
 }
 
-String listFiles(FS &fs, String folder) {
+/**********************************************************************
+**  Function: listFiles
+**  list all of the files, if ishtml=true, return html rather than simple text
+**********************************************************************/
+String listFiles(FS &fs, const String &folder) {
+    // log_i("Listfiles Start");
     String returnText = "pa:" + folder + ":0\n";
-    MOUNT_SD_CARD;
+    // Serial.println("Listing files stored on SD");
+
     _webFS = fs;
     File root = fs.open(folder);
     uploadFolder = folder;
@@ -99,10 +134,10 @@ String listFiles(FS &fs, String folder) {
                 }
             }
         } else break;
-        esp_task_wdt_reset();
+        delay(1);
     }
     root.close();
-    UNMOUNT_SD_CARD;
+    // log_i("ListFiles End");
     return returnText;
 }
 
@@ -127,7 +162,11 @@ bool checkUserWebAuth(AsyncWebServerRequest *request, bool onFailureReturnLoginP
     return false;
 }
 
-void createDirRecursive(String path, FS fs) {
+/**********************************************************************
+**  Function: createDirRecursive
+** Create folders recursivelly
+**********************************************************************/
+void createDirRecursive(const String &path, FS fs) {
     String currentPath = "";
     int startIndex = 0;
     while (startIndex < path.length()) {
@@ -155,7 +194,6 @@ void handleUpload(
             String fullPath = uploadFolder + "/" + relativePath;
             String dirPath = fullPath.substring(0, fullPath.lastIndexOf("/"));
             if (dirPath.length() > 0) { createDirRecursive(dirPath, _webFS); }
-            MOUNT_SD_CARD;
         RETRY:
             request->_tempFile = _webFS.open(uploadFolder + "/" + filename, "w");
             if (!request->_tempFile) {
@@ -181,7 +219,6 @@ void handleUpload(
         }
         if (final) {
             if (request->_tempFile) request->_tempFile.close();
-            UNMOUNT_SD_CARD;
         }
     }
 }
@@ -189,31 +226,43 @@ void handleUpload(
 void notFound(AsyncWebServerRequest *request) { request->send(404, "text/plain", "Nothing in here Sharky"); }
 
 void drawWebUiScreen(bool mode_ap) {
-    tft.fillScreen(bruceConfig.bgColor);
-    tft.drawRoundRect(5, 5, tftWidth - 10, tftHeight - 10, 5, ALCOLOR);
-    if (mode_ap) {
-        setTftDisplay(0, 0, bruceConfig.bgColor, FM);
-        tft.drawCentreString("BruceNet/brucenet", tftWidth / 2, 7, 1);
-    }
-    setTftDisplay(0, 0, ALCOLOR, FM);
-    tft.drawCentreString("BRUCE WebUI", tftWidth / 2, 27, 1);
+    drawMainBorderWithTitle("WebUI", true);
+
     String txt;
     if (!mode_ap) txt = WiFi.localIP().toString();
     else txt = WiFi.softAPIP().toString();
-    tft.setTextColor(bruceConfig.priColor);
-    tft.drawCentreString("http://bruce.local", tftWidth / 2, 45, 1);
-    setTftDisplay(7, 67);
-    tft.setTextSize(FM);
-    tft.print("IP: ");
-    tft.println(txt);
-    tft.setCursor(7, tft.getCursorY());
-    tft.println("Usr: " + String(bruceConfig.webUI.user));
-    tft.setCursor(7, tft.getCursorY());
-    tft.println("Pwd: " + String(bruceConfig.webUI.pwd));
-    tft.setCursor(7, tft.getCursorY());
-    tft.setTextColor(TFT_RED);
+
+    int padX = 14;
+    int currentY = 55;
+
+    tft.setTextColor(bruceConfig.priColor, bruceConfig.bgColor);
     tft.setTextSize(FP);
-    tft.drawCentreString("press Esc to stop", tftWidth / 2, tftHeight - 2 * LH * FP, 1);
+
+    if (mode_ap) {
+        tft.setCursor(padX, currentY);
+        tft.print("Net: BruceNet/brucenet");
+        currentY += LH * FP + 6;
+    }
+
+    tft.setCursor(padX, currentY);
+    if (mdnsRunning) tft.print("Url: http://bruce.local");
+    currentY += LH * FP + 6;
+
+    tft.setCursor(padX, currentY);
+    tft.print("IP:  " + txt);
+    currentY += LH * FP + 6;
+
+    tft.setCursor(padX, currentY);
+    tft.print("Usr: " + String(bruceConfig.webUI.user));
+    currentY += LH * FP + 6;
+
+    tft.setCursor(padX, currentY);
+    tft.print("Pwd: " + String(bruceConfig.webUI.pwd));
+
+    tft.setTextColor(TFT_RED, bruceConfig.bgColor);
+    tft.setTextSize(FP);
+    tft.drawCentreString("press Esc to stop", tftWidth / 2, tftHeight - 2 * LH * FP - 5, 1);
+
 #if defined(HAS_TOUCH)
     TouchFooter();
 #endif
@@ -231,11 +280,15 @@ String color565ToWebHex(uint16_t color565) {
     return String(hex);
 }
 
-void serveWebUIFile(AsyncWebServerRequest *request, String filename, const char *contentType) {
+/**********************************************************************
+**  Function: serveWebUIFile
+**  serves files for WebUI and checks for custom WebUI files
+**********************************************************************/
+void serveWebUIFile(AsyncWebServerRequest *request, const String &filename, const char *contentType) {
     serveWebUIFile(request, filename, contentType, false, nullptr, 0);
 }
 void serveWebUIFile(
-    AsyncWebServerRequest *request, String filename, const char *contentType, bool gzip,
+    AsyncWebServerRequest *request, const String &filename, const char *contentType, bool gzip,
     const uint8_t *originaFile, uint32_t originalFileSize
 ) {
     AsyncWebServerResponse *response = nullptr;
@@ -258,27 +311,22 @@ void serveWebUIFile(
         }
         response = request->beginResponse(200, String(contentType), originaFile, originalFileSize);
         if (gzip) {
-            if (!response->addHeader("Content-Encoding", "gzip")) Serial.println("Failed to add gzip header");
+            if (!response->addHeader("Content-Encoding", "gzip")) log_e("Failed to add gzip header");
         }
     }
     request->send(response);
 }
 
 static bool startMdnsResponder() {
-    constexpr size_t kMinInternalHeap = 20 * 1024;
-    size_t freeInternalHeap = heap_caps_get_free_size(MALLOC_CAP_INTERNAL);
-    if (freeInternalHeap < kMinInternalHeap) {
-        Serial.printf(
-            "Skipping mDNS responder. Only %lu bytes of internal heap available (need %lu).\n",
-            static_cast<unsigned long>(freeInternalHeap),
-            static_cast<unsigned long>(kMinInternalHeap)
-        );
-        return false;
-    }
+    RAM_LOG("before MDNS");
+
     if (!MDNS.begin(host)) {
-        Serial.println("Error setting up MDNS responder!");
+        RAM_LOG("MDNS failed");
+        Serial.printf("Error setting up MDNS responder!\n");
         return false;
     }
+
+    RAM_LOG("after MDNS");
     return true;
 }
 
@@ -568,9 +616,7 @@ h1 {
                 response->addHeader("Location", "/");
                 response->addHeader("Set-Cookie", "BRUCESESSION=" + token + "; Path=/; HttpOnly");
                 request->send(response);
-                MOUNT_SD_CARD;
                 bruceConfig.addWebUISession(token);
-                UNMOUNT_SD_CARD;
                 return;
             }
         }
@@ -1099,14 +1145,13 @@ document.addEventListener('keydown', (e) => {
     server->on("/systeminfo", HTTP_GET, [](AsyncWebServerRequest *request) {
         if (checkUserWebAuth(request)) {
             char response_body[300];
-            MOUNT_SD_CARD;
             uint64_t LittleFSTotalBytes = LittleFS.totalBytes();
             uint64_t LittleFSUsedBytes = LittleFS.usedBytes();
             uint64_t SDTotalBytes = SD.totalBytes();
             uint64_t SDUsedBytes = SD.usedBytes();
-            UNMOUNT_SD_CARD;
-            sprintf(
+            snprintf(
                 response_body,
+                sizeof(response_body),
                 "{\"%s\":\"%s\",\"SD\":{\"%s\":\"%s\",\"%s\":\"%s\",\"%s\":\"%s\"},"
                 "\"LittleFS\":{\"%s\":\"%s\",\"%s\":\"%s\",\"%s\":\"%s\"}}",
                 "BRUCE_VERSION",
@@ -1162,11 +1207,9 @@ document.addEventListener('keydown', (e) => {
                 String filePath = request->arg("filePath").c_str();
                 String filePath2 = filePath.substring(0, filePath.lastIndexOf('/') + 1) + fileName;
                 if (fs == "SD") {
-                    MOUNT_SD_CARD;
                     if (SD.rename(filePath, filePath2))
                         request->send(200, "text/plain", filePath + " renamed to " + filePath2);
                     else request->send(200, "text/plain", "Fail renaming file.");
-                    UNMOUNT_SD_CARD;
                 } else {
                     if (LittleFS.rename(filePath, filePath2))
                         request->send(200, "text/plain", filePath + " renamed to " + filePath2);
@@ -1223,13 +1266,11 @@ document.addEventListener('keydown', (e) => {
                     else vTaskDelay(pdMS_TO_TICKS(50));
                 }
             } else {
-                MOUNT_SD_CARD;
                 if (parseSerialCommand(cmnd, false)) {
                     request->send(200, "text/plain", "command " + cmnd + " queued");
                 } else {
                     request->send(400, "text/plain", "command failed, check the serial log for details");
                 }
-                UNMOUNT_SD_CARD;
             }
         } else {
             request->send(400, "text/plain", "http request missing required arg: cmnd");
@@ -1245,9 +1286,7 @@ document.addEventListener('keydown', (e) => {
             String folder = "/";
             if (request->hasArg("folder")) { folder = request->arg("folder"); }
             if (strcmp(request->arg("fs").c_str(), "SD") == 0) {
-                MOUNT_SD_CARD;
                 request->send(200, "text/plain", listFiles(SD, folder));
-                UNMOUNT_SD_CARD;
             } else {
                 request->send(200, "text/plain", listFiles(LittleFS, folder));
             }
@@ -1265,13 +1304,11 @@ document.addEventListener('keydown', (e) => {
 
                 FS *fs;
                 if (useSD) {
-                    MOUNT_SD_CARD;
-                    request->onDisconnect([]() { UNMOUNT_SD_CARD; });
                     fs = &SD;
                 } else fs = &LittleFS;
 
-                Serial.printf("\nfilename: %s\n", fileName.c_str());
-                Serial.printf("fileAction: %s\n", fileAction.c_str());
+                log_i("filename: %s\n", fileName.c_str());
+                log_i("fileAction: %s\n", fileAction.c_str());
 
                 if (!fs->exists(fileName)) {
                     if (strcmp(fileAction.c_str(), "create") == 0) {
@@ -1350,9 +1387,8 @@ document.addEventListener('keydown', (e) => {
                 fs::FS *fs = useSD ? (fs::FS *)&SD : (fs::FS *)&LittleFS;
                 String fsType = useSD ? "SD" : "LittleFS";
 
-                if (useSD) {
-                    if (!setupSdCard()) {
-                        request->onDisconnect([]() { UNMOUNT_SD_CARD; });
+                if (useSD) {              // LittleFS is already mounted
+                    if (!setupSdCard()) { // only tries to mount SD if editting on SD
                         request->send(500, "text/plain", "Failed to initialize file system: " + fsType);
                         return;
                     }
@@ -1388,9 +1424,7 @@ document.addEventListener('keydown', (e) => {
             if (request->hasArg("usr") && request->hasArg("pwd")) {
                 const char *usr = request->arg("usr").c_str();
                 const char *pwd = request->arg("pwd").c_str();
-                MOUNT_SD_CARD;
                 bruceConfig.setWebUICreds(usr, pwd);
-                UNMOUNT_SD_CARD;
                 request->send(
                     200, "text/plain", "User: " + String(usr) + " configured with password: " + String(pwd)
                 );
@@ -1402,9 +1436,8 @@ document.addEventListener('keydown', (e) => {
 }
 
 void startWebUi(bool mode_ap) {
-    UNMOUNT_SD_CARD;
     bool keepWifiConnected = false;
-    if (WiFi.status() != WL_CONNECTED) {
+    if (!WiFi.isConnected()) {
         if (mode_ap) wifiConnectMenu(WIFI_AP);
         else wifiConnectMenu(WIFI_STA);
     } else {
@@ -1430,8 +1463,7 @@ void startWebUi(bool mode_ap) {
     tft.setLogging(true);
     
     drawWebUiScreen(mode_ap);
-    
-#ifdef HAS_SCREEN
+
     while (!check(EscPress)) {
         vTaskDelay(pdMS_TO_TICKS(70));
     }
@@ -1449,5 +1481,4 @@ void startWebUi(bool mode_ap) {
         vTaskDelay(pdMS_TO_TICKS(100));
         if (!keepWifiConnected) { wifiDisconnect(); }
     }
-#endif
 }

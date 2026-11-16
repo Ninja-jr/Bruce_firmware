@@ -1,15 +1,26 @@
 #include "core/main_menu.h"
 #include <globals.h>
 
+#include "core/bus_HAL.h"
 #include "core/powerSave.h"
+#include "core/ram_profile.h"
 #include "core/serial_commands/cli.h"
 #include "core/utils.h"
+#include "current_year.h"
 #include "esp32-hal-psram.h"
+#include "esp_heap_caps.h"
 #include "esp_task_wdt.h"
 #include "esp_wifi.h"
 #include <functional>
 #include <string>
 #include <vector>
+// Native RF decoding runs beneath the menu callbacks on loopTask. The default
+// 8 KiB stack overflows on the full protocol path (including RAW fallback).
+// Keep the smaller framework default on Lite builds without stream codecs.
+#if !defined(LITE_VERSION)
+SET_LOOP_TASK_STACK_SIZE(16 * 1024);
+#endif
+
 io_expander ioExpander;
 BruceConfig bruceConfig;
 BruceConfigPins bruceConfigPins;
@@ -19,12 +30,28 @@ USBSerial USBserial;
 SerialDevice *serialDevice = &USBserial;
 
 StartupApp startupApp;
+String startupAppJSInterpreterFile = "";
+
 MainMenu mainMenu;
-SPIClass sdcardSPI;
+#ifndef VSPI
+#define VSPI FSPI
+#endif
 #ifdef USE_HSPI_PORT
-SPIClass CC_NRF_SPI(VSPI);
+// The display owns HSPI (SPIClass() defaults to HSPI): mounting the SD on it would re-route the
+// HSPI MISO input to the SD card's pin and break every device that shares the display MISO
+// (e.g. the XPT2046 touchscreen).
+SPIClass sdcardSPI(VSPI);
+// SPIClass sdcardSPI;
+SPIClass AUX_SPI(VSPI);
 #else
-SPIClass CC_NRF_SPI(HSPI);
+// sdcardSPI and AUX_SPI must live on different SPI hosts: SPIClass's default constructor and
+// AUX_SPI(HSPI) both resolve to the same host, so once sdcardSPI has claimed it, calling
+// AUX_SPI.begin() on other pins (e.g. a shared XPT2046 touch bus) succeeds but never actually
+// reroutes that host's GPIO matrix -- every AUX_SPI consumer ends up talking over the SD card's
+// pins instead. Confirmed on the T-HMI: its shared touch bus read only 0x1FFF (floating) through
+// AUX_SPI while the exact same pins, driven bit-banged, answered the XPT2046 correctly.
+SPIClass sdcardSPI(VSPI);
+SPIClass AUX_SPI(HSPI);
 #endif
 
 // Navigation Variables
@@ -46,9 +73,12 @@ String menuOptionLabel = "";
 volatile int EncoderLedChange = 0;
 #endif
 
-TouchPoint touchPoint;
+BruceTouchPoint touchPoint;
+volatile bool touchZoneOutsideFooterEnabled = true;
 
 keyStroke KeyStroke;
+
+volatile int32_t RotaryNetSteps = 0;
 
 TaskHandle_t xHandle;
 void __attribute__((weak)) taskInputHandler(void *parameter) {
@@ -60,6 +90,8 @@ void __attribute__((weak)) taskInputHandler(void *parameter) {
         // if AnyKeyPress is false, or rerun if it was not renewed within 75ms (arbitrary)
         // because AnyKeyPress will be true if didn´t passed through a check(bool var)
         if (!AnyKeyPress || millis() - timer > 75) {
+            // Held across the whole update so consumers never observe a half-written state
+            inputLock();
             NextPress = false;
             PrevPress = false;
             UpPress = false;
@@ -72,9 +104,9 @@ void __attribute__((weak)) taskInputHandler(void *parameter) {
             PrevPagePress = false;
             touchPoint.pressed = false;
             touchPoint.Clear();
-#ifndef USE_TFT_eSPI_TOUCH
+            checkAndRecoverSysI2CBus();
             InputHandler();
-#endif
+            inputUnlock();
             timer = millis();
         }
         vTaskDelay(pdMS_TO_TICKS(10));
@@ -84,7 +116,7 @@ void __attribute__((weak)) taskInputHandler(void *parameter) {
 unsigned long previousMillis = millis();
 int prog_handler; // 0 - Flash, 1 - LittleFS, 3 - Download
 String cachedPassword = "";
-bool interpreter_start = false;
+int8_t interpreter_state = -1;
 bool sdcardMounted = false;
 bool gpsConnected = false;
 
@@ -99,11 +131,15 @@ bool returnToMenu;
 bool isSleeping = false;
 bool isScreenOff = false;
 bool dimmer = false;
-char timeStr[10];
+char timeStr[16];
 time_t localTime;
 struct tm *timeInfo;
 #if defined(HAS_RTC)
+#if defined(HAS_RTC_PCF85063A)
+pcf85063_RTC _rtc;
+#else
 cplus_RTC _rtc;
+#endif
 RTC_TimeTypeDef _time;
 RTC_DateTypeDef _date;
 bool clock_set = true;
@@ -114,25 +150,18 @@ bool clock_set = false;
 
 std::vector<Option> options;
 // Protected global variables
-#if defined(HAS_SCREEN)
 tft_logger tft = tft_logger(); // Invoke custom library
-TFT_eSprite sprite = TFT_eSprite(&tft);
-TFT_eSprite draw = TFT_eSprite(&tft);
+tft_sprite sprite = tft_sprite(&tft);
+tft_sprite draw = tft_sprite(&tft);
 volatile int tftWidth = TFT_HEIGHT;
 #ifdef HAS_TOUCH
-volatile int tftHeight =
-    TFT_WIDTH - 20; // 20px to draw the TouchFooter(), were the btns are being read in touch devices.
+volatile int tftHeight = TFT_WIDTH - TOUCH_FOOTER_HEIGHT; // reserved to draw the TouchFooter(), were the btns
+                                                          // are being read in touch devices.
 #else
 volatile int tftHeight = TFT_WIDTH;
 #endif
-#else
-tft_logger tft;
-SerialDisplayClass &sprite = tft;
-SerialDisplayClass &draw = tft;
-volatile int tftWidth = VECTOR_DISPLAY_DEFAULT_HEIGHT;
-volatile int tftHeight = VECTOR_DISPLAY_DEFAULT_WIDTH;
-#endif
 
+#include "core/bus_HAL.h"
 #include "core/display.h"
 #include "core/led_control.h"
 #include "core/mykeyboard.h"
@@ -151,7 +180,11 @@ volatile int tftHeight = VECTOR_DISPLAY_DEFAULT_WIDTH;
  **  Config LittleFS and SD storage
  *********************************************************************/
 void begin_storage() {
-    if (!LittleFS.begin(true)) { LittleFS.format(), LittleFS.begin(); }
+    if (!setupLittleFS()) {
+        LittleFS.format();
+        setupLittleFS();
+    }
+    RAM_LOG("after LittleFS");
     bool checkFS = setupSdCard();
     bruceConfig.fromFile(checkFS);
     bruceConfigPins.fromFile(checkFS);
@@ -172,6 +205,22 @@ void _post_setup_gpio() __attribute__((weak));
 void _post_setup_gpio() {}
 
 /*********************************************************************
+ **  Function: _pre_storage_gpio()
+ **  Sets up a weak (empty) function for board fixes that must run
+ **  after the first TFT access and before storage is mounted.
+ *********************************************************************/
+void _pre_storage_gpio() __attribute__((weak));
+void _pre_storage_gpio() {}
+
+/*********************************************************************
+ **  Function: _late_setup_gpio()
+ **  Sets up a weak (empty) function for board fixes that must run
+ **  Runs right before animation
+ *********************************************************************/
+void _late_setup_gpio() __attribute__((weak));
+void _late_setup_gpio() {}
+
+/*********************************************************************
  **  Function: setup_gpio
  **  Setup GPIO pins
  *********************************************************************/
@@ -180,20 +229,23 @@ void setup_gpio() {
     // init setup from /ports/*/interface.h
     _setup_gpio();
 
-    // Smoochiee v2 uses a AW9325 tro control GPS, MIC, Vibro and CC1101 RX/TX powerlines
-    ioExpander.init(IO_EXPANDER_ADDRESS, &Wire);
+    // Freeze the board's generic wiring so post-storage hooks can tell their own defaults
+    // apart from values loaded from /brucePins.conf (see applyBoardDefault() in configPins.h).
+    brucePinsSetupDefaults = bruceConfigPins;
 
-#if TFT_MOSI > 0
-    if (bruceConfigPins.CC1101_bus.mosi == (gpio_num_t)TFT_MOSI)
-        initCC1101once(&tft.getSPIinstance()); // (T_EMBED), CORE2 and others
-    else
-#endif
-        if (bruceConfigPins.CC1101_bus.mosi == bruceConfigPins.SDCARD_bus.mosi)
-        initCC1101once(&sdcardSPI); // (ARDUINO_M5STACK_CARDPUTER) and (ESP32S3DEVKITC1) and devices that
-                                    // share CC1101 pin with only SDCard
-    else initCC1101once(NULL);
-    // (ARDUINO_M5STICK_C_PLUS) || (ARDUINO_M5STICK_C_PLUS2) and others that doesn´t share SPI with
-    // other devices (need to change it when Bruce board comes to shore)
+    // IO expander (AW9523/PCA9555: Smoochiee, Reaper, T-Lora Pager, Mako, Pebble) switching GPS,
+    // MIC, Vibro, CC1101 RX/TX, NFC... powerlines. It is an onboard peripheral, so it lives on the
+    // sys_i2c bus each board registers in _setup_gpio() via setSysI2CBus(); &Wire only for a board
+    // that never declared sys_i2c.
+    bool hasSysI2C = bruceConfigPins.sys_i2c.sda >= 0 && bruceConfigPins.sys_i2c.scl >= 0;
+    ioExpander.init(IO_EXPANDER_ADDRESS, hasSysI2C ? getSysI2CBus() : &Wire);
+
+    initCC1101once(acquireSPIBus(
+        bruceConfigPins.CC1101_bus.sck, bruceConfigPins.CC1101_bus.miso, bruceConfigPins.CC1101_bus.mosi
+    ));
+    // acquireSPIBus() returns nullptr when these pins have no hardware controller left (e.g.
+    // ARDUINO_M5STICK_C_PLUS and others that don't share SPI with the display/SD/aux bus);
+    // initCC1101once(NULL) lets the driver fall back to managing the default SPI object itself.
 }
 
 /*********************************************************************
@@ -206,7 +258,7 @@ void begin_tft() {
     tft.setRotation(bruceConfigPins.rotation);
     tftWidth = tft.width();
 #ifdef HAS_TOUCH
-    tftHeight = tft.height() - 20;
+    tftHeight = tft.height() - TOUCH_FOOTER_HEIGHT;
 #else
     tftHeight = tft.height();
 #endif
@@ -328,10 +380,37 @@ void boot_screen_anim() {
  *********************************************************************/
 void init_clock() {
 #if defined(HAS_RTC)
-
     _rtc.begin();
+#if defined(HAS_RTC_BM8563)
     _rtc.GetBm8563Time();
+#endif
+#if defined(HAS_RTC_PCF85063A)
+    _rtc.GetPcf85063Time();
+#endif
     _rtc.GetTime(&_time);
+    _rtc.GetDate(&_date);
+
+    struct tm timeinfo = {};
+    timeinfo.tm_sec = _time.Seconds;
+    timeinfo.tm_min = _time.Minutes;
+    timeinfo.tm_hour = _time.Hours;
+    timeinfo.tm_mday = _date.Date;
+    timeinfo.tm_mon = _date.Month > 0 ? _date.Month - 1 : 0;
+    timeinfo.tm_year = _date.Year >= 1900 ? _date.Year - 1900 : 0;
+    time_t epoch = mktime(&timeinfo);
+    struct timeval tv = {.tv_sec = epoch};
+    settimeofday(&tv, nullptr);
+#else
+    struct tm timeinfo = {};
+    timeinfo.tm_year = CURRENT_YEAR - 1900;
+    timeinfo.tm_mon = 0x05;
+    timeinfo.tm_mday = 0x14;
+    time_t epoch = mktime(&timeinfo);
+    rtc.setTime(epoch);
+    clock_set = true;
+    struct timeval tv = {.tv_sec = epoch};
+    settimeofday(&tv, nullptr);
+    restorePersistedClock(); // override the default with the last-saved time (NVS) + start periodic save
 #endif
 }
 
@@ -352,13 +431,7 @@ void init_led() {
 void startup_sound() {
     if (bruceConfig.soundEnabled == 0) return; // if sound is disabled, do not play sound
 #if !defined(LITE_VERSION)
-#if defined(BUZZ_PIN)
-    // Bip M5 just because it can. Does not bip if splashscreen is bypassed
-    _tone(5000, 50);
-    delay(200);
-    _tone(5000, 50);
-    /*  2fix: menu infinite loop */
-#elif defined(HAS_NS4168_SPKR)
+#if defined(HAS_SPEAKER)
     // play a boot sound
     if (bruceConfig.theme.boot_sound) {
         playAudioFile(bruceConfig.themeFS(), bruceConfig.getThemeItemImg(bruceConfig.theme.paths.boot_sound));
@@ -367,6 +440,13 @@ void startup_sound() {
     } else if (LittleFS.exists("/boot.wav")) {
         playAudioFile(&LittleFS, "/boot.wav");
     }
+#else
+    // Bip M5 just because it can. Does not bip if splashscreen is bypassed.
+    // _tone() is a no-op while no buzzer pin is configured.
+    _tone(5000, 50);
+    delay(200);
+    _tone(5000, 50);
+    /*  2fix: menu infinite loop */
 #endif
 #endif
 }
@@ -383,11 +463,22 @@ void setup() {
 
     log_d("Total heap: %d", ESP.getHeapSize());
     log_d("Free heap: %d", ESP.getFreeHeap());
-    if (psramInit()) log_d("PSRAM Started");
-    if (psramFound()) log_d("PSRAM Found");
-    else log_d("PSRAM Not Found");
-    log_d("Total PSRAM: %d", ESP.getPsramSize());
-    log_d("Free PSRAM: %d", ESP.getFreePsram());
+    bool psramStarted = psramInit();
+    // Printed unconditionally (boards force CORE_DEBUG_LEVEL=1, so log_d is invisible).
+    // If PSRAM fails to init, a PSRAM board effectively becomes a no-PSRAM board and
+    // Wi-Fi + BLE cannot coexist. This one boot line makes that failure mode observable.
+    Serial.printf(
+        "[PSRAM] init=%d found=%d total=%u free=%u | internal free=%u largest=%u\n",
+        psramStarted,
+        psramFound(),
+        (unsigned)ESP.getPsramSize(),
+        (unsigned)ESP.getFreePsram(),
+        (unsigned)heap_caps_get_free_size(MALLOC_CAP_INTERNAL),
+        (unsigned)heap_caps_get_largest_free_block(MALLOC_CAP_INTERNAL)
+    );
+    Serial.flush();
+
+    RAM_LOG("setup-start");
 
     // declare variables
     prog_handler = 0;
@@ -397,27 +488,35 @@ void setup() {
     bruceConfig.bright = 100; // theres is no value yet
     bruceConfigPins.rotation = ROTATION;
     setup_gpio();
-#if defined(HAS_SCREEN)
+
     tft.init();
     tft.setRotation(bruceConfigPins.rotation);
     tft.fillScreen(TFT_BLACK);
     // bruceConfig is not read yet.. just to show something on screen due to long boot time
     tft.setTextColor(TFT_PURPLE, TFT_BLACK);
     tft.drawCentreString("Booting", tft.width() / 2, tft.height() / 2, 1);
-#else
-    tft.begin();
-#endif
+    RAM_LOG("first-display-elem"); // first element drawn on screen
+
+    _pre_storage_gpio();
     begin_storage();
+    RAM_LOG("after-storage"); // bruceConfig/bruceConfigPins loaded from FS
     begin_tft();
     init_clock();
     init_led();
+    RAM_LOG("after-tft-clock-led");
+
+    options.reserve(20); // preallocate some options space to avoid fragmentation
+
+    RAM_LOG("before-wifi-init"); // largest contiguous internal block here gates Wi-Fi/BLE
 
     // Set WiFi country to avoid warnings and ensure max power
-    wifi_country_t country = {
+    const wifi_country_t country = {
         .cc = "US",
         .schan = 1,
         .nchan = 14,
+#ifdef CONFIG_ESP_PHY_MAX_TX_POWER
         .max_tx_power = CONFIG_ESP_PHY_MAX_TX_POWER, // 20
+#endif
         .policy = WIFI_COUNTRY_POLICY_MANUAL
     };
 
@@ -426,9 +525,16 @@ void setup() {
 
     // Some GPIO Settings (such as CYD's brightness control must be set after tft and sdcard)
     _post_setup_gpio();
+    // Some board interfaces initialize or reset the backlight in post-setup,
+    // so re-apply the stored brightness after that stage completes.
+    setBrightness(bruceConfig.bright, false);
     // end of post gpio begin
 
-    // #ifndef USE_TFT_eSPI_TOUCH
+    inputLockInit();
+#if defined(HAS_RESISTIVE_TOUCH)
+    // Runs before the input task exists; asks for the calibration when nothing is stored in the NVS
+    if (!loadTouchCalibration()) calibrateTouch();
+#endif
     // This task keeps running all the time, will never stop
     xTaskCreate(
         taskInputHandler,              // Task function
@@ -438,8 +544,8 @@ void setup() {
         2,                             // Task priority (0 to 3), loopTask has priority 2.
         &xHandle                       // Task handle (not used)
     );
-    // #endif
-#if defined(HAS_SCREEN)
+    _late_setup_gpio();
+#if !defined(USE_DUMMY_TFT)
     bruceConfig.openThemeFile(bruceConfig.themeFS(), bruceConfig.themePath, false);
     if (!bruceConfig.instantBoot) {
         boot_screen_anim();
@@ -458,43 +564,46 @@ void setup() {
     }
 #endif
     //  start a task to handle serial commands while the webui is running
-    startSerialCommandsHandlerTask();
+    startSerialCommandsHandlerTask(true);
 
     wakeUpScreen();
     if (bruceConfig.startupApp != "" && !startupApp.startApp(bruceConfig.startupApp)) {
         bruceConfig.setStartupApp("");
     }
+
+    RAM_LOG("setup-end");
 }
 
 /**********************************************************************
  **  Function: loop
  **  Main loop
  **********************************************************************/
-#if defined(HAS_SCREEN)
+#if !defined(USE_DUMMY_TFT)
 void loop() {
-    // Interpreter must be ran in the loop() function, otherwise it breaks
-    // called by 'stack canary watchpoint triggered (loopTask)'
 #if !defined(LITE_VERSION) && !defined(DISABLE_INTERPRETER)
-    if (interpreter_start) {
-        TaskHandle_t interpreterTaskHandler = NULL;
-        vTaskDelete(serialcmdsTaskHandle); // stop serial commands while in interpreter
+    if (interpreter_state > 0) {
         vTaskDelay(pdMS_TO_TICKS(10));
-        xTaskCreate(
-            interpreterHandler,          // Task function
-            "interpreterHandler",        // Task Name
-            INTERPRETER_TASK_STACK_SIZE, // Stack size
-            NULL,                        // Task parameters
-            2,                           // Task priority (0 to 3), loopTask has priority 2.
-            &interpreterTaskHandler      // Task handle
-        );
-
-        while (interpreter_start == true) { vTaskDelay(pdMS_TO_TICKS(500)); }
-        startSerialCommandsHandlerTask();
-        interpreter_start = false;
+        interpreter_state = 2;
+        Serial.println("Entering interpreter...");
+        while (interpreter_state > 0) { vTaskDelay(pdMS_TO_TICKS(500)); }
+        if (interpreter_state == 0) {
+            Serial.println("Interpreter put to background.");
+        } else {
+            Serial.println("Exiting interpreter...");
+        }
+        if (interpreter_state == -1) { interpreterTaskHandler = NULL; }
         previousMillis = millis(); // ensure that will not dim screen when get back to menu
     }
 #endif
     tft.fillScreen(bruceConfig.bgColor);
+
+#if defined(ENABLE_RAM_LOGGING)
+    static bool ramLoggedFirstMenu = false;
+    if (!ramLoggedFirstMenu) {
+        RAM_LOG("first-mainMenu");
+        ramLoggedFirstMenu = true;
+    }
+#endif
 
     mainMenu.begin();
     delay(1);

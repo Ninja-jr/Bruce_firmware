@@ -10,7 +10,7 @@ QueueHandle_t rspQueue = nullptr;
 TaskHandle_t serialcmdsTaskHandle;
 
 struct CmdPacket {
-    char text[SAFE_STACK_BUFFER_SIZE];
+    char text[512]; // command size
 };
 bool parseSerialCommand(const String &command, bool waitForResponse) {
     if (!cmdQueue || !rspQueue) {
@@ -50,20 +50,31 @@ void handleSerialCommands(SerialCli &serialCli) {
     Serial.println("COMMAND: " + cmd_str);
     serialCli.parse(cmd_str);
     serialDevice->print("# "); // prompt
-    backToMenu();              // forced menu redrawn
+
+    // forced menu redrawn if the command is not "nav" or "option"
+    // it allows navigation commands to be executed without returning to the menu, while other commands will
+    // return to the menu after execution.
+    String cmd_trimmed = cmd_str;
+    cmd_trimmed.trim();
+    if (!cmd_trimmed.startsWith("nav") && !cmd_trimmed.startsWith("option")) { backToMenu(); }
 }
 
 void _serialCmdsTaskLoop(void *pvParameters) {
     Serial.begin(115200);
     while (1) {
         handleSerialCommands(serialCli);
-        vTaskDelay(pdMS_TO_TICKS(10));
+        // handleSerialCommands() runs one command per pass, so a burst queued by
+        // the BLE app used to pay the full idle tick between each one. Still always
+        // yields, just sooner when there is more input waiting.
+        vTaskDelay(pdMS_TO_TICKS(serialDevice->available() ? 1 : 10));
     }
 }
 
-void startSerialCommandsHandlerTask() {
-    cmdQueue = xQueueCreate(2, sizeof(CmdPacket));
-    rspQueue = xQueueCreate(2, sizeof(bool));
+void startSerialCommandsHandlerTask(bool initQueues) {
+    if (initQueues) {
+        cmdQueue = xQueueCreate(2, sizeof(CmdPacket));
+        rspQueue = xQueueCreate(2, sizeof(bool));
+    }
 
     xTaskCreatePinnedToCore(
         _serialCmdsTaskLoop,         // Function to implement the task

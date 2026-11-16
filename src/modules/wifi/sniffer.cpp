@@ -94,22 +94,6 @@ portMUX_TYPE handshakeReadyMux = portMUX_INITIALIZER_UNLOCKED;
 std::set<uint64_t> handshakeBeaconLogged;
 std::map<uint64_t, HandshakeTracker> perApHandshakeTracker;
 
-// --- Observed clients per AP (powers the Client Scanner census) ---
-// apKey -> (clientKey -> info). Updated for data frames in analyzeFrame().
-// Bounded per AP and globally; stalest entry evicted on overflow.
-struct ClientInfo {
-    uint8_t mac[6] = {0, 0, 0, 0, 0, 0};
-    uint8_t ip[4] = {0, 0, 0, 0}; // last IP seen with this MAC (0.0.0.0 = unknown)
-    uint32_t frames = 0;
-    uint32_t lastSeen = 0;
-};
-static std::map<uint64_t, std::map<uint64_t, ClientInfo>> apClients;
-static constexpr size_t MAX_CLIENTS_PER_AP = 24;
-static constexpr size_t MAX_TRACKED_APS = 48;
-// First channel each AP key was heard on (lets callers target APs whose
-// beacon was never decoded).
-static std::map<uint64_t, uint8_t> apFirstChannel;
-
 // --- 4-way handshake frame buffer ---
 // Buffer M1, M2, and M3 in memory; flush all 4 frames when M4 arrives.
 constexpr size_t EAPOL_BUF_SIZE = 256;
@@ -539,90 +523,6 @@ bool sniffer_is_handshake_ready(uint64_t key) {
     ready = handshakeReadyBssids.find(key) != handshakeReadyBssids.end();
     portEXIT_CRITICAL(&handshakeReadyMux);
     return ready;
-}
-
-bool handshakeCrackable(const HandshakeTracker &hs) {
-    return (hs.msg1 && hs.msg2) || (hs.msg2 && hs.msg3);
-}
-
-bool sniffer_is_handshake_crackable(uint64_t key) {
-    auto it = perApHandshakeTracker.find(key);
-    if (it == perApHandshakeTracker.end()) return false;
-    if (sniffer_is_handshake_ready(key)) return true;
-    return handshakeCrackable(it->second);
-}
-
-bool sniffer_ap_has_partial(uint64_t key) {
-    if (sniffer_is_handshake_ready(key)) return false;
-    auto it = perApHandshakeTracker.find(key);
-    if (it == perApHandshakeTracker.end()) return false;
-    const HandshakeTracker &t = it->second;
-    return t.msg1 || t.msg2 || t.msg3;
-}
-
-uint16_t sniffer_count_clients(const uint8_t bssid[6]) {
-    if (!bssid) return 0;
-    uint64_t apKey = 0;
-    for (int i = 0; i < 6; i++) { apKey = (apKey << 8) | bssid[i]; }
-    auto it = apClients.find(apKey);
-    if (it == apClients.end()) return 0;
-    return (uint16_t)it->second.size();
-}
-
-uint32_t sniffer_total_clients() {
-    uint32_t total = 0;
-    for (const auto &kv : apClients) total += (uint32_t)kv.second.size();
-    return total;
-}
-
-uint8_t sniffer_list_client_aps(uint8_t outBssid[][6], uint8_t outCh[], uint8_t maxOut) {
-    if (!outBssid || !outCh || maxOut == 0) return 0;
-    uint8_t n = 0;
-    for (const auto &kv : apClients) {
-        if (n >= maxOut) break;
-        if (kv.second.empty()) continue;
-        uint64_t key = kv.first;
-        for (int i = 5; i >= 0; i--) {
-            outBssid[n][i] = (uint8_t)(key & 0xFF);
-            key >>= 8;
-        }
-        auto chIt = apFirstChannel.find(kv.first);
-        outCh[n] = (chIt != apFirstChannel.end()) ? chIt->second : 0;
-        n++;
-    }
-    return n;
-}
-
-uint8_t sniffer_get_client_details(uint64_t apKey, ClientDetail *out, uint8_t maxOut) {
-    if (!out || maxOut == 0) return 0;
-    auto it = apClients.find(apKey);
-    if (it == apClients.end() || it->second.empty()) return 0;
-    std::vector<const ClientInfo *> sorted;
-    sorted.reserve(it->second.size());
-    for (const auto &kv : it->second) sorted.push_back(&kv.second);
-    std::sort(sorted.begin(), sorted.end(), [](const ClientInfo *a, const ClientInfo *b) {
-        return a->frames > b->frames;
-    });
-    uint8_t n = 0;
-    for (const ClientInfo *ci : sorted) {
-        if (n >= maxOut) break;
-        memcpy(out[n].mac, ci->mac, 6);
-        memcpy(out[n].ip, ci->ip, 4);
-        out[n].frames = ci->frames;
-        n++;
-    }
-    return n;
-}
-
-uint16_t sniffer_get_beacon_frame(const uint8_t bssid[6], uint8_t *out, uint16_t outLen) {
-    if (!bssid || !out || outLen == 0) return 0;
-    uint64_t apKey = 0;
-    for (int i = 0; i < 6; i++) { apKey = (apKey << 8) | bssid[i]; }
-    auto it = beaconRawCache.find(apKey);
-    if (it == beaconRawCache.end() || it->second.len == 0) return 0;
-    uint16_t n = it->second.len < outLen ? it->second.len : outLen;
-    memcpy(out, it->second.data, n);
-    return n;
 }
 
 static void resetHandshakeTracking() {
@@ -1133,8 +1033,6 @@ void sniffer_reset_handshake_cache() {
     resetHandshakeBeaconCache();
     perApHandshakeTracker.clear();
     eapol4WayBuffer.clear();
-    apClients.clear();
-    apFirstChannel.clear();
 }
 
 void printAddress(const uint8_t *addr) {

@@ -6,9 +6,16 @@ void backToMenu();
 void addOptionToMainMenu();
 int getBattery() __attribute__((weak));
 void updateClockTimezone();
+#if !defined(HAS_RTC)
+void restorePersistedClock();
+#endif
 void updateTimeStr(struct tm timeInfo);
 void showDeviceInfo();
+String formatTimeDecimal(uint32_t totalMillis);
 String getOptionsJSON();
-void touchHeatMap(struct TouchPoint t);
+void touchHeatMap(struct BruceTouchPoint t);
 void i2c_bulk_write(TwoWire *wire, uint8_t addr, const uint8_t *bulk_data);
+void printMemoryUsage(const char *msg = "");
+String repeatString(int length, String character);
+String formatBytes(uint64_t bytes);
 #endif

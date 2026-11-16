@@ -9,12 +9,15 @@
 #include "modules/rf/rf_scan.h"
 #include "modules/rf/rf_send.h"
 #include "modules/rf/rf_spectrum.h"
+#include "modules/rf/rf_utils.h"
 #include "modules/rf/rf_waterfall.h"
+#include "modules/rf/rf_protopirate.h"
 
 void RFMenu::optionsMenu() {
     options = {
         {"Scan/copy",       [=]() { RFScan(); }       },
 #if !defined(LITE_VERSION)
+        {"ProtoPirate",     rf_protopirate            },
         {"Record RAW",      rf_raw_record             }, // Pablo-Ortiz-Lopez
         {"Custom SubGhz",   sendCustomRF              },
 #endif
@@ -23,13 +26,12 @@ void RFMenu::optionsMenu() {
         {"RSSI Spectrum",   rf_CC1101_rssi            }, // @Pirata
         {"SquareWave Spec", rf_SquareWave             }, // @Pirata
         {"Spectogram",      rf_waterfall              }, // dev_eclipse
-#if defined(BUZZ_PIN) or defined(HAS_NS4168_SPKR) and defined(RF_LISTEN_H)
+#if defined(RF_LISTEN_H)
         {"Listen",          rf_listen                 }, // dev_eclipse
 #endif
         {"Bruteforce",      rf_bruteforce             }, // dev_eclipse
-        {"Jammer Itmt",     [=]() { RFJammer(false); }},
+        {"Jammer",          [=]() { RFJammer(true); } },
 #endif
-        {"Jammer Full",     [=]() { RFJammer(true); } },
         {"Config",          [this]() { configMenu(); }},
     };
     addOptionToMainMenu();
@@ -53,11 +55,7 @@ void RFMenu::configMenu() {
 
     loopOptions(options, MENU_TYPE_SUBMENU, "RF Config");
 }
-void RFMenu::drawIconImg() {
-    drawImg(
-        *bruceConfig.themeFS(), bruceConfig.getThemeItemImg(bruceConfig.theme.paths.rf), 0, imgCenterY, true
-    );
-}
+
 void RFMenu::drawIcon(float scale) {
     clearIconArea();
     int radius = scale * 7;

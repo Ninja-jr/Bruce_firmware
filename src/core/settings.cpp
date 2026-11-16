@@ -1,7 +1,11 @@
 #include "settings.h"
 #include "core/led_control.h"
 #include "core/wifi/wifi_common.h"
+#include "current_year.h"
 #include "display.h"
+#if !defined(LITE_VERSION) && !defined(DISABLE_INTERPRETER)
+#include "modules/bjs_interpreter/interpreter.h"
+#endif
 #include "modules/ble_api/ble_api.hpp"
 #include "modules/others/qrcode_menu.h"
 #include "modules/rf/rf_utils.h" // for initRfModule
@@ -12,6 +16,10 @@
 #include "utils.h"
 #include <ELECHOUSE_CC1101_SRC_DRV.h>
 #include <globals.h>
+#include <nvs.h>
+#if defined(HAS_RESISTIVE_TOUCH)
+#include <CYD28_TouchscreenR.h>
+#endif
 
 int currentScreenBrightness = -1;
 
@@ -86,14 +94,14 @@ int gsetRotation(bool set) {
     if (result & 0b01) { // if 1 or 3
         tftWidth = TFT_HEIGHT;
 #if defined(HAS_TOUCH)
-        tftHeight = TFT_WIDTH - 20;
+        tftHeight = TFT_WIDTH - TOUCH_FOOTER_HEIGHT;
 #else
         tftHeight = TFT_WIDTH;
 #endif
     } else { // if 2 or 0
         tftWidth = TFT_WIDTH;
 #if defined(HAS_TOUCH)
-        tftHeight = TFT_HEIGHT - 20;
+        tftHeight = TFT_HEIGHT - TOUCH_FOOTER_HEIGHT;
 #else
         tftHeight = TFT_HEIGHT;
 #endif
@@ -103,56 +111,120 @@ int gsetRotation(bool set) {
 
 /*********************************************************************
 **  Function: setBrightnessMenu
-**  Handles Menu to set brightness
+**  Handles Menu to set brightness (live-preview slider; drag on touch
+**  boards, Next/Prev to step by 5%, Sel to apply, Esc to cancel)
 **********************************************************************/
 void setBrightnessMenu() {
-    int idx = 0;
-    if (bruceConfig.bright == 100) idx = 0;
-    else if (bruceConfig.bright == 75) idx = 1;
-    else if (bruceConfig.bright == 50) idx = 2;
-    else if (bruceConfig.bright == 25) idx = 3;
-    else if (bruceConfig.bright == 1) idx = 4;
+    returnToMenu = false;
 
-    options = {
-        {"100%",
-         [=]() { setBrightness((uint8_t)100); },
-         bruceConfig.bright == 100,
-         [](void *pointer, bool shouldRender) {
-             setBrightness((uint8_t)100, false);
-             return false;
-         }},
-        {"75 %",
-         [=]() { setBrightness((uint8_t)75); },
-         bruceConfig.bright == 75,
-         [](void *pointer, bool shouldRender) {
-             setBrightness((uint8_t)75, false);
-             return false;
-         }},
-        {"50 %",
-         [=]() { setBrightness((uint8_t)50); },
-         bruceConfig.bright == 50,
-         [](void *pointer, bool shouldRender) {
-             setBrightness((uint8_t)50, false);
-             return false;
-         }},
-        {"25 %",
-         [=]() { setBrightness((uint8_t)25); },
-         bruceConfig.bright == 25,
-         [](void *pointer, bool shouldRender) {
-             setBrightness((uint8_t)25, false);
-             return false;
-         }},
-        {" 1 %",
-         [=]() { setBrightness((uint8_t)1); },
-         bruceConfig.bright == 1,
-         [](void *pointer, bool shouldRender) {
-             setBrightness((uint8_t)1, false);
-             return false;
-         }}
-    };
-    addOptionToMainMenu(); // this one bugs the brightness selection
-    loopOptions(options, MENU_TYPE_REGULAR, "", idx);
-    setBrightness(bruceConfig.bright, false);
+    int original = bruceConfig.bright;
+    int val = (bruceConfig.bright / 5) * 5;
+    if (val > 100) val = 100;
+    if (val < 0) val = 0;
+
+    const int lineHeight = FM * LH;
+    const int hintHeight = FP * LH;
+    const int sliderH = 12;
+    const int radius = sliderH / 2;
+    const int spacing = 8;
+    const int paddingTop = 8;
+    const int paddingBottom = 8;
+    const int paddingSide = 12;
+
+    int contentWidth = static_cast<int>(tftWidth * 0.8f);
+    int contentHeight = paddingTop + lineHeight + spacing + sliderH + spacing + hintHeight + paddingBottom;
+    int boxX = (tftWidth - contentWidth) / 2;
+    int boxY = (tftHeight - contentHeight) / 2;
+
+    int trackX = boxX + paddingSide;
+    int trackW = contentWidth - 2 * paddingSide;
+    int trackY = boxY + paddingTop + lineHeight + spacing;
+
+    bool redraw = true;
+    bool first_draw = true;
+    while (1) {
+        if (redraw) {
+            if (first_draw) {
+                tft.fillRoundRect(boxX, boxY, contentWidth, contentHeight, 5, bruceConfig.bgColor);
+                tft.drawRoundRect(boxX, boxY, contentWidth, contentHeight, 5, bruceConfig.priColor);
+                first_draw = false;
+            }
+            tft.setTextSize(FM);
+            tft.setTextColor(bruceConfig.priColor, bruceConfig.bgColor);
+            tft.drawCentreString(
+                " Bright: " + String(val) + "% ", boxX + contentWidth / 2, boxY + paddingTop, 1
+            );
+
+            int indicatorX = trackX + (trackW * val) / 100;
+            tft.fillRect(trackX, trackY - 3, trackW, 3, bruceConfig.bgColor);
+            tft.fillRect(trackX, trackY + sliderH, trackW, 3, bruceConfig.bgColor);
+            tft.fillRect(trackX - radius - 2, trackY - 4, radius * 2, sliderH + 8, bruceConfig.bgColor);
+            tft.fillRect(
+                trackX + trackW - radius + 2, trackY - 4, radius * 2, sliderH + 8, bruceConfig.bgColor
+            );
+            tft.drawRoundRect(trackX, trackY, trackW, sliderH, radius, bruceConfig.secColor);
+            int fillW = indicatorX - trackX;
+
+            tft.fillRoundRect(trackX, trackY, fillW, sliderH, radius, bruceConfig.secColor);
+            tft.fillRoundRect(
+                trackX + fillW, trackY + 1, trackW - fillW, sliderH - 2, radius, bruceConfig.bgColor
+            );
+
+            tft.fillCircle(indicatorX, trackY + sliderH / 2, radius + 2, bruceConfig.priColor);
+
+            tft.setTextSize(FP);
+            tft.setTextColor(bruceConfig.priColor, bruceConfig.bgColor);
+            tft.drawCentreString("Sel to apply", boxX + contentWidth / 2, trackY + sliderH + spacing, 1);
+
+            setBrightness(val, false);
+            redraw = false;
+        }
+
+#if defined(HAS_TOUCH)
+        if (touchPoint.pressed) {
+            const int touchX = touchPoint.x;
+            const int touchY = touchPoint.y;
+            touchPoint.Clear();
+
+            const int touchPadding = 10;
+            if (touchX >= boxX && touchX <= boxX + contentWidth && touchY >= trackY - touchPadding &&
+                touchY <= trackY + sliderH + touchPadding) {
+                int clampedX = touchX;
+                if (clampedX < trackX) clampedX = trackX;
+                if (clampedX > trackX + trackW) clampedX = trackX + trackW;
+                int newVal = ((clampedX - trackX) * 100 + trackW / 2) / trackW;
+                newVal = (newVal / 5) * 5;
+                if (newVal > 100) newVal = 100;
+                if (newVal < 0) newVal = 0;
+                if (newVal != val) {
+                    val = newVal;
+                    redraw = true;
+                }
+            }
+        }
+#endif
+
+        if (check(NextPress)) {
+            val += 5;
+            if (val > 100) val = 100;
+            redraw = true;
+        }
+        if (check(PrevPress)) {
+            val -= 5;
+            if (val < 0) val = 0;
+            redraw = true;
+        }
+        if (check(SelPress)) {
+            setBrightness(val);
+            break;
+        }
+        if (check(EscPress) || returnToMenu) {
+            setBrightness(original, false);
+            break;
+        }
+        vTaskDelay(pdMS_TO_TICKS(1));
+    }
+    tft.fillScreen(bruceConfig.bgColor);
 }
 
 /*********************************************************************
@@ -167,6 +239,7 @@ void setSleepMode() {
             returnToMenu = true;
             break;
         }
+        vTaskDelay(pdMS_TO_TICKS(1));
     }
 }
 
@@ -246,7 +319,7 @@ void setUIColor() {
                  bruceConfig.setColorInverted(!bruceConfig.colorInverted);
                  tft.invertDisplay(bruceConfig.colorInverted);
              },
-             bruceConfig.colorInverted}
+             bruceConfig.colorInverted > 0}
         );
 
         addOptionToMainMenu();
@@ -254,6 +327,24 @@ void setUIColor() {
         int selectedOption = loopOptions(options, idx);
         if (selectedOption == -1 || selectedOption == options.size() - 1) return;
     }
+}
+
+/*********************************************************************
+**  Function: setMainMenuStyleMenu
+**  Choose how the main menu presents the modules
+**********************************************************************/
+void setMainMenuStyleMenu() {
+    options = {
+        {"Carousel",
+         []() { bruceConfig.setMainMenuStyle(MAIN_MENU_CAROUSEL); },
+         bruceConfig.mainMenuStyle == MAIN_MENU_CAROUSEL},
+        {"Grid",
+         []() { bruceConfig.setMainMenuStyle(MAIN_MENU_GRID); },
+         bruceConfig.mainMenuStyle == MAIN_MENU_GRID    },
+    };
+    addOptionToMainMenu();
+
+    loopOptions(options, bruceConfig.mainMenuStyle);
 }
 
 uint16_t alterOneColorChannel565(uint16_t color, int newR, int newG, int newB) {
@@ -419,7 +510,8 @@ void setCustomUIColorSettingMenu(
 }
 
 /*********************************************************************
-**  Function: setSoundConfig
+**  Function: setSoundConfig - 01/2026 - Refactored "ConfigMenu" (this function manteined for
+* retrocompatibility)
 **  Enable or disable sound
 **********************************************************************/
 void setSoundConfig() {
@@ -452,7 +544,8 @@ void setSoundVolume() {
 
 #ifdef HAS_RGB_LED
 /*********************************************************************
-**  Function: setLedBlinkConfig
+**  Function: setLedBlinkConfig - 01/2026 - Refactored "ConfigMenu" (this function manteined for
+* retrocompatibility)
 **  Enable or disable led blink
 **********************************************************************/
 void setLedBlinkConfig() {
@@ -482,7 +575,7 @@ void setWifiStartupConfig() {
 **********************************************************************/
 void addEvilWifiMenu() {
     String apName = keyboard("", 30, "Evil Portal SSID");
-    bruceConfig.addEvilWifiName(apName);
+    if (apName != "\x1B") bruceConfig.addEvilWifiName(apName);
 }
 
 /*********************************************************************
@@ -507,7 +600,7 @@ void removeEvilWifiMenu() {
 **********************************************************************/
 void setEvilEndpointCreds() {
     String userInput = keyboard(bruceConfig.evilPortalEndpoints.getCredsEndpoint, 30, "Evil creds endpoint");
-    bruceConfig.setEvilEndpointCreds(userInput);
+    if (userInput != "\x1B") bruceConfig.setEvilEndpointCreds(userInput);
 }
 
 /*********************************************************************
@@ -516,7 +609,7 @@ void setEvilEndpointCreds() {
 **********************************************************************/
 void setEvilEndpointSsid() {
     String userInput = keyboard(bruceConfig.evilPortalEndpoints.setSsidEndpoint, 30, "Evil creds endpoint");
-    bruceConfig.setEvilEndpointSsid(userInput);
+    if (userInput != "\x1B") bruceConfig.setEvilEndpointSsid(userInput);
 }
 
 /*********************************************************************
@@ -593,73 +686,72 @@ void setEvilPasswordMode() {
 }
 
 /*********************************************************************
+** Function: setEvilGatewayIp
+** Handles menu for setting the Evil Portal gateway IP
+***********************************************************************/
+void setEvilGatewayIp() {
+    options = {
+        {"172.0.0.1",
+         [=]() { bruceConfig.setEvilGatewayIp("172.0.0.1"); },
+         bruceConfig.evilPortalGatewayIp == "172.0.0.1"},
+        {"192.168.4.1",
+         [=]() { bruceConfig.setEvilGatewayIp("192.168.4.1"); },
+         bruceConfig.evilPortalGatewayIp == "192.168.4.1"},
+        {"Custom", [=]() {
+             String ip = num_keyboard("", 15, "Gateway Addr");
+             bruceConfig.setEvilGatewayIp(ip);
+         }},
+    };
+    loopOptions(options, bruceConfig.evilPortalGatewayIp == "192.168.4.1" ? 1 : 0);
+}
+
+/*********************************************************************
 **  Function: setRFModuleMenu
 **  Handles Menu to set the RF module in use
 **********************************************************************/
 void setRFModuleMenu() {
     int result = 0;
     int idx = 0;
-    uint8_t pins_setup = 0;
+    int presetIdx = -1; // -1 = plain "CC1101" (board's default CC1101_bus wiring, set in _setup_gpio())
     if (bruceConfigPins.rfModule == M5_RF_MODULE) idx = 0;
     else if (bruceConfigPins.rfModule == CC1101_SPI_MODULE) {
         idx = 1;
-#if defined(ARDUINO_M5STICK_C_PLUS) || defined(ARDUINO_M5STICK_C_PLUS2)
-        if (bruceConfigPins.CC1101_bus.mosi == GPIO_NUM_26) idx = 2;
-#endif
+        for (size_t i = 0; i < bruceConfigPins.CC1101_presets.size(); i++) {
+            const BruceConfigPins::SPIPins &p = bruceConfigPins.CC1101_presets[i].pins;
+            if (bruceConfigPins.CC1101_bus.sck == p.sck && bruceConfigPins.CC1101_bus.mosi == p.mosi &&
+                bruceConfigPins.CC1101_bus.cs == p.cs) {
+                idx = 2 + (int)i;
+                break;
+            }
+        }
     }
 
     options = {
-        {"M5 RF433T/R",         [&]() { result = M5_RF_MODULE; }   },
-#if defined(ARDUINO_M5STICK_C_PLUS) || defined(ARDUINO_M5STICK_C_PLUS2)
-        {"CC1101 (legacy)",     [&pins_setup]() { pins_setup = 1; }},
-        {"CC1101 (Shared SPI)", [&pins_setup]() { pins_setup = 2; }},
-#else
-        {"CC1101", [&]() { result = CC1101_SPI_MODULE; }},
-#endif
-        /* WIP:
-         * #ifdef USE_CC1101_VIA_PCA9554
-         * {"CC1101+PCA9554",  [&]() { result = 2; }},
-         * #endif
-         */
+        {"M5 RF433T/R", [&]() { result = M5_RF_MODULE; }     },
+        {"CC1101",      [&]() { result = CC1101_SPI_MODULE; }},
     };
+    for (size_t i = 0; i < bruceConfigPins.CC1101_presets.size(); i++) {
+        options.push_back({bruceConfigPins.CC1101_presets[i].label, [&, i]() {
+                               result = CC1101_SPI_MODULE;
+                               presetIdx = (int)i;
+                           }});
+    }
     loopOptions(options, idx);
-    if (result == CC1101_SPI_MODULE || pins_setup > 0) {
-        // This setting is meant to StickCPlus and StickCPlus2 to setup the ports from RF Menu
-        if (pins_setup == 1) {
-            result = CC1101_SPI_MODULE;
-            bruceConfigPins.setCC1101Pins(
-                {(gpio_num_t)CC1101_SCK_PIN,
-                 (gpio_num_t)CC1101_MISO_PIN,
-                 (gpio_num_t)CC1101_MOSI_PIN,
-                 (gpio_num_t)CC1101_SS_PIN,
-                 (gpio_num_t)CC1101_GDO0_PIN,
-                 GPIO_NUM_NC}
-            );
-        } else if (pins_setup == 2) {
-#if CONFIG_SOC_GPIO_OUT_RANGE_MAX > 30
-            result = CC1101_SPI_MODULE;
-            bruceConfigPins.setCC1101Pins(
-                {(gpio_num_t)SDCARD_SCK,
-                 (gpio_num_t)SDCARD_MISO,
-                 (gpio_num_t)SDCARD_MOSI,
-                 GPIO_NUM_33,
-                 GPIO_NUM_32,
-                 GPIO_NUM_NC}
-            );
-#endif
+    if (result == CC1101_SPI_MODULE) {
+        if (presetIdx >= 0) {
+            const BruceConfigPins::SPIPinPreset &preset = bruceConfigPins.CC1101_presets[presetIdx];
+            bruceConfigPins.setCC1101Pins(preset.pins);
+            bruceConfigPins.setNrf24Pins(preset.pins);
         }
         if (initRfModule()) {
             bruceConfigPins.setRfModule(CC1101_SPI_MODULE);
+            deinitRfModule();
             return;
         }
         // else display an error
         displayError("CC1101 not found", true);
-        if (pins_setup == 1)
-            qrcode_display("https://github.com/pr3y/Bruce/blob/main/media/connections/cc1101_stick.jpg");
-        if (pins_setup == 2)
-            qrcode_display(
-                "https://github.com/pr3y/Bruce/blob/main/media/connections/cc1101_stick_SDCard.jpg"
-            );
+        if (presetIdx >= 0 && bruceConfigPins.CC1101_presets[presetIdx].wiringQrUrl)
+            qrcode_display(bruceConfigPins.CC1101_presets[presetIdx].wiringQrUrl);
         while (!check(AnyKeyPress)) vTaskDelay(50 / portTICK_PERIOD_MS);
     }
     // fallback to "M5 RF433T/R" on errors
@@ -672,7 +764,8 @@ void setRFModuleMenu() {
 **********************************************************************/
 void setRFFreqMenu() {
     float result = 433.92;
-    String freq_str = keyboard(String(bruceConfigPins.rfFreq), 10, "Default frequency:");
+    String freq_str = num_keyboard(String(bruceConfigPins.rfFreq), 10, "Default frequency:");
+    if (freq_str == "\x1B") return;
     if (freq_str.length() > 1) {
         result = freq_str.toFloat();          // returns 0 if not valid
         if (result >= 280 && result <= 928) { // TODO: check valid freq according to current module?
@@ -694,14 +787,14 @@ void setRFIDModuleMenu() {
     options = {
         {"M5 RFID2",
          [=]() { bruceConfigPins.setRfidModule(M5_RFID2_MODULE); },
-         bruceConfigPins.rfidModule == M5_RFID2_MODULE     },
+         bruceConfigPins.rfidModule == M5_RFID2_MODULE                            },
 #ifdef M5STICK
         {"PN532 I2C G33",
          [=]() { bruceConfigPins.setRfidModule(PN532_I2C_MODULE); },
-         bruceConfigPins.rfidModule == PN532_I2C_MODULE    },
+         bruceConfigPins.rfidModule == PN532_I2C_MODULE                           },
         {"PN532 I2C G36",
          [=]() { bruceConfigPins.setRfidModule(PN532_I2C_SPI_MODULE); },
-         bruceConfigPins.rfidModule == PN532_I2C_SPI_MODULE},
+         bruceConfigPins.rfidModule == PN532_I2C_SPI_MODULE                       },
 #else
         {"PN532 on I2C",
          [=]() { bruceConfigPins.setRfidModule(PN532_I2C_MODULE); },
@@ -709,10 +802,35 @@ void setRFIDModuleMenu() {
 #endif
         {"PN532 on SPI",
          [=]() { bruceConfigPins.setRfidModule(PN532_SPI_MODULE); },
-         bruceConfigPins.rfidModule == PN532_SPI_MODULE    },
+         bruceConfigPins.rfidModule == PN532_SPI_MODULE                           },
         {"RC522 on SPI",
          [=]() { bruceConfigPins.setRfidModule(RC522_SPI_MODULE); },
-         bruceConfigPins.rfidModule == RC522_SPI_MODULE    },
+         bruceConfigPins.rfidModule == RC522_SPI_MODULE                           },
+#if !defined(LITE_VERSION)
+        {"ST25R3916 SPI",
+         [=]() { bruceConfigPins.setRfidModule(ST25R3916_SPI_MODULE); },
+         bruceConfigPins.rfidModule == ST25R3916_SPI_MODULE                       },
+        {"ST25R3916 I2C",
+         [=]() { bruceConfigPins.setRfidModule(ST25R3916_I2C_MODULE); },
+         bruceConfigPins.rfidModule == ST25R3916_I2C_MODULE                       },
+#ifdef CAP_NFC_SS_PIN
+        // M5Stack Cap CC1101: its NFC half is an ST25R3916 on the default SPI port.
+        // https://docs.m5stack.com/en/cap/Cap_CC1101
+        {"CC1101 M5 Cap",
+         [=]() {
+             bruceConfigPins.setSR25RPins(
+                 {(gpio_num_t)CAP_NFC_SCK_PIN,
+                  (gpio_num_t)CAP_NFC_MISO_PIN,
+                  (gpio_num_t)CAP_NFC_MOSI_PIN,
+                  (gpio_num_t)CAP_NFC_SS_PIN,
+                  (gpio_num_t)CAP_NFC_IRQ_PIN,
+                  GPIO_NUM_NC}
+             );
+             bruceConfigPins.setRfidModule(ST25R3916_SPI_MODULE);
+         },                                                              bruceConfigPins.rfidModule == ST25R3916_SPI_MODULE &&
+             bruceConfigPins.ST25R_bus.cs == (gpio_num_t)CAP_NFC_SS_PIN},
+#endif
+#endif
     };
     loopOptions(options, bruceConfigPins.rfidModule);
 }
@@ -723,7 +841,7 @@ void setRFIDModuleMenu() {
 **********************************************************************/
 void addMifareKeyMenu() {
     String key = keyboard("", 12, "MIFARE key");
-    bruceConfig.addMifareKey(key);
+    if (key != "\x1B") bruceConfig.addMifareKey(key);
 }
 
 /*********************************************************************
@@ -731,37 +849,47 @@ void addMifareKeyMenu() {
 **  Handles Menu to set timezone to NTP
 **********************************************************************/
 const char *ntpServer = "pool.ntp.org";
-long selectedTimezone;
-const int daylightOffset_sec = 0;
-int timeHour;
-
-TimeChangeRule BRST = {"BRST", Last, Sun, Oct, 0, timeHour};
-Timezone myTZ(BRST, BRST);
 
 WiFiUDP ntpUDP;
-NTPClient timeClient(ntpUDP, ntpServer, selectedTimezone, daylightOffset_sec);
+NTPClient timeClient(ntpUDP, ntpServer, 0, 0);
 
 void setClock() {
-    bool auto_mode = true;
-
 #if defined(HAS_RTC)
     RTC_TimeTypeDef TimeStruct;
+#if defined(HAS_RTC_BM8563)
     _rtc.GetBm8563Time();
+#endif
+#if defined(HAS_RTC_PCF85063A)
+    _rtc.GetPcf85063Time();
+#endif
 #endif
 
     options = {
-        {"NTP Timezone", [&]() { auto_mode = true; } },
-        {"Manually set", [&]() { auto_mode = false; }},
+        {"Via NTP Set Timezone",                                                 [&]() { bruceConfig.setAutomaticTimeUpdateViaNTP(true); } },
+        {"Set Time Manually",                                                    [&]() { bruceConfig.setAutomaticTimeUpdateViaNTP(false); }},
+        {("Daylight Savings " + String(bruceConfig.dst ? "On" : "Off")).c_str(),
+         [&]() {
+             bruceConfig.setDST(!bruceConfig.dst);
+             updateClockTimezone();
+             returnToMenu = true;
+         }                                                                                                                                 },
+        {(bruceConfig.clock24hr ? "24-Hour Format" : "12-Hour Format"),          [&]() {
+             bruceConfig.setClock24Hr(!bruceConfig.clock24hr);
+             returnToMenu = true;
+         }                                                          }
     };
+
     addOptionToMainMenu();
     loopOptions(options);
 
     if (returnToMenu) return;
 
-    if (auto_mode) {
+    if (bruceConfig.automaticTimeUpdateViaNTP) {
         if (!wifiConnected) wifiConnectMenu();
 
-        float selectedTimezone = bruceConfig.tmz; // Store current timezone as default
+        options.clear();
+
+#ifndef LITE_VERSION
 
         struct TimezoneMapping {
             const char *name;
@@ -809,8 +937,7 @@ void setClock() {
             {"UTC+14 (Kiritimati)",                       14   }
         };
 
-        options.clear();
-        int idx = sizeof(timezoneMappings) / sizeof(timezoneMappings[0]);
+        int idx = 0;
         int i = 0;
         for (const auto &mapping : timezoneMappings) {
             if (bruceConfig.tmz == mapping.offset) { idx = i; }
@@ -821,31 +948,35 @@ void setClock() {
             ++i;
         }
 
+#else
+        constexpr float timezoneOffsets[] = {-12, -11, -10,  -9.5, -9,  -8,    -7, -6, -5,   -4,
+                                             -3,  -2,  -1,   0,    0.5, 1,     2,  3,  3.5,  4,
+                                             4.5, 5,   5.5,  5.75, 6,   6.5,   7,  8,  8.75, 9,
+                                             9.5, 10,  10.5, 11,   12,  12.75, 13, 14};
+
+        int idx = 0;
+        int i = 0;
+        for (const auto &offset : timezoneOffsets) {
+            if (bruceConfig.tmz == offset) idx = i;
+
+            options.emplace_back(
+                ("UTC" + String(offset >= 0 ? "+" : "") + String(offset)).c_str(),
+                [=]() { bruceConfig.setTmz(offset); },
+                bruceConfig.tmz == offset
+            );
+            ++i;
+        }
+
+#endif
+
         addOptionToMainMenu();
 
         loopOptions(options, idx);
 
-        if (returnToMenu) return;
+        updateClockTimezone();
 
-        timeClient.setTimeOffset(bruceConfig.tmz * 3600);
-        timeClient.begin();
-        timeClient.update();
-        localTime = myTZ.toLocal(timeClient.getEpochTime());
-
-#if defined(HAS_RTC)
-        struct tm *timeinfo = localtime(&localTime);
-        TimeStruct.Hours = timeinfo->tm_hour;
-        TimeStruct.Minutes = timeinfo->tm_min;
-        TimeStruct.Seconds = timeinfo->tm_sec;
-        _rtc.SetTime(&TimeStruct);
-#else
-        rtc.setTime(timeClient.getEpochTime());
-#endif
-
-        clock_set = true;
-        runClockLoop();
     } else {
-        int hr, mn, am;
+        int hr, mn, am = 0; // Initialize am to default value
         options = {};
         for (int i = 0; i < 12; i++) {
             String tmp = String(i < 10 ? "0" : "") + String(i);
@@ -875,19 +1006,42 @@ void setClock() {
         TimeStruct.Minutes = mn;
         TimeStruct.Seconds = 0;
         _rtc.SetTime(&TimeStruct);
+        _rtc.GetTime(&_time);
+        _rtc.GetDate(&_date);
+
+        struct tm timeinfo = {};
+        timeinfo.tm_sec = _time.Seconds;
+        timeinfo.tm_min = _time.Minutes;
+        timeinfo.tm_hour = _time.Hours;
+        timeinfo.tm_mday = _date.Date;
+        timeinfo.tm_mon = _date.Month > 0 ? _date.Month - 1 : 0;
+        timeinfo.tm_year = _date.Year >= 1900 ? _date.Year - 1900 : 0;
+        time_t epoch = mktime(&timeinfo);
+        struct timeval tv = {.tv_sec = epoch};
+        settimeofday(&tv, nullptr);
 #else
-        rtc.setTime(0, mn, hr + am, 20, 06, 2024); // send me a gift, @Pirata!
+        rtc.setTime(0, mn, hr + am, 20, 06, CURRENT_YEAR); // send me a gift, @Pirata!
+        struct tm t = rtc.getTimeStruct();
+        time_t epoch = mktime(&t);
+        struct timeval tv = {.tv_sec = epoch};
+        settimeofday(&tv, nullptr);
 #endif
         clock_set = true;
-        runClockLoop();
     }
 }
 
-void runClockLoop() {
+void runClockLoop(bool showMenuHint) {
     int tmp = 0;
+    unsigned long hintStartTime = millis();
+    bool hintVisible = showMenuHint;
 
 #if defined(HAS_RTC)
+#if defined(HAS_RTC_BM8563)
     _rtc.GetBm8563Time();
+#endif
+#if defined(HAS_RTC_PCF85063A)
+    _rtc.GetPcf85063Time();
+#endif
     _rtc.GetTime(&_time);
 #endif
 
@@ -897,7 +1051,9 @@ void runClockLoop() {
 
     for (;;) {
         if (millis() - tmp > 1000) {
-#if !defined(HAS_RTC)
+#if defined(HAS_RTC)
+            updateTimeStr(_rtc.getTimeStruct());
+#else
             updateTimeStr(rtc.getTimeStruct());
 #endif
             Serial.print("Current time: ");
@@ -910,41 +1066,53 @@ void runClockLoop() {
                 tftHeight - 2 * BORDER_PAD_X,
                 bruceConfig.priColor
             );
-            tft.setCursor(64, tftHeight / 3 + 5);
             uint8_t f_size = 4;
             for (uint8_t i = 4; i > 0; i--) {
-                if (i * LW * 8 < (tftWidth - BORDER_PAD_X * 2)) {
+                if (i * LW * strlen(timeStr) < (tftWidth - BORDER_PAD_X * 2)) {
                     f_size = i;
                     break;
                 }
             }
             tft.setTextSize(f_size);
-#if defined(HAS_RTC)
-            _rtc.GetBm8563Time();
-            _rtc.GetTime(&_time);
-            char timeString[9]; // Buffer para armazenar a string formatada "HH:MM:SS"
-            snprintf(
-                timeString,
-                sizeof(timeString),
-                "%02d:%02d:%02d",
-                _time.Hours % 100,
-                _time.Minutes % 100,
-                _time.Seconds % 100
-            );
-            tft.drawCentreString(timeString, tftWidth / 2, tftHeight / 2 - 13, 1);
-#else
             tft.drawCentreString(timeStr, tftWidth / 2, tftHeight / 2 - 13, 1);
-#endif
+
+            // "OK to show menu" hint management
+            if (hintVisible && (millis() - hintStartTime < 5000)) {
+                tft.setTextSize(FP);
+                tft.drawCentreString("OK to show menu", tftWidth / 2, tftHeight / 2 + 25, 1);
+            } else if (hintVisible && (millis() - hintStartTime >= 5000)) {
+                // Clear hint after 5 seconds
+                tft.fillRect(
+                    BORDER_PAD_X + 1,
+                    tftHeight / 2 + 20,
+                    tftWidth - 2 * BORDER_PAD_X - 2,
+                    20,
+                    bruceConfig.bgColor
+                );
+                hintVisible = false;
+            }
             tmp = millis();
         }
 
-        // Checks para sair do loop
-        if (check(SelPress) or check(EscPress)) { // Apertar o botão power dos sticks
+        // Checks to exit the loop
+        if (check(SelPress)) {
+            tft.fillScreen(bruceConfig.bgColor);
+            if (showMenuHint) {
+                // Exits the loop to return to the caller (ClockMenu)
+                break;
+            } else {
+                // Original behavior
+                returnToMenu = true;
+                break;
+            }
+        }
+
+        if (check(EscPress)) {
             tft.fillScreen(bruceConfig.bgColor);
             returnToMenu = true;
             break;
-            // goto Exit;
         }
+
         vTaskDelay(10 / portTICK_PERIOD_MS);
     }
 }
@@ -956,7 +1124,6 @@ void runClockLoop() {
 int gsetIrTxPin(bool set) {
     int result = bruceConfigPins.irTx;
 
-    if (result > 50) bruceConfigPins.setIrTxPin(TXLED);
     if (set) {
         options.clear();
         std::vector<std::pair<const char *, int>> pins;
@@ -969,7 +1136,8 @@ int gsetIrTxPin(bool set) {
 #ifdef ALLOW_ALL_GPIO_FOR_IR_RF
             int i = pin.second;
             if (i != TFT_CS && i != TFT_RST && i != TFT_SCLK && i != TFT_MOSI && i != TFT_BL &&
-                i != TOUCH_CS && i != SDCARD_CS && i != SDCARD_MOSI && i != SDCARD_MISO)
+                i != TOUCH_CS && i != bruceConfigPins.SDCARD_bus.cs && i != bruceConfigPins.SDCARD_bus.mosi &&
+                i != bruceConfigPins.SDCARD_bus.miso)
 #endif
                 options.push_back(
                     {pin.first,
@@ -997,7 +1165,8 @@ void setIrTxRepeats() {
         {"10 (+ 1 initial)", [&]() { chRpts = 10; }},
         {"Custom",           [&]() {
              // up to 99 repeats
-             String rpt = keyboard(String(bruceConfigPins.irTxRepeats), 2, "Nbr of Repeats (+ 1 initial)");
+             String rpt =
+                 num_keyboard(String(bruceConfigPins.irTxRepeats), 2, "Nbr of Repeats (+ 1 initial)");
              chRpts = static_cast<uint8_t>(rpt.toInt());
          }                       },
     };
@@ -1016,7 +1185,7 @@ void setIrTxRepeats() {
 int gsetIrRxPin(bool set) {
     int result = bruceConfigPins.irRx;
 
-    if (result > 45) bruceConfigPins.setIrRxPin(GROVE_SCL);
+    if (result < 0) bruceConfigPins.setIrRxPin(GROVE_SCL);
     if (set) {
         options.clear();
         std::vector<std::pair<const char *, int>> pins;
@@ -1029,7 +1198,8 @@ int gsetIrRxPin(bool set) {
 #ifdef ALLOW_ALL_GPIO_FOR_IR_RF
             int i = pin.second;
             if (i != TFT_CS && i != TFT_RST && i != TFT_SCLK && i != TFT_MOSI && i != TFT_BL &&
-                i != TOUCH_CS && i != SDCARD_CS && i != SDCARD_MOSI && i != SDCARD_MISO)
+                i != TOUCH_CS && i != bruceConfigPins.SDCARD_bus.cs && i != bruceConfigPins.SDCARD_bus.mosi &&
+                i != bruceConfigPins.SDCARD_bus.miso)
 #endif
                 options.push_back(
                     {pin.first,
@@ -1052,7 +1222,7 @@ int gsetIrRxPin(bool set) {
 int gsetRfTxPin(bool set) {
     int result = bruceConfigPins.rfTx;
 
-    if (result > 45) bruceConfigPins.setRfTxPin(GROVE_SDA);
+    if (result < 0) bruceConfigPins.setRfTxPin(bruceConfigPins.i2c_bus.sda);
     if (set) {
         options.clear();
         std::vector<std::pair<const char *, int>> pins;
@@ -1065,7 +1235,8 @@ int gsetRfTxPin(bool set) {
 #ifdef ALLOW_ALL_GPIO_FOR_IR_RF
             int i = pin.second;
             if (i != TFT_CS && i != TFT_RST && i != TFT_SCLK && i != TFT_MOSI && i != TFT_BL &&
-                i != TOUCH_CS && i != SDCARD_CS && i != SDCARD_MOSI && i != SDCARD_MISO)
+                i != TOUCH_CS && i != bruceConfigPins.SDCARD_bus.cs && i != bruceConfigPins.SDCARD_bus.mosi &&
+                i != bruceConfigPins.SDCARD_bus.miso)
 #endif
                 options.push_back(
                     {pin.first,
@@ -1089,7 +1260,7 @@ int gsetRfTxPin(bool set) {
 int gsetRfRxPin(bool set) {
     int result = bruceConfigPins.rfRx;
 
-    if (result > 36) bruceConfigPins.setRfRxPin(GROVE_SCL);
+    if (result < 0) bruceConfigPins.setRfRxPin(GROVE_SCL);
     if (set) {
         options.clear();
         std::vector<std::pair<const char *, int>> pins;
@@ -1102,7 +1273,8 @@ int gsetRfRxPin(bool set) {
 #ifdef ALLOW_ALL_GPIO_FOR_IR_RF
             int i = pin.second;
             if (i != TFT_CS && i != TFT_RST && i != TFT_SCLK && i != TFT_MOSI && i != TFT_BL &&
-                i != TOUCH_CS && i != SDCARD_CS && i != SDCARD_MOSI && i != SDCARD_MISO)
+                i != TOUCH_CS && i != bruceConfigPins.SDCARD_bus.cs && i != bruceConfigPins.SDCARD_bus.mosi &&
+                i != bruceConfigPins.SDCARD_bus.miso)
 #endif
                 options.push_back(
                     {pin.first,
@@ -1131,15 +1303,20 @@ void setStartupApp() {
         {"None", [=]() { bruceConfig.setStartupApp(""); }, bruceConfig.startupApp == ""}
     };
 
-    int index = 1;
+    int index = 0;
     for (String appName : startupApp.getAppNames()) {
-        if (bruceConfig.startupApp == appName) idx = index++;
+        index++;
+        if (bruceConfig.startupApp == appName) idx = index;
 
-        options.push_back(
-            {appName.c_str(),
-             [=]() { bruceConfig.setStartupApp(appName); },
-             bruceConfig.startupApp == appName}
-        );
+        options.push_back({appName.c_str(), [=]() {
+                               bruceConfig.setStartupApp(appName);
+#if !defined(LITE_VERSION) && !defined(DISABLE_INTERPRETER)
+                               if (appName == "JS Interpreter") {
+                                   options = getScriptsOptionsList("", true);
+                                   loopOptions(options, MENU_TYPE_SUBMENU, "Startup Script");
+                               }
+#endif
+                           }});
     }
 
     loopOptions(options, idx);
@@ -1165,29 +1342,6 @@ void setGpsBaudrateMenu() {
 }
 
 /*********************************************************************
-**  Function: setBleNameMenu
-**  Handles Menu to set BLE Gap Name
-**********************************************************************/
-void setBleNameMenu() {
-    const String defaultBleName = "Keyboard_" + String((uint8_t)(ESP.getEfuseMac() >> 32), HEX);
-
-    const bool isDefault = bruceConfigPins.bleName == defaultBleName;
-
-    options = {
-        {"Default", [=]() { bruceConfigPins.setBleName(defaultBleName); }, isDefault },
-        {"Custom",
-         [=]() {
-             String newBleName = keyboard(bruceConfigPins.bleName, 30, "BLE Device Name:");
-             if (!newBleName.isEmpty()) bruceConfigPins.setBleName(newBleName);
-             else displayError("BLE Name cannot be empty", true);
-         },                                                                !isDefault},
-    };
-    addOptionToMainMenu();
-
-    loopOptions(options, isDefault ? 0 : 1);
-}
-
-/*********************************************************************
 **  Function: setWifiApSsidMenu
 **  Handles Menu to set the WiFi AP SSID
 **********************************************************************/
@@ -1201,8 +1355,10 @@ void setWifiApSsidMenu() {
         {"Custom",
          [=]() {
              String newSsid = keyboard(bruceConfig.wifiAp.ssid, 32, "WiFi AP SSID:");
-             if (!newSsid.isEmpty()) bruceConfig.setWifiApCreds(newSsid, bruceConfig.wifiAp.pwd);
-             else displayError("SSID cannot be empty", true);
+             if (newSsid != "\x1B") {
+                 if (!newSsid.isEmpty()) bruceConfig.setWifiApCreds(newSsid, bruceConfig.wifiAp.pwd);
+                 else displayError("SSID cannot be empty", true);
+             }
          },                                                                         !isDefault},
     };
     addOptionToMainMenu();
@@ -1223,9 +1379,11 @@ void setWifiApPasswordMenu() {
          isDefault                                                                             },
         {"Custom",
          [=]() {
-             String newPassword = keyboard(bruceConfig.wifiAp.pwd, 32, "WiFi AP Password:");
-             if (!newPassword.isEmpty()) bruceConfig.setWifiApCreds(bruceConfig.wifiAp.ssid, newPassword);
-             else displayError("Password cannot be empty", true);
+             String newPassword = keyboard(bruceConfig.wifiAp.pwd, 32, "WiFi AP Password:", true);
+             if (newPassword != "\x1B") {
+                 if (!newPassword.isEmpty()) bruceConfig.setWifiApCreds(bruceConfig.wifiAp.ssid, newPassword);
+                 else displayError("Password cannot be empty", true);
+             }
          },                                                                          !isDefault},
     };
     addOptionToMainMenu();
@@ -1253,8 +1411,7 @@ void setWifiApCredsMenu() {
 **********************************************************************/
 void setNetworkCredsMenu() {
     options = {
-        {"WiFi AP Creds", setWifiApCredsMenu},
-        {"BLE Name",      setBleNameMenu    },
+        {"WiFi AP Creds", setWifiApCredsMenu}
     };
     addOptionToMainMenu();
 
@@ -1269,6 +1426,7 @@ void setBadUSBBLEMenu() {
     options = {
         {"Keyboard Layout", setBadUSBBLEKeyboardLayoutMenu},
         {"Key Delay",       setBadUSBBLEKeyDelayMenu      },
+        {"Show Output",     setBadUSBBLEShowOutputMenu    },
     };
     addOptionToMainMenu();
 
@@ -1280,7 +1438,6 @@ void setBadUSBBLEMenu() {
 **  Main Menu for setting Bad USB/BLE Keyboard Layout
 **********************************************************************/
 void setBadUSBBLEKeyboardLayoutMenu() {
-
     uint8_t opt = bruceConfig.badUSBBLEKeyboardLayout;
 
     options.clear();
@@ -1312,13 +1469,30 @@ void setBadUSBBLEKeyboardLayoutMenu() {
 **  Main Menu for setting Bad USB/BLE Keyboard Key Delay
 **********************************************************************/
 void setBadUSBBLEKeyDelayMenu() {
-    String delayStr = keyboard(String(bruceConfig.badUSBBLEKeyDelay), 4, "Key Delay (ms):");
-    uint8_t delayVal = static_cast<uint8_t>(delayStr.toInt());
-    if (delayVal >= 25 && delayVal <= 500) {
-        bruceConfig.setBadUSBBLEKeyDelay(delayVal);
-    } else if (delayVal != 0) {
-        displayError("Invalid key delay value (25 to 500)", true);
+    String delayStr = num_keyboard(String(bruceConfig.badUSBBLEKeyDelay), 3, "Key Delay (ms):");
+    if (delayStr != "\x1B") {
+        uint16_t delayVal = static_cast<uint16_t>(delayStr.toInt());
+        if (delayVal <= 500) {
+            bruceConfig.setBadUSBBLEKeyDelay(delayVal);
+        } else if (delayVal != 0) {
+            displayError("Invalid key delay value (0 to 500)", true);
+        }
     }
+}
+
+/*********************************************************************
+**  Function: setBadUSBBLEShowOutputMenu
+**  Main Menu for setting Bad USB/BLE Show Output
+**********************************************************************/
+void setBadUSBBLEShowOutputMenu() {
+    options.clear();
+    options = {
+        {"Enable",  [&]() { bruceConfig.setBadUSBBLEShowOutput(true); } },
+        {"Disable", [&]() { bruceConfig.setBadUSBBLEShowOutput(false); }},
+    };
+    addOptionToMainMenu();
+
+    loopOptions(options, bruceConfig.badUSBBLEShowOutput ? 0 : 1);
 }
 
 /*********************************************************************
@@ -1326,7 +1500,6 @@ void setBadUSBBLEKeyDelayMenu() {
 **  Handles Menu to configure WiFi MAC Address
 **********************************************************************/
 void setMacAddressMenu() {
-
     String currentMAC = bruceConfig.wifiMAC;
     if (currentMAC == "") currentMAC = WiFi.macAddress();
 
@@ -1338,6 +1511,7 @@ void setMacAddressMenu() {
         {"Set Custom MAC",
          [&]() {
              String newMAC = keyboard(bruceConfig.wifiMAC, 17, "XX:YY:ZZ:AA:BB:CC");
+             if (newMAC == "\x1B") return;
              if (newMAC.length() == 17) {
                  bruceConfig.setWifiMAC(newMAC);
              } else {
@@ -1348,8 +1522,9 @@ void setMacAddressMenu() {
              uint8_t randomMac[6];
              for (int i = 0; i < 6; i++) randomMac[i] = random(0x00, 0xFF);
              char buf[18];
-             sprintf(
+             snprintf(
                  buf,
+                 sizeof(buf),
                  "%02X:%02X:%02X:%02X:%02X:%02X",
                  randomMac[0],
                  randomMac[1],
@@ -1408,7 +1583,7 @@ RELOAD:
             String tmp = String(i);
             options.push_back({tmp.c_str(), [i, &sel]() { sel = (gpio_num_t)i; }});
         }
-        loopOptions(options);
+        loopOptions(options, index);
         options.clear();
         if (opt == 1) points.sck = sel;
         else if (opt == 2) points.miso = sel;
@@ -1469,6 +1644,15 @@ RELOAD:
 **  Main Menu to manually set SPI Pins
 **********************************************************************/
 void setI2CPinsMenu(BruceConfigPins::I2CPins &value) {
+#if defined(SOC_HP_I2C_NUM) && SOC_HP_I2C_NUM < 2
+    // On SoCs with a single HP I2C peripheral, Grove I2C shares hardware with the system I2C bus
+    // (touch/RTC/PMIC), so its pins can't be changed independently when the board has a real,
+    // distinct system I2C bus.
+    if (bruceConfigPins.sys_i2c.sda >= 0 && bruceConfigPins.sys_i2c.scl >= 0) {
+        displayError("I2C Pins cannot be changed on this board", true);
+        return;
+    }
+#endif
     uint8_t opt = 0;
     bool changed = false;
     BruceConfigPins::I2CPins points = value;
@@ -1505,6 +1689,134 @@ RELOAD:
         changed = true;
         goto RELOAD;
     }
+}
+
+/*********************************************************************
+**  Function: setSpeakerPinsMenu
+**  Menu to manually set the I2S speaker pins (was the BCLK/WCLK/DOUT/MCLK -D macros)
+**********************************************************************/
+void setSpeakerPinsMenu(BruceConfigPins::SpeakerPins &value) {
+    uint8_t opt = 0;
+    bool changed = false;
+    BruceConfigPins::SpeakerPins points = value;
+
+RELOAD:
+    options = {
+        {String("BCLK=" + String(points.bclk)).c_str(), [&]() { opt = 1; }},
+        {String("WCLK=" + String(points.ws)).c_str(), [&]() { opt = 2; }},
+        {String("DOUT=" + String(points.dout)).c_str(), [&]() { opt = 3; }},
+        {String("MCLK=" + String(points.mclk)).c_str(), [&]() { opt = 4; }},
+        {"Save Config", [&]() { opt = 7; }, changed},
+        {"Main Menu", [&]() { opt = 0; }},
+    };
+
+    loopOptions(options);
+    if (opt == 0) return;
+    else if (opt == 7) {
+        if (changed) {
+            value = points;
+            bruceConfigPins.setSpeakerPins(value);
+        }
+    } else {
+        options = {};
+        gpio_num_t sel = GPIO_NUM_NC;
+        int index = 0;
+        if (opt == 1) index = points.bclk + 1;
+        else if (opt == 2) index = points.ws + 1;
+        else if (opt == 3) index = points.dout + 1;
+        else if (opt == 4) index = points.mclk + 1;
+        for (int8_t i = -1; i <= GPIO_NUM_MAX; i++) {
+            String tmp = String(i);
+            options.push_back({tmp.c_str(), [i, &sel]() { sel = (gpio_num_t)i; }});
+        }
+        loopOptions(options, index);
+        options.clear();
+        if (opt == 1) points.bclk = sel;
+        else if (opt == 2) points.ws = sel;
+        else if (opt == 3) points.dout = sel;
+        else if (opt == 4) points.mclk = sel;
+        changed = true;
+        goto RELOAD;
+    }
+}
+
+/*********************************************************************
+**  Function: setMicPinsMenu
+**  Menu to manually set the microphone wiring (was PIN_CLK/PIN_DATA/PIN_BCLK/PIN_WS)
+**********************************************************************/
+void setMicPinsMenu(BruceConfigPins::MicPins &value) {
+    uint8_t opt = 0;
+    bool changed = false;
+    BruceConfigPins::MicPins points = value;
+
+RELOAD:
+    {
+        const char *typeName = points.type == MIC_TYPE_I2S_PHILIPS ? "I2S Philips"
+                               : points.type == MIC_TYPE_I2S_MSB   ? "I2S MSB"
+                                                                   : "PDM";
+        options = {
+            {String("Type=" + String(typeName)).c_str(), [&]() { opt = 1; }},
+            {String("CLK/BCLK=" + String(points.clk)).c_str(), [&]() { opt = 2; }},
+            {String("WS  =" + String(points.ws)).c_str(), [&]() { opt = 3; }},
+            {String("DATA=" + String(points.data)).c_str(), [&]() { opt = 4; }},
+            {"Save Config", [&]() { opt = 7; }, changed},
+            {"Main Menu", [&]() { opt = 0; }},
+        };
+    }
+
+    loopOptions(options);
+    if (opt == 0) return;
+    else if (opt == 7) {
+        if (changed) {
+            value = points;
+            bruceConfigPins.setMicPins(value);
+        }
+    } else if (opt == 1) {
+        options = {
+            {"PDM",         [&]() { points.type = MIC_TYPE_PDM; }        },
+            {"I2S MSB",     [&]() { points.type = MIC_TYPE_I2S_MSB; }    },
+            {"I2S Philips", [&]() { points.type = MIC_TYPE_I2S_PHILIPS; }},
+        };
+        loopOptions(options, points.type);
+        options.clear();
+        changed = true;
+        goto RELOAD;
+    } else {
+        options = {};
+        gpio_num_t sel = GPIO_NUM_NC;
+        int index = 0;
+        if (opt == 2) index = points.clk + 1;
+        else if (opt == 3) index = points.ws + 1;
+        else if (opt == 4) index = points.data + 1;
+        for (int8_t i = -1; i <= GPIO_NUM_MAX; i++) {
+            String tmp = String(i);
+            options.push_back({tmp.c_str(), [i, &sel]() { sel = (gpio_num_t)i; }});
+        }
+        loopOptions(options, index);
+        options.clear();
+        if (opt == 2) points.clk = sel;
+        else if (opt == 3) points.ws = sel;
+        else if (opt == 4) points.data = sel;
+        changed = true;
+        goto RELOAD;
+    }
+}
+
+/*********************************************************************
+**  Function: setBuzzerPinMenu
+**  Menu to manually set the buzzer pin (was the BUZZ_PIN -D macro).
+**  -1 disables the buzzer.
+**********************************************************************/
+void setBuzzerPinMenu() {
+    options = {};
+    int sel = bruceConfigPins.buzzer;
+    for (int8_t i = -1; i <= GPIO_NUM_MAX; i++) {
+        String tmp = String(i);
+        options.push_back({tmp.c_str(), [i, &sel]() { sel = i; }});
+    }
+    loopOptions(options, bruceConfigPins.buzzer + 1);
+    options.clear();
+    bruceConfigPins.setBuzzerPin(sel);
 }
 
 /*********************************************************************
@@ -1568,5 +1880,318 @@ void enableBLEAPI() {
     }
 
     ble_api_enabled = !ble_api_enabled;
+
+    // Give the user visual feedback about the new state, otherwise the toggle
+    // looks like it does nothing and gets pressed repeatedly (which cycles the
+    // BLE stack setup/teardown and can corrupt the GATT table).
+    if (ble_api_enabled) {
+        displayInfo("BLE API ON > Advertising as 'Bruce'", true);
+    } else {
+        displayInfo("BLE API OFF", true);
+    }
+}
+
+bool appStoreInstalled() {
+    FS *fs;
+    if (!getFsStorage(fs)) {
+        log_i("Fail getting filesystem");
+        return false;
+    }
+
+    return fs->exists("/BruceJS/Tools/App Store.bin");
+}
+
+#include <HTTPClient.h>
+void installAppStoreJS() {
+
+    if (!WiFi.isConnected()) { wifiConnectMenu(WIFI_STA); }
+    if (!WiFi.isConnected()) {
+        displayWarning("WiFi not connected", true);
+        return;
+    }
+
+    FS *fs;
+    if (!getFsStorage(fs)) {
+        log_i("Fail getting filesystem");
+        return;
+    }
+
+    if (!fs->exists("/BruceJS")) {
+        if (!fs->mkdir("/BruceJS")) {
+            displayWarning("Failed to create /BruceJS directory", true);
+            return;
+        }
+    }
+
+    if (!fs->exists("/BruceJS/Tools")) {
+        if (!fs->mkdir("/BruceJS/Tools")) {
+            displayWarning("Failed to create /BruceJS/Tools directory", true);
+            return;
+        }
+    }
+
+    HTTPClient http;
+    http.begin("http://appstore.bruce.computer/service/appstorebin/");
+    int httpCode = http.GET();
+    if (httpCode != 200) {
+        http.end();
+        displayWarning("Failed to download App Store", true);
+        return;
+    }
+
+    File file = fs->open("/BruceJS/Tools/App Store.bin", FILE_WRITE);
+    if (!file) {
+        displayWarning("Failed to save App Store", true);
+        return;
+    }
+    file.print(http.getString());
+    http.end();
+    file.close();
+
+    // Check for old App Store.js and delete if found
+    if (fs->exists("/BruceJS/Tools/App Store.js")) {
+        fs->remove("/BruceJS/Tools/App Store.js");
+    }
+
+    displaySuccess("App Store installed", true);
+    displaySuccess("Goto JS Interpreter -> Tools -> App Store", true);
+}
+#endif
+
+#if defined(HAS_RESISTIVE_TOUCH)
+extern CYD28_TouchR touch; // defined by hal/inputs/touch.cpp
+
+static constexpr const char *TOUCH_CAL_NAMESPACE = "touch_cal";
+
+static bool validTouchCalibration(uint16_t x0, uint16_t x1, uint16_t y0, uint16_t y1) {
+    return x0 > 0 && x1 > 0 && y0 > 0 && y1 > 0 && x0 != x1 && y0 != y1;
+}
+
+static esp_err_t readTouchCalibrationItems(
+    nvs_handle_t handle, uint16_t &x0, uint16_t &x1, uint16_t &y0, uint16_t &y1, uint8_t &rot
+) {
+    esp_err_t err = nvs_get_u16(handle, "x0", &x0);
+    err |= nvs_get_u16(handle, "x1", &x1);
+    err |= nvs_get_u16(handle, "y0", &y0);
+    err |= nvs_get_u16(handle, "y1", &y1);
+    err |= nvs_get_u8(handle, "r", &rot);
+    if (err == ESP_OK) return err;
+
+    // Older builds used single-letter keys.
+    err = nvs_get_u16(handle, "x", &x0);
+    err |= nvs_get_u16(handle, "X", &x1);
+    err |= nvs_get_u16(handle, "y", &y0);
+    err |= nvs_get_u16(handle, "Y", &y1);
+    err |= nvs_get_u8(handle, "r", &rot);
+    return err;
+}
+
+static bool getTouchCalibration(uint16_t &x0, uint16_t &x1, uint16_t &y0, uint16_t &y1, uint8_t &rot) {
+    x0 = x1 = y0 = y1 = 0;
+    rot = 0;
+
+    nvs_handle_t handle;
+    if (nvs_open(TOUCH_CAL_NAMESPACE, NVS_READONLY, &handle) != ESP_OK) {
+        log_i("getTouchCalibration: no %s namespace found", TOUCH_CAL_NAMESPACE);
+        return false;
+    }
+    esp_err_t err = readTouchCalibrationItems(handle, x0, x1, y0, y1, rot);
+    nvs_close(handle);
+    rot &= 0x07;
+    return err == ESP_OK && validTouchCalibration(x0, x1, y0, y1);
+}
+
+// Loads the calibration from the NVS namespace "touch_cal" and applies it to the touch driver.
+// Returns false when there is no valid calibration stored.
+bool loadTouchCalibration() {
+    uint16_t x0, x1, y0, y1;
+    uint8_t rot;
+
+    if (!getTouchCalibration(x0, x1, y0, y1, rot)) {
+        Serial.println("loadTouchCalibration: Failed to load valid calibration data");
+        return false;
+    }
+
+    uint16_t parameters[5] = {x0, x1, y0, y1, rot};
+    touch.setTouch(parameters);
+    Serial.printf(
+        "loadTouchCalibration: Loaded calibration - x0:%u x1:%u y0:%u y1:%u rot:%u\n", x0, x1, y0, y1, rot
+    );
+    return true;
+}
+
+bool saveTouchCalibration(uint16_t x0, uint16_t x1, uint16_t y0, uint16_t y1, uint8_t rot) {
+    if (!validTouchCalibration(x0, x1, y0, y1)) {
+        Serial.printf(
+            "saveTouchCalibration: Invalid calibration - x0:%u x1:%u y0:%u y1:%u rot:%u\n",
+            x0,
+            x1,
+            y0,
+            y1,
+            rot
+        );
+        return false;
+    }
+
+    nvs_handle_t handle;
+    esp_err_t err = nvs_open(TOUCH_CAL_NAMESPACE, NVS_READWRITE, &handle);
+    if (err != ESP_OK) {
+        Serial.printf("saveTouchCalibration: Failed to open %s namespace\n", TOUCH_CAL_NAMESPACE);
+        return false;
+    }
+
+    rot &= 0x07;
+    err = nvs_set_u16(handle, "x0", x0);
+    err |= nvs_set_u16(handle, "x1", x1);
+    err |= nvs_set_u16(handle, "y0", y0);
+    err |= nvs_set_u16(handle, "y1", y1);
+    err |= nvs_set_u8(handle, "r", rot);
+    if (err == ESP_OK) err = nvs_commit(handle);
+    nvs_close(handle);
+
+    if (err == ESP_OK) {
+        Serial.printf(
+            "saveTouchCalibration: Saved calibration - x0:%u x1:%u y0:%u y1:%u rot:%u\n", x0, x1, y0, y1, rot
+        );
+        return true;
+    }
+    Serial.printf("saveTouchCalibration: Failed to save calibration data: %s\n", esp_err_to_name(err));
+    return false;
+}
+
+// Asks the user to touch the 4 corners, computes the calibration, applies it and stores it in NVS.
+void calibrateTouch() {
+    // The input task reads the same touch driver: keep it out while the raw readings are taken.
+    inputLock();
+    tft.setRotation(0);
+    tft.fillScreen(bruceConfig.bgColor);
+    wakeUpScreen();
+    const uint16_t _w = tft.width();
+    const uint16_t _h = tft.height();
+
+    struct RawTouchPoint {
+        uint16_t x;
+        uint16_t y;
+    };
+
+    auto drawCenteredLine = [&](const char *text, int16_t y) { tft.drawCentreString(text, _w / 2, y, 1); };
+
+    tft.setTextColor(bruceConfig.priColor, bruceConfig.bgColor);
+    tft.setTextSize(FP);
+    const int16_t lineHeight = LH;
+    int16_t y = (_h - lineHeight * 4) / 2;
+    drawCenteredLine("Bruce Touch Calibration", y);
+    y += lineHeight;
+    drawCenteredLine("---------------------------", y);
+    y += lineHeight;
+    drawCenteredLine("Touch the screen corners", y);
+    y += lineHeight;
+    drawCenteredLine("indicated by the arrows", y);
+    delay(500);
+
+    auto drawArrow = [&](uint8_t corner) {
+        tft.fillRect(0, 0, 30, 30, bruceConfig.bgColor);
+        tft.fillRect(0, _h - 30, 30, 30, bruceConfig.bgColor);
+        tft.fillRect(_w - 30, 0, 30, 30, bruceConfig.bgColor);
+        tft.fillRect(_w - 30, _h - 30, 30, 30, bruceConfig.bgColor);
+        const int16_t edge = 0;
+        const int16_t len = 28;
+        const int16_t head = 8;
+        const bool right = corner == 1 || corner == 2;
+        const bool bottom = corner >= 2;
+        const int16_t x0 = right ? _w - edge : edge;
+        const int16_t y0 = bottom ? _h - edge : edge;
+        const int16_t sx = right ? -1 : 1;
+        const int16_t sy = bottom ? -1 : 1;
+
+        tft.drawLine(x0 + sx * len, y0 + sy * len, x0, y0, bruceConfig.priColor);
+        tft.drawLine(x0, y0, x0 + sx * head, y0, bruceConfig.priColor);
+        tft.drawLine(x0, y0, x0, y0 + sy * head, bruceConfig.priColor);
+        tft.drawLine(x0 + 1, y0 + sy, x0 + sx * (head + 1), y0 + sy, bruceConfig.priColor);
+        tft.drawLine(x0 + sx, y0 + 1, x0 + sx, y0 + sy * (head + 1), bruceConfig.priColor);
+    };
+
+    auto logRaw = [&](const char *phase) {
+        static unsigned long lastLog = 0;
+        if (millis() - lastLog < 1000) return;
+        lastLog = millis();
+        auto r = touch.getPointRaw();
+        Serial.printf(
+            "calibrateTouch[%s]: raw x=%d y=%d z=%d isrWake=%d\n", phase, r.x, r.y, r.z, touch.isrWake
+        );
+    };
+    auto readRawPoint = [&]() {
+        while (touch.touched()) {
+            logRaw("release");
+            delay(10);
+        }
+        while (!touch.touched()) {
+            logRaw("wait");
+            delay(10);
+        }
+
+        uint32_t sx = 0;
+        uint32_t sy = 0;
+        const uint8_t samples = 6;
+        for (uint8_t i = 0; i < samples; ++i) {
+            auto p = touch.getPointRaw();
+            sx += p.x;
+            sy += p.y;
+            delay(18);
+        }
+
+        while (touch.touched()) { delay(10); }
+        return RawTouchPoint{uint16_t(sx / samples), uint16_t(sy / samples)};
+    };
+
+    RawTouchPoint p[4];
+    for (uint8_t i = 0; i < 4; ++i) {
+        drawArrow(i);
+        p[i] = readRawPoint();
+    }
+
+    const int32_t leftRawX = (int32_t(p[0].x) + p[3].x) / 2;
+    const int32_t rightRawX = (int32_t(p[1].x) + p[2].x) / 2;
+    const int32_t leftRawY = (int32_t(p[0].y) + p[3].y) / 2;
+    const int32_t rightRawY = (int32_t(p[1].y) + p[2].y) / 2;
+
+    const uint8_t swapXY = abs(rightRawX - leftRawX) < abs(rightRawY - leftRawY);
+    const uint8_t invertX = swapXY ? p[0].y > p[1].y : p[0].x > p[1].x;
+    const uint8_t invertY = swapXY ? p[0].x > p[3].x : p[0].y > p[3].y;
+    // Same bit layout the Launcher stores (swapXY and invertX are inverted for compatibility with
+    // the CYD28_TouchscreenR orientation handling), so both firmwares can share the NVS values.
+    const uint8_t rot = !swapXY | (invertY << 1) | (!invertX << 2);
+    uint16_t xMin = !swapXY ? p[0].y : p[0].x;
+    uint16_t xMax = xMin;
+    uint16_t yMin = !swapXY ? p[0].x : p[0].y;
+    uint16_t yMax = yMin;
+    for (uint8_t i = 1; i < 4; ++i) {
+        const uint16_t rx = !swapXY ? p[i].y : p[i].x;
+        const uint16_t ry = !swapXY ? p[i].x : p[i].y;
+        if (rx < xMin) xMin = rx;
+        if (rx > xMax) xMax = rx;
+        if (ry < yMin) yMin = ry;
+        if (ry > yMax) yMax = ry;
+    }
+
+    uint16_t parameters[5] = {xMin, xMax, yMin, yMax, rot};
+    touch.setTouch(parameters);
+    saveTouchCalibration(xMin, xMax, yMin, yMax, rot);
+
+    Serial.printf(
+        "calibrateTouch: x0:%u x1:%u y0:%u y1:%u rot:%u swap:%u invX:%u invY:%u\n",
+        xMin,
+        xMax,
+        yMin,
+        yMax,
+        rot,
+        swapXY,
+        invertX,
+        invertY
+    );
+    tft.setRotation(bruceConfigPins.rotation);
+    tft.fillScreen(bruceConfig.bgColor);
+    wakeUpScreen();
+    inputUnlock();
 }
 #endif

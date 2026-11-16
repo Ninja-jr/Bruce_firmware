@@ -6,8 +6,14 @@
 #include "modules/ir/custom_ir.h"
 #include "modules/ir/ir_jammer.h"
 #include "modules/ir/ir_read.h"
-
+#if defined(ARDUINO_M5STICK_S3)
+#include <M5Unified.h>
+#endif
 void IRMenu::optionsMenu() {
+#if defined(ARDUINO_M5STICK_S3)
+    bool prevPower = M5.Power.getExtOutput();
+    M5.Power.setExtOutput(true); // ENABLE 5V OUTPUT
+#endif
     options = {
         {"TV-B-Gone", StartTvBGone              },
         {"Custom IR", otherIRcodes              },
@@ -23,6 +29,9 @@ void IRMenu::optionsMenu() {
     txt += " Tx: " + String(bruceConfigPins.irTx) + " Rx: " + String(bruceConfigPins.irRx) +
            " Rpts: " + String(bruceConfigPins.irTxRepeats);
     loopOptions(options, MENU_TYPE_SUBMENU, txt.c_str());
+#if defined(ARDUINO_M5STICK_S3)
+    M5.Power.setExtOutput(prevPower);
+#endif
 }
 
 void IRMenu::configMenu() {
@@ -35,11 +44,7 @@ void IRMenu::configMenu() {
 
     loopOptions(options, MENU_TYPE_SUBMENU, "IR Config");
 }
-void IRMenu::drawIconImg() {
-    drawImg(
-        *bruceConfig.themeFS(), bruceConfig.getThemeItemImg(bruceConfig.theme.paths.ir), 0, imgCenterY, true
-    );
-}
+
 void IRMenu::drawIcon(float scale) {
     clearIconArea();
     int iconSize = scale * 60;

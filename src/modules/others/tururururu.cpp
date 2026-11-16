@@ -66,15 +66,7 @@ void drawFish(Fish &f) {
 
 // Função para mover o tubarão
 void detectInputs() {
-#if defined(ARDUINO_M5STICK_C_PLUS) ||                                                                       \
-    defined(ARDUINO_M5STICK_C_PLUS2) // check(EscPress) is the same of check(PrevPress) in these devices
-    if (check(SelPress))
-#else
-    if (check(PrevPress) || check(UpPress))
-#endif
-    {
-        sharkUp = true;
-    }
+    if (check(PrevPress) || check(UpPress)) { sharkUp = true; }
     if (check(NextPress) || check(DownPress)) sharkDown = true;
 }
 
@@ -174,17 +166,17 @@ void shark_loop() {
 
         if (score == 99) {
             displaySuccess("So...");
-            while (!check(SelPress)) { yield(); }
-            while (check(SelPress)) { yield(); } // debounce
+            while (!check(SelPress)) { vTaskDelay(pdMS_TO_TICKS(1)); }
+            while (check(SelPress)) { vTaskDelay(pdMS_TO_TICKS(1)); } // debounce
             displaySuccess("you just found");
-            while (!check(SelPress)) { yield(); }
-            while (check(SelPress)) { yield(); } // debounce
+            while (!check(SelPress)) { vTaskDelay(pdMS_TO_TICKS(1)); }
+            while (check(SelPress)) { vTaskDelay(pdMS_TO_TICKS(1)); } // debounce
             displayInfo("hidden credits!");
-            while (!check(SelPress)) { yield(); }
-            while (check(SelPress)) { yield(); } // debounce
+            while (!check(SelPress)) { vTaskDelay(pdMS_TO_TICKS(1)); }
+            while (check(SelPress)) { vTaskDelay(pdMS_TO_TICKS(1)); } // debounce
             displayInfo("main devs:");
-            while (!check(SelPress)) { yield(); }
-            while (check(SelPress)) { yield(); } // debounce
+            while (!check(SelPress)) { vTaskDelay(pdMS_TO_TICKS(1)); }
+            while (check(SelPress)) { vTaskDelay(pdMS_TO_TICKS(1)); } // debounce
             options = {
                 {"Pirata",       [=]() { displayError("github.com/bmorcelli", true); }   },
                 {"pr3y",         [=]() { displaySuccess("github.com/pr3y", true); }      },

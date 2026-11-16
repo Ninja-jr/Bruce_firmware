@@ -38,7 +38,7 @@ bool BruceTheme::openThemeFile(FS *fs, String filepath, bool overwriteConfigSett
         return false;
     }
     themePath = filepath;
-    String baseThemePath = themePath.substring(0, themePath.lastIndexOf('/')) + "/";
+    String baseThemePath = filepath.substring(0, filepath.lastIndexOf('/')) + "/";
 
     ThemeEntry entries[] = {
         {"wifi",        &theme.wifi,        theme.paths.wifi       },
@@ -58,7 +58,8 @@ bool BruceTheme::openThemeFile(FS *fs, String filepath, bool overwriteConfigSett
         {"config",      &theme.config,      theme.paths.config     },
         {"boot_img",    &theme.boot_img,    theme.paths.boot_img   },
         {"boot_sound",  &theme.boot_sound,  theme.paths.boot_sound },
-        {"lora",        &theme.lora,        theme.paths.lora       }
+        {"lora",        &theme.lora,        theme.paths.lora       },
+        {"wire",        &theme.wire,        theme.paths.wire       }
     };
 
     JsonObject _th = jsonDoc.as<JsonObject>();
@@ -67,7 +68,7 @@ bool BruceTheme::openThemeFile(FS *fs, String filepath, bool overwriteConfigSett
             String path = baseThemePath + _th[entry.key].as<String>();
             if (fs->exists(path)) {
                 *entry.flag = true;
-                entry.path = _th[entry.key].as<String>();
+                entry.path = path;
                 // Pre-cache PNGs into BIN files to avoid runtime decoding and allocations
                 if (path.endsWith(".png") || path.endsWith(".PNG")) { preparePngBin(*fs, path); }
             } else {
@@ -80,6 +81,7 @@ bool BruceTheme::openThemeFile(FS *fs, String filepath, bool overwriteConfigSett
 
     if (!_th["border"].isNull()) { theme.border = _th["border"].as<int>(); }
     if (!_th["label"].isNull()) { theme.label = _th["label"].as<int>(); }
+    if (!_th["gifDuration"].isNull()) { theme.gifDuration = _th["gifDuration"].as<int>(); }
 
     if (overwriteConfigSettings) {
         uint16_t _priColor = bruceConfig.priColor;
@@ -111,8 +113,28 @@ bool BruceTheme::openThemeFile(FS *fs, String filepath, bool overwriteConfigSett
 }
 
 bool BruceTheme::validateImgFile(FS *fs, String filepath) {
-    // Think of a way to check if the images are at maximum height of tftHeight
-    // this size is the maximun value to be shown on screen without overlapping the status bar.
+    // Validate theme image files
+    // Check if file exists
+    if (fs == nullptr || filepath.isEmpty()) return false;
+    if (!fs->exists(filepath)) return false;
+    
+    // Check file is not empty
+    File file = fs->open(filepath, FILE_READ);
+    if (!file) return false;
+    
+    size_t fileSize = file.size();
+    file.close();
+    
+    // Reject obviously invalid files (too small to be valid images)
+    if (fileSize < 64) return false;
+    
+    // Reject unreasonably large files (likely not intended as menu icons)
+    // Menu icons should be small - 500KB is plenty for even high-res icons
+    const size_t MAX_ICON_SIZE = 500 * 1024;
+    if (fileSize > MAX_ICON_SIZE) return false;
+    
+    // For more advanced validation (checking actual image dimensions), 
+    // we would need to decode the image. For now, basic checks above.
     return true;
 }
 

@@ -17,6 +17,8 @@ BOOT_OFFSETS = {
     "esp32":   0x1000,  # ESP32
     "esp32s3": 0x0000,  # ESP32-S3
     "esp32c5": 0x2000,  # ESP32-C5
+    "esp32c6": 0x0000,  # ESP32-C6
+    "esp32p4": 0x2000,  # ESP32-P4
 }
 boot_offset = BOOT_OFFSETS.get(mcu, 0x0000)  # safe fallback
 
@@ -99,7 +101,7 @@ def _merge_bins_callback(target, source, env):
             env.Exit(1)
 
     cmd = " ".join([
-        "pio pkg exec -p \"tool-esptoolpy\" -- esptool.py",
+        q(python_exe), "-m", "platformio", "pkg", "exec", "-p", q("tool-esptoolpy"), "--", "esptool.py",
         "--chip", chip_arg,
         "merge-bin",
         "--output", q(out_bin),

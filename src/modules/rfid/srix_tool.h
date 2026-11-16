@@ -1,6 +1,6 @@
 /**
  * @file srix_tool.cpp
- * @brief SRIX4K/SRIX512 Reader/Writer Tool v1.2
+ * @brief SRIX4K/SRIX512 Reader/Writer Tool v1.3
  * @author Senape3000
  * @info https://github.com/Senape3000/firmware/blob/main/docs_custom/SRIX/SRIX_Tool_README.md
  * @date 2026-01-01
@@ -12,6 +12,21 @@
 // DEBUG MODE: uncomment for read the write process output from serial
 // #define SRIX_DEBUG_WRITE_SIMULATION
 
+// Uncomment to enable verbose debug output on Serial
+// #define SRIX_DEBUG
+
+// Helper macro for debug
+#ifdef SRIX_DEBUG
+#define SRIX_LOG(...)                                                                                        \
+    Serial.printf(__VA_ARGS__);                                                                              \
+    Serial.println()
+#define SRIX_PRINT(...) Serial.print(__VA_ARGS__)
+#else
+#define SRIX_LOG(...)
+#define SRIX_PRINT(...)
+#endif
+
+#include "core/bus_HAL.h"
 #include "pn532_srix.h"
 #include <Arduino.h>
 #include <FS.h>
@@ -33,18 +48,35 @@ public:
 
     void setup();
     void loop();
+    // ========== JS INTERPRETER SUPPORT ==========
+    // Headless constructor (no UI, no loop)
+    SRIXTool(bool headless_mode);
+
+    // Headless method for JS
+    String read_tag_headless(int timeout_seconds);
+    int write_tag_headless(int timeout_seconds);
+    String save_file_headless(const String &filename);
+    int load_file_headless(const String &filename);
+    int write_single_block_headless(uint8_t block_num, const uint8_t *block_data);
+    bool waitForTagHeadless(uint32_t timeout_ms);
+
+    // Getter for data access
+    uint8_t *getDump() { return _dump; }
+    uint8_t *getUID() { return _uid; }
+    bool isDumpValid() { return _dump_valid_from_read || _dump_valid_from_load; }
 
 private:
-// PN532 for SRIX - uses IRQ/RST if board has them defined
-// Devices such as T-Embed CC1101 have embedded PN532 that needs IRQ and RST pins
-// If using other device, set -DPN532_IRQ=pin_num and -DPN532_RF_REST=pin_num in platformio.ini
+    // PN532 for SRIX - uses IRQ/RST if board has them defined
+    // Devices such as T-Embed CC1101 have embedded PN532 that needs IRQ and RST pins
+    // If using other device, set -DPN532_IRQ=pin_num and -DPN532_RF_REST=pin_num in platformio.ini
+    Arduino_PN532_SRIX *nfc = nullptr;
 #if defined(PN532_IRQ) && defined(PN532_RF_REST)
-    Arduino_PN532_SRIX *nfc;
     bool _has_hardware_pins = true;
 #else
-    Arduino_PN532_SRIX *nfc;
     bool _has_hardware_pins = false;
 #endif
+    I2CLease _i2cLease; // sys_i2c or i2c_bus, whichever the PN532 answered on
+    bool openBus();
 
     SRIX_State current_state;
     bool _tag_read = false;
@@ -73,7 +105,7 @@ private:
     void show_main_menu();
     void save_file();
     void load_file();
-    void load_file_data(FS *fs, String filepath);
+    void load_file_data(FS *fs, const String &filepath);
 };
 
 void PN532_SRIX();

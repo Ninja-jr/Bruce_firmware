@@ -4,8 +4,8 @@
 #include "core/utils.h" // to return optionsJSON
 #include "core/wifi/webInterface.h"
 #include "core/wifi/wifi_common.h" //to return MAC addr
+#include "core/bus_HAL.h"
 #include "modules/badusb_ble/ducky_typer.h"
-#include <Wire.h>
 #include <globals.h>
 
 uint32_t uptimeCallback(cmd *c) {
@@ -56,29 +56,22 @@ uint32_t dateCallback(cmd *c) {
 uint32_t i2cCallback(cmd *c) {
     // scan for connected i2c modules
     // derived from https://learn.adafruit.com/scanning-i2c-addresses/arduino
-    Wire.begin(bruceConfigPins.i2c_bus.sda, bruceConfigPins.i2c_bus.scl);
-    byte error, address;
-    int nDevices;
+    // Scans sys_i2c and i2c_bus (once when they share pins), tagging each hit with its bus.
     serialDevice->println("Scanning...");
-    nDevices = 0;
-    for (address = 1; address < 127; address++) {
-        // The i2c_scanner uses the return value of
-        // the Write.endTransmisstion to see if
-        // a device did acknowledge to the address.
-        Wire.beginTransmission(address);
-        error = Wire.endTransmission();
-        if (error == 0) {
+    int nDevices = i2cScanAll(
+        [](I2CBusId bus, uint8_t address, void *) {
             serialDevice->print("I2C device found at address 0x");
             if (address < 16) serialDevice->print("0");
             serialDevice->print(address, HEX);
-            nDevices++;
-        } else if (error == 4) {
-            serialDevice->print("Unknown error at address 0x");
-            if (address < 16) serialDevice->print("0");
-            serialDevice->println(address, HEX);
-        }
-    }
+            serialDevice->println(" (" + i2cBusLabel(bus) + ")");
+        },
+        nullptr
+    );
 
+    if (nDevices < 0) {
+        serialDevice->println("No I2C bus configured");
+        return false;
+    }
     if (nDevices == 0) {
         serialDevice->println("No I2C devices found");
         return false;
@@ -107,7 +100,7 @@ uint32_t infoCallback(cmd *c) {
     serialDevice->print("Bruce v");
     serialDevice->println(BRUCE_VERSION);
     serialDevice->println(GIT_COMMIT_HASH);
-    serialDevice->print("SDK: ");              
+    serialDevice->print("SDK: ");
     serialDevice->println(ESP.getSdkVersion());
     serialDevice->println("MAC addr: " + String(WiFi.macAddress()));
     // https://github.com/espressif/arduino-esp32/blob/master/libraries/ESP32/examples/ChipID/GetChipID/GetChipID.ino
@@ -182,8 +175,20 @@ uint32_t helpCallback(cmd *c) {
     serialDevice->println("  say <text>   - Text-To-Speech (speaker required).");
 
     serialDevice->println("\nUI Commands:");
-    serialDevice->println("  led <r/g/b> <0-255>    - Change the UI main color.");
-    serialDevice->println("  clock                 - Show the clock UI.");
+    serialDevice->println("  screen color rgb <r> <g> <b>  - Change the UI main color.");
+    serialDevice->println("  screen color hex <RRGGBB>     - Change the UI main color.");
+    serialDevice->println("  screen brightness <0-255>     - Change the screen backlight.");
+    serialDevice->println("  clock                         - Show the clock UI.");
+
+#ifdef HAS_RGB_LED
+    serialDevice->println("\nRGB LED Commands:");
+    serialDevice->println("  led <r/g/b> <0-255>      - Change a single channel of the RGB LED.");
+    serialDevice->println("  led rgb <r> <g> <b>      - Change the RGB LED color.");
+    serialDevice->println("  led hex <RRGGBB>         - Change the RGB LED color.");
+    serialDevice->println("  led brightness <0-100>   - Change the RGB LED brightness.");
+    serialDevice->println("  led effect <0-9>         - Change the RGB LED effect (0 = solid color).");
+    serialDevice->println("  led off                  - Turn the RGB LED off.");
+#endif
 
     serialDevice->println("\nPower Management:");
     serialDevice->println("  power <off/reboot/sleep>  - General power management.");
@@ -275,7 +280,7 @@ uint32_t navCallback(cmd *c) {
             AnyKeyPress = true;
             SerialCmdPress = true;
             *var = true;
-            if (!LongPress) vTaskDelay(190 / portTICK_PERIOD_MS);
+            if (!LongPress) break;
         }
         vTaskDelay(10 / portTICK_PERIOD_MS);
     }
@@ -338,7 +343,9 @@ uint32_t displayCallback(cmd *c) {
         }
         serialDevice->println("\n[End of Dump]");
     } else if (opt == "info") {
-        serialDevice->println(TFT_WIDTH + String("x") + TFT_HEIGHT + String("x") + ROTATION);
+        serialDevice->println(
+            TFT_WIDTH + String("x") + TFT_HEIGHT + String("x") + bruceConfigPins.rotation
+        );
     } else {
         serialDevice->println(
             "Display command accept:\n"
