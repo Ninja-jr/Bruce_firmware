@@ -188,6 +188,20 @@ jobs:
             exit 0
           fi
           git checkout -B logs FETCH_HEAD
+
+          CUTOFF=$(date -u -d '30 days ago' +%Y-%m-%d)
+          if [ -d sync ]; then
+            for f in sync/*.log; do
+              [ -e "$f" ] || continue
+              fname=$(basename "$f")
+              fdate=${fname%%_*}
+              if [[ "$fdate" < "$CUTOFF" ]]; then
+                echo "Pruning $f (older than $CUTOFF)"
+                git rm -q "$f"
+              fi
+            done
+          fi
+
           mkdir -p sync
           {
             echo "# Sync run ${RUN_TS}"
