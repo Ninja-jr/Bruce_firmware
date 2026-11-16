@@ -63,7 +63,6 @@ jobs:
           - { env: "LAUNCHER_CYD-2USB",               family: "ESP32",}
           - { env: "LAUNCHER_CYD-2432W328C",          family: "ESP32",}
           - { env: "LAUNCHER_CYD-3248S035R",          family: "ESP32",}
-          # - { env: "LAUNCHER_CYD-3248S035C",          family: "ESP32",}          
           - { env: "lilygo-t-embed-cc1101",           family: "ESP32-S3",}
           - { env: "lilygo-t-embed",                  family: "ESP32-S3",}
           - { env: "lilygo-t-deck",                   family: "ESP32-S3",}
@@ -182,9 +181,30 @@ jobs:
           GIT_HASH=$(git rev-parse --short HEAD)
           sed -i "s|-DGIT_COMMIT_HASH='\"Homebrew\"'|!echo '-DGIT_COMMIT_HASH=\\\\\\\\\"${GIT_HASH}\\\\\\\\\"'|g" ./platformio.ini
 
-      - name: Run Compile
+      - name: Compile firmware
         run: |
-          platformio run -e ${{ matrix.board.env }}
+          mkdir -p /tmp/full /tmp/issues
+          platformio run -e ${{ matrix.board.env }} 2>&1 | tee /tmp/full/${{ matrix.board.env }}.log
+          grep -E '^[^ :]+\.(c|cc|cpp|cxx|h|hpp|ino|S):[0-9]+(:[0-9]+)?: ' /tmp/full/${{ matrix.board.env }}.log \
+            > /tmp/issues/${{ matrix.board.env }}.log || true
+
+      - name: Upload full build log
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: full-log-${{ matrix.board.env }}
+          path: /tmp/full/${{ matrix.board.env }}.log
+          retention-days: 1
+          if-no-files-found: ignore
+
+      - name: Upload issues log
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: issues-log-${{ matrix.board.env }}
+          path: /tmp/issues/${{ matrix.board.env }}.log
+          retention-days: 1
+          if-no-files-found: ignore
 
       - name: Save PIO Build Cache
         uses: actions/cache/save@v4
@@ -200,6 +220,103 @@ jobs:
           path: Bruce-*.*
           retention-days: 5
           if-no-files-found: ignore
+
+  collect_logs:
+    name: Collect Build Logs
+    runs-on: ubuntu-latest
+    needs: compile_sketch
+    if: always()
+    env:
+      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+    steps:
+      - name: Download full logs
+        uses: actions/download-artifact@v4
+        with:
+          pattern: 'full-log-*'
+          path: /tmp/logs/full
+          merge-multiple: true
+
+      - name: Download issues logs
+        uses: actions/download-artifact@v4
+        with:
+          pattern: 'issues-log-*'
+          path: /tmp/logs/issues
+          merge-multiple: true
+
+      - name: Checkout logs branch
+        uses: actions/checkout@v4
+        with:
+          ref: logs
+          fetch-depth: 0
+        continue-on-error: true
+
+      - name: Create logs branch if missing
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          if ! git rev-parse --verify HEAD >/dev/null 2>&1; then
+            git checkout --orphan logs
+            git rm -rf . 2>/dev/null || true
+            cat > README.md << 'EOF'
+          # Build Logs
+
+          Automated build logs from the Bruce firmware (Ninja-Jr's fork) builds.
+
+          ## Structure
+
+          - `logs/<branch>/<timestamp>/full/` — complete `platformio run` output per board
+          - `logs/<branch>/<timestamp>/issues/` — filtered errors and warnings only
+
+          Each timestamp folder is a single workflow run. Old folders can be pruned freely; only the latest matters for debugging.
+
+          ## Notes
+
+          - Binary artifacts are not stored here — they live in the workflow's Artifacts section.
+          - Do not edit or commit to this branch manually. It is regenerated on every build.
+          EOF
+            git add README.md
+            git commit -m "chore: initialize logs branch [skip ci]"
+          fi
+
+      - name: Write logs to tree
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            BRANCH_NAME="${{ github.event.inputs.target_branch }}"
+          else
+            BRANCH_NAME="${{ github.ref_name }}"
+          fi
+          RUN_TS=$(date -u +%Y-%m-%d_%H%M%S)
+          DEST="logs/${BRANCH_NAME}/${RUN_TS}"
+          mkdir -p "${DEST}/full" "${DEST}/issues"
+          cp /tmp/logs/full/*.log "${DEST}/full/" 2>/dev/null || true
+          cp /tmp/logs/issues/*.log "${DEST}/issues/" 2>/dev/null || true
+          echo "Writing logs to ${DEST}"
+
+      - name: Commit and push logs
+        env:
+          PAT: ${{ secrets.SYNC_PAT }}
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            BRANCH_NAME="${{ github.event.inputs.target_branch }}"
+          else
+            BRANCH_NAME="${{ github.ref_name }}"
+          fi
+          git add logs/
+          if ! git diff --cached --quiet; then
+            git commit -m "chore: update build logs for ${BRANCH_NAME} [skip ci]"
+            git push https://x-access-token:${PAT}@github.com/${{ github.repository }}.git HEAD:logs
+          else
+            echo "No changes to commit"
+          fi
+
+      - name: Delete log artifacts
+        if: always()
+        uses: geekyeggo/delete-artifact@v5
+        with:
+          name: |
+            full-log-*
+            issues-log-*
+          failOnError: false
 
   post_compile_steps:
     name: Update Releases
