@@ -47,11 +47,50 @@ jobs:
               echo "No changes."
               return 0
             fi
-            git merge --no-edit --no-ff upstream/"$BRANCH_NAME" -m "chore: sync with upstream $(date +'%Y-%m-%d') [skip ci]" || true
+
+            local PRE_MERGE_SHA
+            PRE_MERGE_SHA=$(git rev-parse HEAD)
+            local WORKFLOWS_BACKUP
+            WORKFLOWS_BACKUP=$(mktemp -d)
+            if [ -d .github/workflows ]; then
+              cp -a .github/workflows/. "$WORKFLOWS_BACKUP/"
+            fi
+
+            if ! git merge --no-edit --no-ff -X theirs upstream/"$BRANCH_NAME" -m "chore: sync with upstream $(date +'%Y-%m-%d') [skip ci]"; then
+              echo "Merge failed for $BRANCH_NAME, aborting"
+              git merge --abort 2>/dev/null || true
+              git reset --hard origin/"$BRANCH_NAME" 2>/dev/null || true
+              rm -rf "$WORKFLOWS_BACKUP"
+              return 1
+            fi
+
             if [ "$BRANCH_NAME" = "dev" ]; then
               git checkout "$BRANCH_NAME" -- "src/modules/rf/rf_jammer.cpp" 2>/dev/null || true
             fi
-            git checkout "$BRANCH_NAME" -- .github/workflows/ 2>/dev/null || true
+
+            rm -rf .github/workflows
+            mkdir -p .github/workflows
+            if [ -n "$(ls -A "$WORKFLOWS_BACKUP" 2>/dev/null)" ]; then
+              cp -a "$WORKFLOWS_BACKUP"/. .github/workflows/
+            fi
+            git add .github/workflows/
+            git commit --amend --no-edit 2>/dev/null || true
+
+            if ! git diff --quiet "$PRE_MERGE_SHA" HEAD -- .github/workflows/; then
+              echo "WARNING: workflows restore verification failed, forcing from pre-merge SHA"
+              git checkout "$PRE_MERGE_SHA" -- .github/workflows/
+              git add .github/workflows/
+              git commit --amend --no-edit 2>/dev/null || true
+              if ! git diff --quiet "$PRE_MERGE_SHA" HEAD -- .github/workflows/; then
+                echo "ERROR: Could not restore workflows, aborting to protect them"
+                git reset --hard origin/"$BRANCH_NAME"
+                rm -rf "$WORKFLOWS_BACKUP"
+                return 1
+              fi
+            fi
+
+            rm -rf "$WORKFLOWS_BACKUP"
+
             if ! git diff --quiet origin/"$BRANCH_NAME" "$BRANCH_NAME"; then
               git push origin "$BRANCH_NAME" --force-with-lease
             else
