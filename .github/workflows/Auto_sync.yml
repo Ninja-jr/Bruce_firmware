@@ -82,10 +82,19 @@ jobs:
               return 1
             fi
 
-            local MERGED_SHA
-            MERGED_SHA=$(git rev-parse HEAD)
+            local POST_MERGE_SHA
+            POST_MERGE_SHA=$(git rev-parse HEAD)
+
+            if [ "$PRE_MERGE_SHA" = "$POST_MERGE_SHA" ]; then
+              echo "Action: already up to date (merge was a no-op)" >> "$REPORT"
+              echo "After:  $POST_MERGE_SHA" >> "$REPORT"
+              echo "" >> "$REPORT"
+              rm -rf "$WORKFLOWS_BACKUP"
+              return 0
+            fi
+
             echo "Action: merged" >> "$REPORT"
-            echo "After:  $MERGED_SHA" >> "$REPORT"
+            echo "After:  $POST_MERGE_SHA" >> "$REPORT"
 
             if [ "$BRANCH_NAME" = "dev" ]; then
               if git checkout "$BRANCH_NAME" -- "src/modules/rf/rf_jammer.cpp" 2>/dev/null; then
