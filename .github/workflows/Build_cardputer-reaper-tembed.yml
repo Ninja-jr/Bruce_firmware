@@ -202,7 +202,7 @@ jobs:
 
           ## Notes
 
-          - Binary artifacts are not stored here — they live in the workflow's Artifacts section (30-day retention).
+          - Binary artifacts are not stored here — they live in the workflow's Artifacts section.
           - Do not edit or commit to this branch manually. It is regenerated on every build.
           EOF
             git add README.md
@@ -230,3 +230,12 @@ jobs:
           else
             echo "No changes to commit"
           fi
+
+      - name: Delete log artifacts
+        if: always()
+        uses: geekyeggo/delete-artifact@v5
+        with:
+          name: |
+            full-log-*
+            issues-log-*
+          failOnError: false
