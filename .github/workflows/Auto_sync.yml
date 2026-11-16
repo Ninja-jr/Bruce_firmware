@@ -85,3 +85,69 @@ jobs:
             TAG_MESSAGE=$(git tag -l --format='%(contents)' $TAG 2>/dev/null || echo "Release $TAG")
             gh release create $TAG --title "$TAG" --notes "$TAG_MESSAGE" --target main || echo "Failed to create release for $TAG"
           done
+
+      - name: Write sync log to logs branch
+        if: always()
+        env:
+          PAT: ${{ secrets.SYNC_PAT }}
+        run: |
+          RUN_TS=$(date -u +%Y-%m-%d_%H%M%S)
+          DEST="sync/${RUN_TS}.log"
+          REMOTE="https://x-access-token:${PAT}@github.com/${{ github.repository }}.git"
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          if ! git fetch "$REMOTE" logs 2>/dev/null; then
+            echo "logs branch missing—cannot write sync log"
+            exit 0
+          fi
+          git checkout -B logs FETCH_HEAD
+          mkdir -p sync
+          {
+            echo "# Sync run ${RUN_TS}"
+            echo "Trigger: ${{ github.event_name }}"
+            echo "Timestamp: $(date -u +%Y-%m-%dT%H:%M:%SZ)"
+            echo ""
+            echo "## Tags"
+            echo "Upstream tags: $(git ls-remote --tags upstream | grep -v '{}' | wc -l)"
+            echo "Local tags:    $(git ls-remote --tags origin | grep -v '{}' | wc -l)"
+            echo ""
+            echo "## Branches"
+            for b in dev main; do
+              echo "### $b"
+              LOCAL=$(git rev-parse origin/${b} 2>/dev/null || echo "missing")
+              UPSTREAM=$(git rev-parse upstream/${b} 2>/dev/null || echo "missing")
+              if [ "$LOCAL" = "$UPSTREAM" ]; then
+                echo "- Result: in sync (${LOCAL})"
+              else
+                PROTECTED=""
+                if [ "$b" = "dev" ]; then PROTECTED="src/modules/rf/rf_jammer.cpp"; fi
+                if [ "$b" = "main" ]; then PROTECTED=".github/workflows/"; fi
+                if [ -n "$PROTECTED" ] && git diff --quiet "$LOCAL" "$UPSTREAM" -- . ":!$PROTECTED" 2>/dev/null; then
+                  echo "- Result: in sync (protected paths preserved)"
+                  echo "- Protected: $PROTECTED"
+                else
+                  echo "- Result: OUT OF SYNC (unexpected changes)"
+                  echo "- Local:    $LOCAL"
+                  echo "- Upstream: $UPSTREAM"
+                fi
+              fi
+              echo ""
+            done
+            echo "## Releases"
+            echo "See run log for any tags created"
+          } > "$DEST"
+          git add sync/
+          if git diff --cached --quiet; then
+            echo "No changes to commit"
+            exit 0
+          fi
+          git commit -m "chore: sync log ${RUN_TS} [skip ci]"
+          for i in 1 2 3 4 5; do
+            if git push "$REMOTE" HEAD:logs; then
+              echo "Pushed sync log"
+              exit 0
+            fi
+            git pull --rebase "$REMOTE" logs || true
+            sleep $((RANDOM % 3 + 1))
+          done
+          echo "Failed to push sync log after 5 attempts"
