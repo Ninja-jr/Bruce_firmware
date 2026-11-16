@@ -158,6 +158,18 @@ jobs:
             fi
           fi
 
+      - name: Resolve version string
+        id: version
+        run: |
+          GIT_HASH=$(git rev-parse --short HEAD)
+          if [ "${{ github.event.inputs.append_hash }}" = "true" ]; then
+            VERSION="${{ github.event.inputs.version_name }} (${GIT_HASH})"
+          else
+            VERSION="${{ github.event.inputs.version_name }}"
+          fi
+          echo "resolved=${VERSION}" >> "$GITHUB_OUTPUT"
+          echo "Final version: ${VERSION}"
+
       - name: Ensure tracking file exists
         run: |
           if [ ! -f merged_prs.txt ]; then
@@ -465,10 +477,30 @@ jobs:
           GIT_HASH=$(git rev-parse --short HEAD)
           sed -i "s|-DGIT_COMMIT_HASH='\"Homebrew\"'|!echo '-DGIT_COMMIT_HASH=\\\\\\\\\"${GIT_HASH}\\\\\\\\\"'|g" ./platformio.ini
 
-      - name: Run Compile for selected environment
+      - name: Compile firmware
         run: |
-          echo "Building environment: ${{ env.SELECTED_ENV }}"
-          platformio run -e "${{ env.SELECTED_ENV }}"
+          mkdir -p /tmp/full /tmp/issues
+          platformio run -e "${{ env.SELECTED_ENV }}" 2>&1 | tee /tmp/full/${{ env.SELECTED_ENV }}.log
+          grep -E '^[^ :]+\.(c|cc|cpp|cxx|h|hpp|ino|S):[0-9]+(:[0-9]+)?: ' /tmp/full/${{ env.SELECTED_ENV }}.log \
+            > /tmp/issues/${{ env.SELECTED_ENV }}.log || true
+
+      - name: Upload full build log
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: full-log-${{ env.SELECTED_ENV }}
+          path: /tmp/full/${{ env.SELECTED_ENV }}.log
+          retention-days: 1
+          if-no-files-found: ignore
+
+      - name: Upload issues log
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: issues-log-${{ env.SELECTED_ENV }}
+          path: /tmp/issues/${{ env.SELECTED_ENV }}.log
+          retention-days: 1
+          if-no-files-found: ignore
 
       - name: Save PIO Build Cache
         uses: actions/cache/save@v4
@@ -494,6 +526,72 @@ jobs:
           echo "   Git Hash: $(git rev-parse --short HEAD)"
           echo "=========================================="
           ls -la Bruce-*.* 2>/dev/null || echo "No Bruce files found"
+
+      - name: Checkout logs branch
+        uses: actions/checkout@v4
+        with:
+          ref: logs
+          fetch-depth: 0
+        continue-on-error: true
+
+      - name: Create logs branch if missing
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          if ! git rev-parse --verify HEAD >/dev/null 2>&1; then
+            git checkout --orphan logs
+            git rm -rf . 2>/dev/null || true
+            cat > README.md << 'EOF'
+          # Build Logs
+
+          Automated build logs from the Bruce firmware (Ninja-Jr's fork) builds.
+
+          ## Structure
+
+          - `logs/<branch>/<timestamp>/full/` — complete `platformio run` output per board
+          - `logs/<branch>/<timestamp>/issues/` — filtered errors and warnings only
+
+          Each timestamp folder is a single workflow run. Old folders can be pruned freely; only the latest matters for debugging.
+
+          ## Notes
+
+          - Binary artifacts are not stored here — they live in the workflow's Artifacts section.
+          - Do not edit or commit to this branch manually. It is regenerated on every build.
+          EOF
+            git add README.md
+            git commit -m "chore: initialize logs branch [skip ci]"
+          fi
+
+      - name: Write logs to tree
+        run: |
+          BRANCH_NAME="${{ github.event.inputs.test_branch }}"
+          RUN_TS=$(date -u +%Y-%m-%d_%H%M%S)
+          DEST="logs/${BRANCH_NAME}/${RUN_TS}"
+          mkdir -p "${DEST}/full" "${DEST}/issues"
+          cp /tmp/full/${{ env.SELECTED_ENV }}.log "${DEST}/full/" 2>/dev/null || true
+          cp /tmp/issues/${{ env.SELECTED_ENV }}.log "${DEST}/issues/" 2>/dev/null || true
+          echo "Writing logs to ${DEST}"
+
+      - name: Commit and push logs
+        env:
+          PAT: ${{ secrets.SYNC_PAT }}
+        run: |
+          git add logs/
+          if ! git diff --cached --quiet; then
+            git commit -m "chore: update build logs for ${{ github.event.inputs.test_branch }} [skip ci]"
+            git push https://x-access-token:${PAT}@github.com/${{ github.repository }}.git HEAD:logs
+          else
+            echo "No changes to commit"
+          fi
+
+      - name: Delete log artifacts
+        if: always()
+        uses: geekyeggo/delete-artifact@v5
+        with:
+          name: |
+            full-log-*
+            issues-log-*
+          failOnError: false
 
   skip-build:
     name: Skip Build (No PRs Merged)
