@@ -38,15 +38,31 @@ jobs:
 
       - name: Sync dev and main branches
         run: |
+          REPORT="/tmp/sync_report.txt"
+          : > "$REPORT"
+
           sync_branch() {
             local BRANCH_NAME="$1"
+            echo "=== $BRANCH_NAME ===" >> "$REPORT"
+
             git fetch origin "$BRANCH_NAME"
             git checkout "$BRANCH_NAME" 2>/dev/null || git checkout -b "$BRANCH_NAME" --track origin/"$BRANCH_NAME"
             git fetch upstream "$BRANCH_NAME"
+
+            local BEFORE_SHA
+            BEFORE_SHA=$(git rev-parse HEAD)
+            echo "Before: $BEFORE_SHA" >> "$REPORT"
+
             if git diff --quiet "$BRANCH_NAME" upstream/"$BRANCH_NAME" -- . ':!.github/workflows/'; then
-              echo "No changes."
+              echo "Action: no changes (already in sync)" >> "$REPORT"
+              echo "After:  $BEFORE_SHA" >> "$REPORT"
+              echo "" >> "$REPORT"
               return 0
             fi
+
+            local AHEAD
+            AHEAD=$(git rev-list --count "$BRANCH_NAME"..upstream/"$BRANCH_NAME" 2>/dev/null || echo "0")
+            echo "Upstream ahead by: $AHEAD commit(s)" >> "$REPORT"
 
             local PRE_MERGE_SHA
             PRE_MERGE_SHA=$(git rev-parse HEAD)
@@ -57,15 +73,24 @@ jobs:
             fi
 
             if ! git merge --no-edit --no-ff -X theirs upstream/"$BRANCH_NAME" -m "chore: sync with upstream $(date +'%Y-%m-%d') [skip ci]"; then
-              echo "Merge failed for $BRANCH_NAME, aborting"
+              echo "Action: MERGE FAILED, aborted" >> "$REPORT"
+              echo "After:  $BEFORE_SHA (unchanged)" >> "$REPORT"
+              echo "" >> "$REPORT"
               git merge --abort 2>/dev/null || true
               git reset --hard origin/"$BRANCH_NAME" 2>/dev/null || true
               rm -rf "$WORKFLOWS_BACKUP"
               return 1
             fi
 
+            local MERGED_SHA
+            MERGED_SHA=$(git rev-parse HEAD)
+            echo "Action: merged" >> "$REPORT"
+            echo "After:  $MERGED_SHA" >> "$REPORT"
+
             if [ "$BRANCH_NAME" = "dev" ]; then
-              git checkout "$BRANCH_NAME" -- "src/modules/rf/rf_jammer.cpp" 2>/dev/null || true
+              if git checkout "$BRANCH_NAME" -- "src/modules/rf/rf_jammer.cpp" 2>/dev/null; then
+                echo "Preserved: src/modules/rf/rf_jammer.cpp" >> "$REPORT"
+              fi
             fi
 
             rm -rf .github/workflows
@@ -77,28 +102,42 @@ jobs:
             git commit --amend --no-edit 2>/dev/null || true
 
             if ! git diff --quiet "$PRE_MERGE_SHA" HEAD -- .github/workflows/; then
-              echo "WARNING: workflows restore verification failed, forcing from pre-merge SHA"
+              echo "Workflows verify: FAILED, forcing from pre-merge SHA" >> "$REPORT"
               git checkout "$PRE_MERGE_SHA" -- .github/workflows/
               git add .github/workflows/
               git commit --amend --no-edit 2>/dev/null || true
               if ! git diff --quiet "$PRE_MERGE_SHA" HEAD -- .github/workflows/; then
-                echo "ERROR: Could not restore workflows, aborting to protect them"
+                echo "Workflows verify: FAILED AGAIN, aborting" >> "$REPORT"
+                echo "After:  $BEFORE_SHA (reset)" >> "$REPORT"
+                echo "" >> "$REPORT"
                 git reset --hard origin/"$BRANCH_NAME"
                 rm -rf "$WORKFLOWS_BACKUP"
                 return 1
               fi
+              echo "Workflows verify: OK after fallback" >> "$REPORT"
+            else
+              echo "Workflows verify: OK" >> "$REPORT"
             fi
+            echo "Preserved: .github/workflows/" >> "$REPORT"
 
             rm -rf "$WORKFLOWS_BACKUP"
 
             if ! git diff --quiet origin/"$BRANCH_NAME" "$BRANCH_NAME"; then
-              git push origin "$BRANCH_NAME" --force-with-lease
+              local FINAL_SHA
+              FINAL_SHA=$(git rev-parse HEAD)
+              if git push origin "$BRANCH_NAME" --force-with-lease; then
+                echo "Push: success ($FINAL_SHA)" >> "$REPORT"
+              else
+                echo "Push: FAILED" >> "$REPORT"
+              fi
             else
-              echo "No new changes."
+              echo "Push: skipped (no changes)" >> "$REPORT"
             fi
+            echo "" >> "$REPORT"
           }
-          sync_branch "dev"
-          sync_branch "main"
+
+          sync_branch "dev" || true
+          sync_branch "main" || true
 
       - name: Create releases for new tags
         env:
@@ -150,30 +189,12 @@ jobs:
             echo "Upstream tags: $(git ls-remote --tags upstream | grep -v '{}' | wc -l)"
             echo "Local tags:    $(git ls-remote --tags origin | grep -v '{}' | wc -l)"
             echo ""
-            echo "## Branches"
-            for b in dev main; do
-              echo "### $b"
-              LOCAL=$(git rev-parse origin/${b} 2>/dev/null || echo "missing")
-              UPSTREAM=$(git rev-parse upstream/${b} 2>/dev/null || echo "missing")
-              if [ "$LOCAL" = "$UPSTREAM" ]; then
-                echo "- Result: in sync (${LOCAL})"
-              else
-                PROTECTED=""
-                if [ "$b" = "dev" ]; then PROTECTED="src/modules/rf/rf_jammer.cpp"; fi
-                if [ "$b" = "main" ]; then PROTECTED=".github/workflows/"; fi
-                if [ -n "$PROTECTED" ] && git diff --quiet "$LOCAL" "$UPSTREAM" -- . ":!$PROTECTED" 2>/dev/null; then
-                  echo "- Result: in sync (protected paths preserved)"
-                  echo "- Protected: $PROTECTED"
-                else
-                  echo "- Result: OUT OF SYNC (unexpected changes)"
-                  echo "- Local:    $LOCAL"
-                  echo "- Upstream: $UPSTREAM"
-                fi
-              fi
-              echo ""
-            done
-            echo "## Releases"
-            echo "See run log for any tags created"
+            echo "## Branch sync report"
+            if [ -f /tmp/sync_report.txt ]; then
+              cat /tmp/sync_report.txt
+            else
+              echo "(no report captured)"
+            fi
           } > "$DEST"
           git add sync/
           if git diff --cached --quiet; then
