@@ -1,0 +1,136 @@
+.pio/libdeps/m5stack-core4mb/IRremoteESP8266/src/IRrecv.cpp:222:10: warning: '++' expression of 'volatile'-qualified type is deprecated [-Wvolatile]
+.pio/libdeps/m5stack-core4mb/LibSSH-ESP32/src/libssh_esp32_compat.c:13:38: warning: initialization discards 'const' qualifier from pointer target type [-Wdiscarded-qualifiers]
+.pio/libdeps/m5stack-core4mb/LibSSH-ESP32/src/libssh_esp32_compat.c:45:5: note: in expansion of macro 'LIBSSH_ESP32_COMPAT_USERNAME'
+.pio/libdeps/m5stack-core4mb/LibSSH-ESP32/src/libssh_esp32_compat.c:45:50: warning: initialization discards 'const' qualifier from pointer target type [-Wdiscarded-qualifiers]
+.pio/libdeps/m5stack-core4mb/LibSSH-ESP32/src/libssh_esp32_compat.c:46:44: warning: initialization discards 'const' qualifier from pointer target type [-Wdiscarded-qualifiers]
+.pio/libdeps/m5stack-core4mb/LibSSH-ESP32/src/libssh_esp32_compat.c:46:60: warning: initialization discards 'const' qualifier from pointer target type [-Wdiscarded-qualifiers]
+.pio/libdeps/m5stack-core4mb/LibSSH-ESP32/src/libssh_esp32_compat.c:22:37: warning: initialization discards 'const' qualifier from pointer target type [-Wdiscarded-qualifiers]
+.pio/libdeps/m5stack-core4mb/LibSSH-ESP32/src/libssh_esp32_compat.c:47:5: note: in expansion of macro 'LIBSSH_ESP32_COMPAT_HOMEDIR'
+.pio/libdeps/m5stack-core4mb/LibSSH-ESP32/src/libssh_esp32_compat.c:47:46: warning: initialization discards 'const' qualifier from pointer target type [-Wdiscarded-qualifiers]
+.pio/libdeps/m5stack-core4mb/LibSSH-ESP32/src/scp.c:110:5: warning: 'ssh_scp_free' is deprecated [-Wdeprecated-declarations]
+.pio/libdeps/m5stack-core4mb/LibSSH-ESP32/src/libssh/libssh.h:592:32: note: declared here
+.pio/libdeps/m5stack-core4mb/LibSSH-ESP32/src/scp.c:303:9: warning: 'ssh_scp_close' is deprecated [-Wdeprecated-declarations]
+.pio/libdeps/m5stack-core4mb/LibSSH-ESP32/src/scp.c:249:5: note: declared here
+.pio/libdeps/m5stack-core4mb/LibSSH-ESP32/src/scp.c:577:5: warning: 'ssh_scp_push_file64' is deprecated [-Wdeprecated-declarations]
+.pio/libdeps/m5stack-core4mb/LibSSH-ESP32/src/scp.c:472:5: note: declared here
+.pio/libdeps/m5stack-core4mb/LibSSH-ESP32/src/scp.c:1039:9: warning: 'ssh_scp_accept_request' is deprecated [-Wdeprecated-declarations]
+.pio/libdeps/m5stack-core4mb/LibSSH-ESP32/src/scp.c:985:5: note: declared here
+.pio/libdeps/m5stack-core4mb/mquickjs/mquickjs.c:746:21: warning: assignment discards 'const' qualifier from pointer target type [-Wdiscarded-qualifiers]
+.pio/libdeps/m5stack-core4mb/mquickjs/mquickjs.c:790:29: warning: assignment discards 'const' qualifier from pointer target type [-Wdiscarded-qualifiers]
+.pio/libdeps/m5stack-core4mb/mquickjs/mquickjs.c:793:29: warning: assignment discards 'const' qualifier from pointer target type [-Wdiscarded-qualifiers]
+.pio/libdeps/m5stack-core4mb/mquickjs/mquickjs.c:796:29: warning: assignment discards 'const' qualifier from pointer target type [-Wdiscarded-qualifiers]
+.pio/libdeps/m5stack-core4mb/mquickjs/mquickjs.c:799:29: warning: assignment discards 'const' qualifier from pointer target type [-Wdiscarded-qualifiers]
+.pio/libdeps/m5stack-core4mb/mquickjs/mquickjs.c:805:29: warning: assignment discards 'const' qualifier from pointer target type [-Wdiscarded-qualifiers]
+.pio/libdeps/m5stack-core4mb/mquickjs/mquickjs.c:820:29: warning: assignment discards 'const' qualifier from pointer target type [-Wdiscarded-qualifiers]
+.pio/libdeps/m5stack-core4mb/OneWire/OneWire.cpp:599:22: warning: extra tokens at end of #undef directive
+.pio/libdeps/m5stack-core4mb/OneWire/OneWire.cpp:600:20: warning: extra tokens at end of #undef directive
+.pio/libdeps/m5stack-core4mb/ESP32-PSRamFS/src/pfs.c:36:4: warning: #warning "Will use PSRAM or heap" [-Wcpp]
+lib/ESP32_Button/src/original/button_adc.c:199:13: warning: 'ADC_ATTEN_DB_11' is deprecated [-Wdeprecated-declarations]
+/home/runner/.platformio/packages/framework-arduinoespressif32-libs/esp32/include/hal/include/hal/adc_types.h:52:5: note: declared here
+lib/ESP32_Button/src/original/button_adc.c:204:9: warning: 'ADC_ATTEN_DB_11' is deprecated [-Wdeprecated-declarations]
+/home/runner/.platformio/packages/framework-arduinoespressif32-libs/esp32/include/hal/include/hal/adc_types.h:52:5: note: declared here
+lib/Bad_Usb_Lib/BleKeyboard.cpp:181:23: warning: 'void NimBLEHIDDevice::startServices()' is deprecated: Services are now started by the server when start() is called, this function is no longer needed and will be removed in a future release. [-Wdeprecated-declarations]
+.pio/libdeps/m5stack-core4mb/NimBLE-Arduino/src/NimBLEHIDDevice.h:52:27: note: declared here
+src/core/config.cpp:863:27: warning: comparison is always false due to limited range of data type [-Wtype-limits]
+boards/m5stack-core/interface.cpp:52:21: warning: comparison is always false due to limited range of data type [-Wtype-limits]
+src/core/ram_profile.cpp:24:54: warning: format '%u' expects argument of type 'unsigned int', but argument 5 has type 'uint32_t' {aka 'long unsigned int'} [-Wformat=]
+src/core/ram_profile.cpp:24:66: warning: format '%u' expects argument of type 'unsigned int', but argument 6 has type 'uint32_t' {aka 'long unsigned int'} [-Wformat=]
+src/core/ram_profile.cpp:24:86: warning: format '%u' expects argument of type 'unsigned int', but argument 7 has type 'uint32_t' {aka 'long unsigned int'} [-Wformat=]
+src/core/ram_profile.cpp:25:20: warning: format '%u' expects argument of type 'unsigned int', but argument 8 has type 'uint32_t' {aka 'long unsigned int'} [-Wformat=]
+src/core/ram_profile.cpp:25:28: warning: format '%u' expects argument of type 'unsigned int', but argument 9 has type 'uint32_t' {aka 'long unsigned int'} [-Wformat=]
+src/core/ram_profile.cpp:25:45: warning: format '%u' expects argument of type 'unsigned int', but argument 10 has type 'uint32_t' {aka 'long unsigned int'} [-Wformat=]
+src/core/serial_commands/interpreter_commands.cpp:6:17: warning: 'uint32_t jsCallback(cmd*)' defined but not used [-Wunused-function]
+src/hal/inputs/touch.cpp:19:13: warning: 'void panelSize(int16_t&, int16_t&)' defined but not used [-Wunused-function]
+src/modules/ble/ble_glasses.cpp:140:6: warning: 'void {anonymous}::drawResult(const std::vector<GlassesMatch>&, bool)' defined but not used [-Wunused-function]
+src/modules/ble/ble_glasses.cpp:70:6: warning: 'bool {anonymous}::matchDevice(const NimBLEAdvertisedDevice*, GlassesMatch&)' defined but not used [-Wunused-function]
+src/modules/ble/ble_spam.cpp:1321:13: warning: 'bool bleSpamBuildAppleContinuityAdvertisement(NimBLEAdvertisementData&)' defined but not used [-Wunused-function]
+src/modules/rf/protocols/decoders/rf_decoder_secplus_v2.cpp:47:13: warning: 'void sp2_mix_order_encode(uint8_t, uint16_t*)' defined but not used [-Wunused-function]
+src/modules/rf/protocols/decoders/rf_decoder_somfy_keytis.cpp:47:16: warning: enumeration value 'ST_PREAMBLE_L' not handled in switch [-Wswitch]
+src/modules/rf/protocols/decoders/rf_decoder_somfy_telis.cpp:46:16: warning: enumeration value 'ST_PREAMBLE_L' not handled in switch [-Wswitch]
+src/modules/rf/protocols/decoders/rf_decoder_toyota_tpms.cpp:24:9: warning: variable 'sync_idx' set but not used [-Wunused-but-set-variable]
+src/modules/rf/rf_analyze.cpp:19:6: warning: 'void {anonymous}::draw_report(const RfClassifyResult&, const RfCodes&, bool, bool, float, bool)' defined but not used [-Wunused-function]
+src/modules/rf/rf_remote_analyzer.cpp:27:6: warning: 'void {anonymous}::drawResult(bool, float, float, bool)' defined but not used [-Wunused-function]
+src/modules/rf/rf_remote_analyzer.cpp:19:7: warning: 'float {anonymous}::rssiAt(float)' defined but not used [-Wunused-function]
+src/modules/rf/rf_rolling.cpp:25:6: warning: 'void {anonymous}::draw_rolling(const std::vector<RollingEntry>&)' defined but not used [-Wunused-function]
+src/modules/rfid/PN532.cpp:688:18: warning: suggest braces around empty body in an 'if' statement [-Wempty-body]
+.pio/libdeps/m5stack-core4mb/M5GFX/src/lgfx/v1/LGFXBase.hpp:1412:9: warning: type 'struct LovyanGFX' violates the C++ One Definition Rule [-Wodr]
+.pio/libdeps/m5stack-core4mb/M5GFX/src/lgfx/v1/LGFXBase.hpp:1412:9: note: a type with the same name but different base type is defined in another translation unit
+.pio/libdeps/m5stack-core4mb/M5GFX/src/lgfx/v1/LGFXBase.hpp:64:9: note: type name 'lgfx::v1::LGFXBase' should match type name 'lgfx::v1::LGFX_FILESYSTEM_Support<lgfx::v1::LGFXBase>'
+.pio/libdeps/m5stack-core4mb/M5GFX/src/lgfx/v1/lgfx_filesystem_support.hpp:45:9: note: the incompatible type is defined here
+.pio/libdeps/m5stack-core4mb/M5GFX/src/lgfx/v1/LGFXBase.hpp:1427:9: warning: type 'struct LGFX_Device' violates the C++ One Definition Rule [-Wodr]
+.pio/libdeps/m5stack-core4mb/M5GFX/src/lgfx/v1/LGFXBase.hpp:1427:9: note: a type with different bases is defined in another translation unit
+.pio/libdeps/m5stack-core4mb/M5GFX/src/lgfx/v1/LGFXBase.hpp:1473:25: warning: type of 'getTouchRaw' does not match original declaration [-Wlto-type-mismatch]
+.pio/libdeps/m5stack-core4mb/M5GFX/src/lgfx/v1/LGFXBase.hpp:1473:25: note: 'getTouchRaw' was previously declared here
+.pio/libdeps/m5stack-core4mb/M5GFX/src/lgfx/v1/LGFXBase.hpp:1473:25: note: code may be misoptimized unless '-fno-strict-aliasing' is used
+.pio/libdeps/m5stack-core4mb/M5GFX/src/lgfx/v1/LGFXBase.hpp:1472:20: warning: type of 'touch' does not match original declaration [-Wlto-type-mismatch]
+.pio/libdeps/m5stack-core4mb/M5GFX/src/lgfx/v1/LGFXBase.hpp:1472:20: note: 'touch' was previously declared here
+.pio/libdeps/m5stack-core4mb/M5GFX/src/lgfx/v1/LGFXBase.hpp:1472:20: note: code may be misoptimized unless '-fno-strict-aliasing' is used
+.pio/libdeps/m5stack-core4mb/M5GFX/src/lgfx/v1/LGFXBase.hpp:1469:17: warning: type of 'setBrightness' does not match original declaration [-Wlto-type-mismatch]
+.pio/libdeps/m5stack-core4mb/M5GFX/src/lgfx/v1/LGFXBase.hpp:1469:17: note: 'setBrightness' was previously declared here
+.pio/libdeps/m5stack-core4mb/M5GFX/src/lgfx/v1/LGFXBase.hpp:1469:17: note: code may be misoptimized unless '-fno-strict-aliasing' is used
+.pio/libdeps/m5stack-core4mb/M5GFX/src/lgfx/v1/LGFXBase.hpp:1438:10: warning: type of 'setPanel' does not match original declaration [-Wlto-type-mismatch]
+.pio/libdeps/m5stack-core4mb/M5GFX/src/lgfx/v1/LGFXBase.cpp:3616:8: note: 'setPanel' was previously declared here
+.pio/libdeps/m5stack-core4mb/M5GFX/src/lgfx/v1/LGFXBase.cpp:3616:8: note: code may be misoptimized unless '-fno-strict-aliasing' is used
+.pio/libdeps/m5stack-core4mb/M5GFX/src/lgfx/v1/LGFXBase.hpp:1530:18: warning: type of 'init_impl' does not match original declaration [-Wlto-type-mismatch]
+.pio/libdeps/m5stack-core4mb/M5GFX/src/lgfx/v1/LGFXBase.cpp:3624:8: note: 'init_impl' was previously declared here
+.pio/libdeps/m5stack-core4mb/M5GFX/src/lgfx/v1/LGFXBase.cpp:3624:8: note: code may be misoptimized unless '-fno-strict-aliasing' is used
+.pio/libdeps/m5stack-core4mb/M5GFX/src/lgfx/v1/LGFXBase.hpp:1430:5: warning: type of '__ct_base ' does not match original declaration [-Wlto-type-mismatch]
+.pio/libdeps/m5stack-core4mb/M5GFX/src/lgfx/v1/LGFXBase.cpp:3601:3: note: '__ct_base ' was previously declared here
+.pio/libdeps/m5stack-core4mb/M5GFX/src/lgfx/v1/LGFXBase.cpp:3601:3: note: code may be misoptimized unless '-fno-strict-aliasing' is used
+.pio/libdeps/m5stack-core4mb/NimBLE-Arduino/src/nimble/nimble/host/src/ble_gap.c:9451:16: warning: type of 'is_ble_hs_resolv_enabled' does not match original declaration [-Wlto-type-mismatch]
+.pio/libdeps/m5stack-core4mb/NimBLE-Arduino/src/nimble/nimble/host/src/ble_hs_resolv.c:331:1: note: return value type mismatch
+.pio/libdeps/m5stack-core4mb/NimBLE-Arduino/src/nimble/nimble/host/src/ble_hs_resolv.c:331:1: note: type 'uint8_t' should match type 'int'
+.pio/libdeps/m5stack-core4mb/NimBLE-Arduino/src/nimble/nimble/host/src/ble_hs_resolv.c:331:1: note: 'is_ble_hs_resolv_enabled' was previously declared here
+.pio/libdeps/m5stack-core4mb/NimBLE-Arduino/src/NimBLEScan.h:222:18: note: virtual method 'onResult'
+.pio/libdeps/m5stack-core4mb/M5GFX/src/lgfx/v1/LGFXBase.hpp:1412:9: warning: type 'struct LovyanGFX' violates the C++ One Definition Rule [-Wodr]
+.pio/libdeps/m5stack-core4mb/M5GFX/src/lgfx/v1/LGFXBase.hpp:1412:9: note: a type with the same name but different base type is defined in another translation unit
+.pio/libdeps/m5stack-core4mb/M5GFX/src/lgfx/v1/LGFXBase.hpp:64:9: note: type name 'lgfx::v1::LGFXBase' should match type name 'lgfx::v1::LGFX_FILESYSTEM_Support<lgfx::v1::LGFXBase>'
+.pio/libdeps/m5stack-core4mb/M5GFX/src/lgfx/v1/lgfx_filesystem_support.hpp:45:9: note: the incompatible type is defined here
+.pio/libdeps/m5stack-core4mb/M5GFX/src/lgfx/v1/LGFXBase.hpp:1412:9: warning: type 'struct LovyanGFX' violates the C++ One Definition Rule [-Wodr]
+.pio/libdeps/m5stack-core4mb/M5GFX/src/lgfx/v1/LGFXBase.hpp:1412:9: note: a type with the same name but different base type is defined in another translation unit
+.pio/libdeps/m5stack-core4mb/M5GFX/src/lgfx/v1/LGFXBase.hpp:64:9: note: type name 'lgfx::v1::LGFXBase' should match type name 'lgfx::v1::LGFX_FILESYSTEM_Support<lgfx::v1::LGFXBase>'
+.pio/libdeps/m5stack-core4mb/M5GFX/src/lgfx/v1/lgfx_filesystem_support.hpp:45:9: note: the incompatible type is defined here
+.pio/libdeps/m5stack-core4mb/M5GFX/src/lgfx/v1/LGFXBase.hpp:1412:9: warning: type 'struct LovyanGFX' violates the C++ One Definition Rule [-Wodr]
+.pio/libdeps/m5stack-core4mb/M5GFX/src/lgfx/v1/LGFXBase.hpp:1412:9: note: a type with the same name but different base type is defined in another translation unit
+.pio/libdeps/m5stack-core4mb/M5GFX/src/lgfx/v1/LGFXBase.hpp:64:9: note: type name 'lgfx::v1::LGFXBase' should match type name 'lgfx::v1::LGFX_FILESYSTEM_Support<lgfx::v1::LGFXBase>'
+.pio/libdeps/m5stack-core4mb/M5GFX/src/lgfx/v1/lgfx_filesystem_support.hpp:45:9: note: the incompatible type is defined here
+.pio/libdeps/m5stack-core4mb/M5GFX/src/lgfx/v1/LGFXBase.hpp:1412:9: warning: type 'struct LovyanGFX' violates the C++ One Definition Rule [-Wodr]
+.pio/libdeps/m5stack-core4mb/M5GFX/src/lgfx/v1/LGFXBase.hpp:1412:9: note: a type with the same name but different base type is defined in another translation unit
+.pio/libdeps/m5stack-core4mb/M5GFX/src/lgfx/v1/LGFXBase.hpp:64:9: note: type name 'lgfx::v1::LGFXBase' should match type name 'lgfx::v1::LGFX_FILESYSTEM_Support<lgfx::v1::LGFXBase>'
+.pio/libdeps/m5stack-core4mb/M5GFX/src/lgfx/v1/lgfx_filesystem_support.hpp:45:9: note: the incompatible type is defined here
+.pio/libdeps/m5stack-core4mb/M5GFX/src/lgfx/v1/LGFXBase.hpp:1412:9: warning: type 'struct LovyanGFX' violates the C++ One Definition Rule [-Wodr]
+.pio/libdeps/m5stack-core4mb/M5GFX/src/lgfx/v1/LGFXBase.hpp:1412:9: note: a type with the same name but different base type is defined in another translation unit
+.pio/libdeps/m5stack-core4mb/M5GFX/src/lgfx/v1/LGFXBase.hpp:64:9: note: type name 'lgfx::v1::LGFXBase' should match type name 'lgfx::v1::LGFX_FILESYSTEM_Support<lgfx::v1::LGFXBase>'
+.pio/libdeps/m5stack-core4mb/M5GFX/src/lgfx/v1/lgfx_filesystem_support.hpp:45:9: note: the incompatible type is defined here
+.pio/libdeps/m5stack-core4mb/M5GFX/src/lgfx/v1/LGFXBase.hpp:1412:9: warning: type 'struct LovyanGFX' violates the C++ One Definition Rule [-Wodr]
+.pio/libdeps/m5stack-core4mb/M5GFX/src/lgfx/v1/LGFXBase.hpp:1412:9: note: a type with the same name but different base type is defined in another translation unit
+.pio/libdeps/m5stack-core4mb/M5GFX/src/lgfx/v1/LGFXBase.hpp:64:9: note: type name 'lgfx::v1::LGFXBase' should match type name 'lgfx::v1::LGFX_FILESYSTEM_Support<lgfx::v1::LGFXBase>'
+.pio/libdeps/m5stack-core4mb/M5GFX/src/lgfx/v1/lgfx_filesystem_support.hpp:45:9: note: the incompatible type is defined here
+.pio/libdeps/m5stack-core4mb/M5GFX/src/lgfx/v1/LGFXBase.hpp:1412:9: warning: type 'struct LovyanGFX' violates the C++ One Definition Rule [-Wodr]
+.pio/libdeps/m5stack-core4mb/M5GFX/src/lgfx/v1/LGFXBase.hpp:1412:9: note: a type with the same name but different base type is defined in another translation unit
+.pio/libdeps/m5stack-core4mb/M5GFX/src/lgfx/v1/LGFXBase.hpp:64:9: note: type name 'lgfx::v1::LGFXBase' should match type name 'lgfx::v1::LGFX_FILESYSTEM_Support<lgfx::v1::LGFXBase>'
+.pio/libdeps/m5stack-core4mb/M5GFX/src/lgfx/v1/lgfx_filesystem_support.hpp:45:9: note: the incompatible type is defined here
+.pio/libdeps/m5stack-core4mb/M5GFX/src/lgfx/v1/LGFXBase.hpp:1412:9: warning: type 'struct LovyanGFX' violates the C++ One Definition Rule [-Wodr]
+.pio/libdeps/m5stack-core4mb/M5GFX/src/lgfx/v1/LGFXBase.hpp:1412:9: note: a type with the same name but different base type is defined in another translation unit
+.pio/libdeps/m5stack-core4mb/M5GFX/src/lgfx/v1/LGFXBase.hpp:64:9: note: type name 'lgfx::v1::LGFXBase' should match type name 'lgfx::v1::LGFX_FILESYSTEM_Support<lgfx::v1::LGFXBase>'
+.pio/libdeps/m5stack-core4mb/M5GFX/src/lgfx/v1/lgfx_filesystem_support.hpp:45:9: note: the incompatible type is defined here
+.pio/libdeps/m5stack-core4mb/M5GFX/src/lgfx/v1/LGFXBase.hpp:1412:9: warning: type 'struct LovyanGFX' violates the C++ One Definition Rule [-Wodr]
+.pio/libdeps/m5stack-core4mb/M5GFX/src/lgfx/v1/LGFXBase.hpp:1412:9: note: a type with the same name but different base type is defined in another translation unit
+.pio/libdeps/m5stack-core4mb/M5GFX/src/lgfx/v1/LGFXBase.hpp:64:9: note: type name 'lgfx::v1::LGFXBase' should match type name 'lgfx::v1::LGFX_FILESYSTEM_Support<lgfx::v1::LGFXBase>'
+.pio/libdeps/m5stack-core4mb/M5GFX/src/lgfx/v1/lgfx_filesystem_support.hpp:45:9: note: the incompatible type is defined here
+.pio/libdeps/m5stack-core4mb/M5GFX/src/lgfx/v1/LGFXBase.hpp:1412:9: warning: type 'struct LovyanGFX' violates the C++ One Definition Rule [-Wodr]
+.pio/libdeps/m5stack-core4mb/M5GFX/src/lgfx/v1/LGFXBase.hpp:1412:9: note: a type with the same name but different base type is defined in another translation unit
+.pio/libdeps/m5stack-core4mb/M5GFX/src/lgfx/v1/LGFXBase.hpp:64:9: note: type name 'lgfx::v1::LGFXBase' should match type name 'lgfx::v1::LGFX_FILESYSTEM_Support<lgfx::v1::LGFXBase>'
+.pio/libdeps/m5stack-core4mb/M5GFX/src/lgfx/v1/lgfx_filesystem_support.hpp:45:9: note: the incompatible type is defined here
+.pio/libdeps/m5stack-core4mb/M5GFX/src/lgfx/v1/LGFXBase.hpp:1412:9: warning: type 'struct LovyanGFX' violates the C++ One Definition Rule [-Wodr]
+.pio/libdeps/m5stack-core4mb/M5GFX/src/lgfx/v1/LGFXBase.hpp:1412:9: note: a type with the same name but different base type is defined in another translation unit
+.pio/libdeps/m5stack-core4mb/M5GFX/src/lgfx/v1/LGFXBase.hpp:64:9: note: type name 'lgfx::v1::LGFXBase' should match type name 'lgfx::v1::LGFX_FILESYSTEM_Support<lgfx::v1::LGFXBase>'
+.pio/libdeps/m5stack-core4mb/M5GFX/src/lgfx/v1/lgfx_filesystem_support.hpp:45:9: note: the incompatible type is defined here
+.pio/libdeps/m5stack-core4mb/M5GFX/src/lgfx/v1/LGFXBase.hpp:1412:9: warning: type 'struct LovyanGFX' violates the C++ One Definition Rule [-Wodr]
+.pio/libdeps/m5stack-core4mb/M5GFX/src/lgfx/v1/LGFXBase.hpp:1412:9: note: a type with the same name but different base type is defined in another translation unit
+.pio/libdeps/m5stack-core4mb/M5GFX/src/lgfx/v1/LGFXBase.hpp:64:9: note: type name 'lgfx::v1::LGFXBase' should match type name 'lgfx::v1::LGFX_FILESYSTEM_Support<lgfx::v1::LGFXBase>'
+.pio/libdeps/m5stack-core4mb/M5GFX/src/lgfx/v1/lgfx_filesystem_support.hpp:45:9: note: the incompatible type is defined here
+.pio/libdeps/m5stack-core4mb/M5GFX/src/lgfx/v1/LGFXBase.hpp:1412:9: warning: type 'struct LovyanGFX' violates the C++ One Definition Rule [-Wodr]
+.pio/libdeps/m5stack-core4mb/M5GFX/src/lgfx/v1/LGFXBase.hpp:1412:9: note: a type with the same name but different base type is defined in another translation unit
+.pio/libdeps/m5stack-core4mb/M5GFX/src/lgfx/v1/LGFXBase.hpp:64:9: note: type name 'lgfx::v1::LGFXBase' should match type name 'lgfx::v1::LGFX_FILESYSTEM_Support<lgfx::v1::LGFXBase>'
+.pio/libdeps/m5stack-core4mb/M5GFX/src/lgfx/v1/lgfx_filesystem_support.hpp:45:9: note: the incompatible type is defined here

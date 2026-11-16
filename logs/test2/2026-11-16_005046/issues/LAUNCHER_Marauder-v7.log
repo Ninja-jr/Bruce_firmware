@@ -1,0 +1,32 @@
+.pio/libdeps/LAUNCHER_Marauder-v7/IRremoteESP8266/src/IRrecv.cpp:222:10: warning: '++' expression of 'volatile'-qualified type is deprecated [-Wvolatile]
+lib/ESP32_Button/src/original/button_adc.c:199:13: warning: 'ADC_ATTEN_DB_11' is deprecated [-Wdeprecated-declarations]
+/home/runner/.platformio/packages/framework-arduinoespressif32-libs/esp32/include/hal/include/hal/adc_types.h:52:5: note: declared here
+lib/ESP32_Button/src/original/button_adc.c:204:9: warning: 'ADC_ATTEN_DB_11' is deprecated [-Wdeprecated-declarations]
+/home/runner/.platformio/packages/framework-arduinoespressif32-libs/esp32/include/hal/include/hal/adc_types.h:52:5: note: declared here
+lib/Bad_Usb_Lib/BleKeyboard.cpp:181:23: warning: 'void NimBLEHIDDevice::startServices()' is deprecated: Services are now started by the server when start() is called, this function is no longer needed and will be removed in a future release. [-Wdeprecated-declarations]
+.pio/libdeps/LAUNCHER_Marauder-v7/NimBLE-Arduino/src/NimBLEHIDDevice.h:52:27: note: declared here
+src/core/config.cpp:863:27: warning: comparison is always false due to limited range of data type [-Wtype-limits]
+src/core/ram_profile.cpp:24:54: warning: format '%u' expects argument of type 'unsigned int', but argument 5 has type 'uint32_t' {aka 'long unsigned int'} [-Wformat=]
+src/core/ram_profile.cpp:24:66: warning: format '%u' expects argument of type 'unsigned int', but argument 6 has type 'uint32_t' {aka 'long unsigned int'} [-Wformat=]
+src/core/ram_profile.cpp:24:86: warning: format '%u' expects argument of type 'unsigned int', but argument 7 has type 'uint32_t' {aka 'long unsigned int'} [-Wformat=]
+src/core/ram_profile.cpp:25:20: warning: format '%u' expects argument of type 'unsigned int', but argument 8 has type 'uint32_t' {aka 'long unsigned int'} [-Wformat=]
+src/core/ram_profile.cpp:25:28: warning: format '%u' expects argument of type 'unsigned int', but argument 9 has type 'uint32_t' {aka 'long unsigned int'} [-Wformat=]
+src/core/ram_profile.cpp:25:45: warning: format '%u' expects argument of type 'unsigned int', but argument 10 has type 'uint32_t' {aka 'long unsigned int'} [-Wformat=]
+src/core/serial_commands/interpreter_commands.cpp:6:17: warning: 'uint32_t jsCallback(cmd*)' defined but not used [-Wunused-function]
+src/hal/inputs/touch.cpp:19:13: warning: 'void panelSize(int16_t&, int16_t&)' defined but not used [-Wunused-function]
+src/modules/ble/ble_glasses.cpp:140:6: warning: 'void {anonymous}::drawResult(const std::vector<GlassesMatch>&, bool)' defined but not used [-Wunused-function]
+src/modules/ble/ble_glasses.cpp:70:6: warning: 'bool {anonymous}::matchDevice(const NimBLEAdvertisedDevice*, GlassesMatch&)' defined but not used [-Wunused-function]
+src/modules/ble/ble_spam.cpp:1321:13: warning: 'bool bleSpamBuildAppleContinuityAdvertisement(NimBLEAdvertisementData&)' defined but not used [-Wunused-function]
+src/modules/rf/protocols/decoders/rf_decoder_secplus_v2.cpp:47:13: warning: 'void sp2_mix_order_encode(uint8_t, uint16_t*)' defined but not used [-Wunused-function]
+src/modules/rf/protocols/decoders/rf_decoder_somfy_keytis.cpp:47:16: warning: enumeration value 'ST_PREAMBLE_L' not handled in switch [-Wswitch]
+src/modules/rf/protocols/decoders/rf_decoder_somfy_telis.cpp:46:16: warning: enumeration value 'ST_PREAMBLE_L' not handled in switch [-Wswitch]
+src/modules/rf/protocols/decoders/rf_decoder_toyota_tpms.cpp:24:9: warning: variable 'sync_idx' set but not used [-Wunused-but-set-variable]
+src/modules/rf/rf_analyze.cpp:19:6: warning: 'void {anonymous}::draw_report(const RfClassifyResult&, const RfCodes&, bool, bool, float, bool)' defined but not used [-Wunused-function]
+src/modules/rf/rf_remote_analyzer.cpp:27:6: warning: 'void {anonymous}::drawResult(bool, float, float, bool)' defined but not used [-Wunused-function]
+src/modules/rf/rf_remote_analyzer.cpp:19:7: warning: 'float {anonymous}::rssiAt(float)' defined but not used [-Wunused-function]
+src/modules/rf/rf_rolling.cpp:25:6: warning: 'void {anonymous}::draw_rolling(const std::vector<RollingEntry>&)' defined but not used [-Wunused-function]
+src/modules/rfid/PN532.cpp:688:18: warning: suggest braces around empty body in an 'if' statement [-Wempty-body]
+.pio/libdeps/LAUNCHER_Marauder-v7/NimBLE-Arduino/src/nimble/nimble/host/src/ble_gap.c:9451:16: warning: type of 'is_ble_hs_resolv_enabled' does not match original declaration [-Wlto-type-mismatch]
+.pio/libdeps/LAUNCHER_Marauder-v7/NimBLE-Arduino/src/nimble/nimble/host/src/ble_hs_resolv.c:331:1: note: return value type mismatch
+.pio/libdeps/LAUNCHER_Marauder-v7/NimBLE-Arduino/src/nimble/nimble/host/src/ble_hs_resolv.c:331:1: note: type 'uint8_t' should match type 'int'
+.pio/libdeps/LAUNCHER_Marauder-v7/NimBLE-Arduino/src/nimble/nimble/host/src/ble_hs_resolv.c:331:1: note: 'is_ble_hs_resolv_enabled' was previously declared here
