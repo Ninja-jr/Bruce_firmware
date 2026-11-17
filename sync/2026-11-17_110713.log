@@ -1,0 +1,25 @@
+# Sync run 2026-11-17_110713
+Trigger: workflow_dispatch
+Timestamp: 2026-11-17T11:07:14Z
+
+## Tags
+Upstream tags: 40
+Local tags:    40
+
+## Branch sync report
+=== dev ===
+Before: 3244d7ee6a981304a016a804f75e21f264c88ee2
+Upstream ahead by: 1 commit(s)
+Action: merged
+After:  a7c74a7290658e58e31798a1014e781632189a22
+Preserved: src/modules/rf/rf_jammer.cpp
+Workflows verify: OK
+Preserved: .github/workflows/
+Push: success (a7c74a7290658e58e31798a1014e781632189a22)
+
+=== main ===
+Before: 4a97531d3653c9e7fecf6494a8b702c9bc5bcc82
+Upstream ahead by: 0 commit(s)
+Action: already up to date (merge was a no-op)
+After:  4a97531d3653c9e7fecf6494a8b702c9bc5bcc82
+
