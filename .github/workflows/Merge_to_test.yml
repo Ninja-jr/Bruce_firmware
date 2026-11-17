@@ -504,30 +504,22 @@ jobs:
 
       - name: Save PIO Build Cache
         uses: actions/cache/save@v4
+        if: always()
         with:
           path: ${{ github.workspace }}/.pio
           key: Bruce-pio-${{ env.SELECTED_ENV }}-${{ github.run_id }}-${{ github.run_attempt }}
 
       - name: Upload Artifacts
         uses: actions/upload-artifact@v4
+        if: always()
         with:
           name: Bruce-${{ env.SELECTED_ENV }}-${{ env.VERSION_NAME }}
           path: Bruce-*.*
           retention-days: 30
-          if-no-files-found: error
-
-      - name: Display Build Info
-        run: |
-          echo "=========================================="
-          echo "✅ Build completed successfully!"
-          echo "   Environment: ${{ env.SELECTED_ENV }}"
-          echo "   Version: ${{ env.VERSION_NAME }}"
-          echo "   Branch: ${{ github.event.inputs.test_branch }}"
-          echo "   Git Hash: $(git rev-parse --short HEAD)"
-          echo "=========================================="
-          ls -la Bruce-*.* 2>/dev/null || echo "No Bruce files found"
+          if-no-files-found: ignore
 
       - name: Checkout logs branch
+        if: always()
         uses: actions/checkout@v4
         with:
           ref: logs
@@ -535,6 +527,7 @@ jobs:
         continue-on-error: true
 
       - name: Create logs branch if missing
+        if: always()
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
@@ -563,6 +556,7 @@ jobs:
           fi
 
       - name: Write logs to tree
+        if: always()
         run: |
           BRANCH_NAME="${{ github.event.inputs.test_branch }}"
           RUN_TS=$(date -u +%Y-%m-%d_%H%M%S)
@@ -573,6 +567,7 @@ jobs:
           echo "Writing logs to ${DEST}"
 
       - name: Commit and push logs
+        if: always()
         env:
           PAT: ${{ secrets.SYNC_PAT }}
         run: |
@@ -593,15 +588,13 @@ jobs:
             issues-log-*
           failOnError: false
 
-  skip-build:
-    name: Skip Build (No PRs Merged)
-    runs-on: ubuntu-latest
-    needs: merge-prs-to-test
-    if: needs.merge-prs-to-test.outputs.success_count == 0
-    steps:
-      - name: Display skip message
+      - name: Display Build Info
+        if: always()
         run: |
           echo "=========================================="
-          echo "ℹ️  No new PRs were merged."
-          echo "ℹ️  Skipping build step."
+          echo "Build result:"
+          echo "   Environment: ${{ env.SELECTED_ENV }}"
+          echo "   Version: ${{ env.VERSION_NAME }}"
+          echo "   Branch: ${{ github.event.inputs.test_branch }}"
+          echo "   Git Hash: $(git rev-parse --short HEAD)"
           echo "=========================================="
