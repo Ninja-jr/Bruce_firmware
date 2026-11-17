@@ -271,5 +271,5 @@ jobs:
           echo "   Environment: ${{ env.SELECTED_ENV }}"
           echo "   Version: ${{ env.VERSION_NAME }}"
           echo "   Branch: ${{ github.event.inputs.target_branch }}"
-          echo "   Git Hash: $(git describe --always"
+          echo "   Git Hash: $(git describe --always)"
           echo "=========================================="
