@@ -26,7 +26,7 @@ on:
       dry_run:
         description: 'Dry run (only list, do not delete)'
         required: true
-        default: true
+        default: false
         type: boolean
 
 permissions:
