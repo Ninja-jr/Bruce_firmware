@@ -183,11 +183,66 @@ jobs:
           REMOTE="https://x-access-token:${PAT}@github.com/${{ github.repository }}.git"
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          if ! git fetch "$REMOTE" logs 2>/dev/null; then
-            echo "logs branch missing—cannot write sync log"
-            exit 0
+
+          if git fetch "$REMOTE" logs 2>/dev/null; then
+            git checkout -B logs FETCH_HEAD
+          else
+            echo "logs branch missing—creating orphan branch"
+            git checkout --orphan logs
+            git rm -rf . 2>/dev/null || true
+            cat > README.md << 'EOF'
+          # Build Logs
+
+          Automated build and sync logs from the Bruce firmware (Ninja-Jr's fork) builds.
+
+          ## Structure
+
+          - `logs/<branch>/<timestamp>/full/` — complete `platformio run` output per board
+          - `logs/<branch>/<timestamp>/issues/` — filtered errors and warnings only
+          - `sync/<timestamp>.log` — per-run transcript of the dev/main sync with upstream
+
+          Each timestamp is a single workflow run. Old entries can be pruned freely; only the latest matters for debugging.
+
+          ## Retention
+
+          - `sync/` logs older than 30 days are pruned automatically on each sync run.
+          - `logs/` entries are not pruned automatically and can be cleaned up manually.
+
+          ## Notes
+
+          - Binary artifacts are not stored here — they live in the workflow's Artifacts section.
+          - Generated content is overwritten on every run. The only hand-edited file is this README.
+          EOF
+            git add README.md
+            git commit -m "chore: initialize logs branch [skip ci]"
           fi
-          git checkout -B logs FETCH_HEAD
+
+          if [ ! -f README.md ]; then
+            cat > README.md << 'EOF'
+          # Build Logs
+
+          Automated build and sync logs from the Bruce firmware (Ninja-Jr's fork) builds.
+
+          ## Structure
+
+          - `logs/<branch>/<timestamp>/full/` — complete `platformio run` output per board
+          - `logs/<branch>/<timestamp>/issues/` — filtered errors and warnings only
+          - `sync/<timestamp>.log` — per-run transcript of the dev/main sync with upstream
+
+          Each timestamp is a single workflow run. Old entries can be pruned freely; only the latest matters for debugging.
+
+          ## Retention
+
+          - `sync/` logs older than 30 days are pruned automatically on each sync run.
+          - `logs/` entries are not pruned automatically and can be cleaned up manually.
+
+          ## Notes
+
+          - Binary artifacts are not stored here — they live in the workflow's Artifacts section.
+          - Generated content is overwritten on every run. The only hand-edited file is this README.
+          EOF
+            git add README.md
+          fi
 
           CUTOFF=$(date -u -d '30 days ago' +%Y-%m-%d)
           if [ -d sync ]; then
