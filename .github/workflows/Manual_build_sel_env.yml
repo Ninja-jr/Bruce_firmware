@@ -173,27 +173,22 @@ jobs:
 
       - name: Save PIO Build Cache
         uses: actions/cache/save@v4
+        if: always()
         with:
           path: ${{ github.workspace }}/.pio
           key: Bruce-pio-${{ env.SELECTED_ENV }}-${{ github.run_id }}-${{ github.run_attempt }}
 
       - name: Upload Artifacts
         uses: actions/upload-artifact@v4
+        if: always()
         with:
           name: Bruce-${{ env.SELECTED_ENV }}
           path: Bruce-*.*
           retention-days: 30
-          if-no-files-found: error
-
-      - name: Display Build Info
-        run: |
-          echo "Build completed successfully!"
-          echo "Environment: ${{ env.SELECTED_ENV }}"
-          echo "Version: ${{ env.VERSION_NAME }}"
-          echo "Git Hash: $(git describe --always --dirty)"
-          ls -la Bruce-*.* 2>/dev/null || echo "No Bruce files found"
+          if-no-files-found: ignore
 
       - name: Checkout logs branch
+        if: always()
         uses: actions/checkout@v4
         with:
           ref: logs
@@ -201,6 +196,7 @@ jobs:
         continue-on-error: true
 
       - name: Create logs branch if missing
+        if: always()
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
@@ -210,25 +206,32 @@ jobs:
             cat > README.md << 'EOF'
           # Build Logs
 
-          Automated build logs from the Bruce firmware (Ninja-Jr's fork) builds.
+          Automated build and sync logs from the Bruce firmware (Ninja-Jr's fork) builds.
 
           ## Structure
 
           - `logs/<branch>/<timestamp>/full/` — complete `platformio run` output per board
           - `logs/<branch>/<timestamp>/issues/` — filtered errors and warnings only
+          - `sync/<timestamp>.log` — per-run transcript of the dev/main sync with upstream
 
-          Each timestamp folder is a single workflow run. Old folders can be pruned freely; only the latest matters for debugging.
+          Each timestamp is a single workflow run. Old entries can be pruned freely; only the latest matters for debugging.
+
+          ## Retention
+
+          - `sync/` logs older than 30 days are pruned automatically on each sync run.
+          - `logs/` entries are not pruned automatically and can be cleaned up manually.
 
           ## Notes
 
           - Binary artifacts are not stored here — they live in the workflow's Artifacts section.
-          - Do not edit or commit to this branch manually. It is regenerated on every build.
+          - Generated content is overwritten on every run. The only hand-edited file is this README.
           EOF
             git add README.md
             git commit -m "chore: initialize logs branch [skip ci]"
           fi
 
       - name: Write logs to tree
+        if: always()
         run: |
           BRANCH_NAME="${{ github.event.inputs.target_branch }}"
           RUN_TS=$(date -u +%Y-%m-%d_%H%M%S)
@@ -239,6 +242,7 @@ jobs:
           echo "Writing logs to ${DEST}"
 
       - name: Commit and push logs
+        if: always()
         env:
           PAT: ${{ secrets.SYNC_PAT }}
         run: |
@@ -258,3 +262,14 @@ jobs:
             full-log-*
             issues-log-*
           failOnError: false
+
+      - name: Display Build Info
+        if: always()
+        run: |
+          echo "=========================================="
+          echo "Build result:"
+          echo "   Environment: ${{ env.SELECTED_ENV }}"
+          echo "   Version: ${{ env.VERSION_NAME }}"
+          echo "   Branch: ${{ github.event.inputs.target_branch }}"
+          echo "   Git Hash: $(git describe --always --dirty)"
+          echo "=========================================="
