@@ -1,0 +1,25 @@
+# Sync run 2026-11-18_105106
+Trigger: schedule
+Timestamp: 2026-11-18T10:51:06Z
+
+## Tags
+Upstream tags: 40
+Local tags:    40
+
+## Branch sync report
+=== dev ===
+Before: cce86bfd9fe1d582b065cc33cfb625d848d63b14
+Upstream ahead by: 3 commit(s)
+Action: merged
+After:  fafda413f150170d7901c1fd50699319495dddd3
+Preserved: src/modules/rf/rf_jammer.cpp
+Workflows verify: OK
+Preserved: .github/workflows/
+Push: success (fafda413f150170d7901c1fd50699319495dddd3)
+
+=== main ===
+Before: 1049cb014a2d89eea887213f4e7e7539042fc50b
+Upstream ahead by: 0 commit(s)
+Action: already up to date (merge was a no-op)
+After:  1049cb014a2d89eea887213f4e7e7539042fc50b
+
