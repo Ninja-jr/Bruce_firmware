@@ -230,7 +230,7 @@ jobs:
                 OURS_FILES=$(jq -r '.files | to_entries[] | select(.value == "ours") | .key' .github/conflict-rules.json 2>/dev/null)
                 THEIRS_FILES=$(jq -r '.files | to_entries[] | select(.value == "theirs") | .key' .github/conflict-rules.json 2>/dev/null)
                 
-                if git merge --no-edit --no-ff pr-$PR -m "chore: merge PR #$PR [skip ci]" 2>/dev/null; then
+                if git merge --no-edit --no-ff pr-$PR -m "chore: merge pr-$PR [skip ci]" 2>/dev/null; then
                   return 0
                 else
                   git merge --abort
@@ -258,7 +258,7 @@ jobs:
                     git add .
                   fi
                   
-                  git commit --no-edit -m "chore: merge PR #$PR (per-file resolution) [skip ci]"
+                  git commit --no-edit -m "chore: merge pr-$PR (per-file resolution) [skip ci]"
                   return $?
                 fi
               else
@@ -270,34 +270,34 @@ jobs:
             case "$STRATEGY" in
               "ours")
                 echo "🔒 Using 'ours' strategy - keeping our version"
-                if git merge --no-edit --no-ff pr-$PR -m "chore: merge PR #$PR [skip ci]" 2>/dev/null; then
+                if git merge --no-edit --no-ff pr-$PR -m "chore: merge pr-$PR [skip ci]" 2>/dev/null; then
                   return 0
                 else
                   git merge --abort
                   echo "⚠️  Conflict detected, applying 'ours' strategy..."
-                  git merge -X ours --no-edit --no-ff pr-$PR -m "chore: merge PR #$PR (ours strategy) [skip ci]"
+                  git merge -X ours --no-edit --no-ff pr-$PR -m "chore: merge pr-$PR (ours strategy) [skip ci]"
                   return $?
                 fi
                 ;;
               "theirs")
                 echo "🔒 Using 'theirs' strategy - taking PR version"
-                if git merge --no-edit --no-ff pr-$PR -m "chore: merge PR #$PR [skip ci]" 2>/dev/null; then
+                if git merge --no-edit --no-ff pr-$PR -m "chore: merge pr-$PR [skip ci]" 2>/dev/null; then
                   return 0
                 else
                   git merge --abort
                   echo "⚠️  Conflict detected, applying 'theirs' strategy..."
-                  git merge -X theirs --no-edit --no-ff pr-$PR -m "chore: merge PR #$PR (theirs strategy) [skip ci]"
+                  git merge -X theirs --no-edit --no-ff pr-$PR -m "chore: merge pr-$PR (theirs strategy) [skip ci]"
                   return $?
                 fi
                 ;;
               "auto-merge")
                 echo "🔄 Using 'auto-merge' - try merge, fallback to ours"
-                if git merge --no-edit --no-ff pr-$PR -m "chore: merge PR #$PR [skip ci]" 2>/dev/null; then
+                if git merge --no-edit --no-ff pr-$PR -m "chore: merge pr-$PR [skip ci]" 2>/dev/null; then
                   return 0
                 else
                   git merge --abort
                   echo "⚠️  Conflict detected, falling back to 'ours' strategy..."
-                  git merge -X ours --no-edit --no-ff pr-$PR -m "chore: merge PR #$PR (auto-merge fallback) [skip ci]"
+                  git merge -X ours --no-edit --no-ff pr-$PR -m "chore: merge pr-$PR (auto-merge fallback) [skip ci]"
                   return $?
                 fi
                 ;;
@@ -460,7 +460,7 @@ jobs:
       - name: Restore PIO Build Cache
         uses: actions/cache/restore@v4
         with:
-          path: ${{ github.workspace }}/.pio
+          path: ${{ github.workspace }}.pio
           key: Bruce-pio-${{ env.SELECTED_ENV }}-${{ github.run_id }}-${{ github.run_attempt }}
           restore-keys: |
             Bruce-pio-${{ env.SELECTED_ENV }}-
@@ -506,7 +506,7 @@ jobs:
         uses: actions/cache/save@v4
         if: always()
         with:
-          path: ${{ github.workspace }}/.pio
+          path: ${{ github.workspace }}.pio
           key: Bruce-pio-${{ env.SELECTED_ENV }}-${{ github.run_id }}-${{ github.run_attempt }}
 
       - name: Upload Artifacts
