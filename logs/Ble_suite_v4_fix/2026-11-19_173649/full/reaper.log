@@ -1,0 +1,1553 @@
+Processing reaper (board: reaper; platform: https://github.com/pioarduino/platform-espressif32/releases/download/55.03.39/platform-espressif32.zip; framework: arduino)
+--------------------------------------------------------------------------------
+Library Manager: Installing git+https://github.com/sayacom/WireGuard-ESP32-Arduino#feature/esp-netif
+git version 2.56.1
+Cloning into '/home/runner/work/Bruce_firmware/Bruce_firmware/.pio/cache/tmp/pkg-installing-o69biea3'...
+Library Manager: WireGuard-ESP32@0.1.5+sha.90aa6b4 has been installed!
+Library Manager: Installing git+https://github.com/bmorcelli/IRremoteESP8266
+git version 2.56.1
+Cloning into '/home/runner/work/Bruce_firmware/Bruce_firmware/.pio/cache/tmp/pkg-installing-mfdlex5u'...
+Library Manager: IRremoteESP8266@2.8.6+sha.22cd38c has been installed!
+Library Manager: Installing paulstoffregen/Time @ 1.6.1
+Unpacking 0% 10% 20% 30% 40% 50% 60% 70% 80% 90% 100%
+Library Manager: Time@1.6.1 has been installed!
+Library Manager: Installing git+https://github.com/emericklaw/Adafruit-BusIO_Bruce @ 1.17.2-bruce.1
+git version 2.56.1
+Cloning into '/home/runner/work/Bruce_firmware/Bruce_firmware/.pio/cache/tmp/pkg-installing-mzf80los'...
+Library Manager: Adafruit BusIO@1.17.2-bruce.1+sha.27230c1 has been installed!
+Library Manager: Installing git+https://github.com/emericklaw/Adafruit-PN532_Bruce @ 1.3.3-bruce.1
+git version 2.56.1
+Cloning into '/home/runner/work/Bruce_firmware/Bruce_firmware/.pio/cache/tmp/pkg-installing-ij5i17pl'...
+Library Manager: Adafruit PN532@1.3.3-bruce.1+sha.e91d695 has been installed!
+Library Manager: Resolving dependencies...
+Library Manager: Installing git+https://github.com/huckor/BER-TLV.git
+git version 2.56.1
+Cloning into '/home/runner/work/Bruce_firmware/Bruce_firmware/.pio/cache/tmp/pkg-installing-jmavf1bl'...
+Library Manager: BER-TLV@0.0.0+20261119173341.sha.bd61b70 has been installed!
+Library Manager: Installing git+https://github.com/rennancockles/Arduino_MFRC522v2.git
+git version 2.56.1
+Cloning into '/home/runner/work/Bruce_firmware/Bruce_firmware/.pio/cache/tmp/pkg-installing-borkd3ha'...
+Library Manager: RFID_MFRC522v2@2.0.6+sha.a6977df has been installed!
+Library Manager: Installing git+https://github.com/bmorcelli/ESP-ChameleonUltra
+git version 2.56.1
+Cloning into '/home/runner/work/Bruce_firmware/Bruce_firmware/.pio/cache/tmp/pkg-installing-4qzcglbv'...
+Library Manager: ESP Chameleon Ultra@0.0.2+sha.f66f354 has been installed!
+Library Manager: Resolving dependencies...
+Library Manager: Installing h2zero/NimBLE-Arduino
+Library Manager: Installing git+https://github.com/bmorcelli/ESP-Amiibolink
+git version 2.56.1
+Cloning into '/home/runner/work/Bruce_firmware/Bruce_firmware/.pio/cache/tmp/pkg-installing-7bgk207r'...
+Library Manager: ESP Amiibolink@0.0.2+sha.fc26412 has been installed!
+Library Manager: Resolving dependencies...
+Library Manager: Installing h2zero/NimBLE-Arduino
+Library Manager: Installing git+https://github.com/rennancockles/SimpleCLI
+git version 2.56.1
+Cloning into '/home/runner/work/Bruce_firmware/Bruce_firmware/.pio/cache/tmp/pkg-installing-sfs0af7j'...
+Library Manager: SimpleCLI@1.1.4+sha.b23d377 has been installed!
+Library Manager: Installing git+https://github.com/whywilson/ESP-PN532BLE
+git version 2.56.1
+Cloning into '/home/runner/work/Bruce_firmware/Bruce_firmware/.pio/cache/tmp/pkg-installing-_z8q20sp'...
+Library Manager: ESP PN32BLE@0.0.2+sha.542f121 has been installed!
+Library Manager: Resolving dependencies...
+Library Manager: Installing h2zero/NimBLE-Arduino
+Library Manager: Installing git+https://github.com/whywilson/ESP-PN532-UART
+git version 2.56.1
+Cloning into '/home/runner/work/Bruce_firmware/Bruce_firmware/.pio/cache/tmp/pkg-installing-5uig6p2a'...
+Library Manager: ESP PN532 UART@0.0.2+sha.879e586 has been installed!
+Library Manager: Installing git+https://github.com/whywilson/ESP-PN532Killer
+git version 2.56.1
+Cloning into '/home/runner/work/Bruce_firmware/Bruce_firmware/.pio/cache/tmp/pkg-installing-bmyodviu'...
+Library Manager: ESP PN532Killer@0.0.7+sha.71bf110 has been installed!
+Library Manager: Resolving dependencies...
+Library Manager: Installing whywilson/ESP-PN532-UART
+Library Manager: Installing bblanchon/ArduinoJson
+Unpacking 0% 10% 20% 30% 40% 50% 60% 70% 80% 90% 100%
+Library Manager: ArduinoJson@7.4.3 has been installed!
+Library Manager: Installing earlephilhower/ESP8266SAM @ ^1.1.0
+Unpacking 0% 10% 20% 30% 40% 50% 60% 70% 80% 90% 100%
+Library Manager: ESP8266SAM@1.1.0 has been installed!
+Library Manager: Installing mikalhart/TinyGPSPlus
+Unpacking 0% 10% 20% 30% 40% 50% 60% 70% 80% 90% 100%
+Library Manager: TinyGPSPlus@1.1.0 has been installed!
+Library Manager: Installing tinyu-zhao/FFT @ ^0.0.1
+Unpacking 0% 10% 20% 30% 40% 50% 60% 70%
+Library Manager: FFT@0.0.1 has been installed!
+Library Manager: Installing h2zero/NimBLE-Arduino @ 2.5.1
+Unpacking 0% 10% 20% 30% 40% 50% 60% 70% 80% 90% 100%
+Library Manager: NimBLE-Arduino@2.5.1 has been installed!
+Library Manager: Installing nrf24/RF24 @ 1.4.11
+Unpacking 0% 10% 20% 30% 40% 50% 60% 70% 80% 90% 100%
+Library Manager: RF24@1.4.11 has been installed!
+Library Manager: Installing Bodmer/JPEGDecoder
+Unpacking 0% 10% 20% 30% 40% 50% 60% 70% 80% 90% 100%
+Library Manager: JPEGDecoder@2.0.0 has been installed!
+Library Manager: Installing git+https://github.com/bmorcelli/SmartRC-CC1101-Driver-Lib/
+git version 2.56.1
+Cloning into '/home/runner/work/Bruce_firmware/Bruce_firmware/.pio/cache/tmp/pkg-installing-sdaoy8o1'...
+Library Manager: SmartRC-CC1101-Driver-Lib@2.5.7+sha.7bba521 has been installed!
+Library Manager: Installing git+https://github.com/BruceDevices/mquickjs#0.0.6
+git version 2.56.1
+Cloning into '/home/runner/work/Bruce_firmware/Bruce_firmware/.pio/cache/tmp/pkg-installing-zaxz8hof'...
+Note: switching to '169b5ea7723bf43d7be9631a14f9c2a1ed8c69e1'.
+
+You are in 'detached HEAD' state. You can look around, make experimental
+changes and commit them, and you can discard any commits you make in this
+state without impacting any branches by switching back to a branch.
+
+If you want to create a new branch to retain commits you create, you may
+do so (now or later) by using -c with the switch command. Example:
+
+  git switch -c <new-branch-name>
+
+Or undo this operation with:
+
+  git switch -
+
+Turn off this advice by setting config variable advice.detachedHead to false
+
+Library Manager: mquickjs@0.0.6+sha.169b5ea has been installed!
+Library Manager: Installing git+https://github.com/bmorcelli/OneWire#patch-1
+git version 2.56.1
+Cloning into '/home/runner/work/Bruce_firmware/Bruce_firmware/.pio/cache/tmp/pkg-installing-k6o571qg'...
+Library Manager: OneWire@2.3.8+sha.42e045e has been installed!
+Library Manager: Installing git+https://github.com/bmorcelli/ESP32-PsRamFS#patch-1
+git version 2.56.1
+Cloning into '/home/runner/work/Bruce_firmware/Bruce_firmware/.pio/cache/tmp/pkg-installing-qy7ds8rl'...
+Library Manager: ESP32-PSRamFS@1.0.6+sha.5ace2e6 has been installed!
+Library Manager: Installing bitbank2/AnimatedGIF
+Unpacking 0% 10% 20% 30% 40% 50% 60% 70% 80% 90% 100%
+Library Manager: AnimatedGIF@2.2.3 has been installed!
+Library Manager: Installing bitbank2/PNGdec @ ^1.1.2
+Unpacking 0% 10% 20% 30% 40% 50% 60% 70% 80% 90% 100%
+Library Manager: PNGdec@1.1.6 has been installed!
+Library Manager: Installing ESP32Async/ESPAsyncWebServer
+Unpacking 0% 10% 20% 30% 40% 50% 60% 70% 80% 90% 100%
+Library Manager: ESPAsyncWebServer@3.12.1 has been installed!
+Library Manager: Resolving dependencies...
+Library Manager: Installing ESP32Async/AsyncTCP @ ^3.5.0
+Unpacking 0% 10% 20% 30% 40% 50% 60% 70% 80% 90% 100%
+Library Manager: AsyncTCP@3.6.1 has been installed!
+Library Manager: Installing fastled/FastLED @ ^3.10.3
+Downloading 0% 10% 20% 30% 40% 50% 60% 70% 80% 90% 100%
+Unpacking 0% 10% 20% 30% 40% 50% 60% 70% 80% 90% 100%
+Library Manager: FastLED@3.10.9 has been installed!
+Library Manager: Installing jgromes/RadioLib @ ^7.4.0
+Unpacking 0% 10% 20% 30% 40% 50% 60% 70% 80% 90% 100%
+Library Manager: RadioLib@7.8.1 has been installed!
+Library Manager: Installing git+https://github.com/lewisxhe/ST25R3916-fork#0c8e00f49d12881d1cff6d6f0879b90ce7ed4033
+git version 2.56.1
+Cloning into '/home/runner/work/Bruce_firmware/Bruce_firmware/.pio/cache/tmp/pkg-installing-umdrnllk'...
+HEAD is now at 0c8e00f Rename the property name
+Library Manager: ST25R3916-fork@1.1.0+sha.0c8e00f has been installed!
+Library Manager: Installing git+https://github.com/lewisxhe/NFC-RFAL-fork#7bde4587ea44c36c178a43d083d7a7345c1e4cfe
+git version 2.56.1
+Cloning into '/home/runner/work/Bruce_firmware/Bruce_firmware/.pio/cache/tmp/pkg-installing-ttx6z8y2'...
+HEAD is now at 7bde458 Rename the property name
+Library Manager: NFC-RFAL-fork@1.0.1+sha.7bde458 has been installed!
+Library Manager: Installing lewisxhe/XPowersLib @ 0.3.2
+Downloading 0% 10% 20% 30% 40% 50% 60% 70% 80% 90% 100%
+Unpacking 0% 10% 20% 30% 40% 50% 60% 70% 80% 90% 100%
+Library Manager: XPowersLib@0.3.2 has been installed!
+Verbose mode can be enabled via `-v, --verbose` option
+[GZIP & EMBED INTO HEADER] - Processing 4 files.
+[DONE] Gzipped files embedded into /home/runner/work/Bruce_firmware/Bruce_firmware/include/webFiles.h
+ae56fe5480611f036a40c7264b9e5c94478eab62cadc274a2dcabeed691b9488 ae56fe5480611f036a40c7264b9e5c94478eab62cadc274a2dcabeed691b9488
+Patching library conflicts with ESP32 core...
+Patched: .pio/libdeps/reaper/ESP8266SAM/src/render.c
+Patched: .pio/libdeps/reaper/ESP8266SAM/src/render.c
+Patched: .pio/libdeps/reaper/JPEGDecoder/src/picojpeg.c
+Patched: .pio/libdeps/reaper/JPEGDecoder/src/picojpeg.c
+Patched: .pio/libdeps/reaper/ESP Amiibolink/src/amiibolink.h
+Patched: .pio/libdeps/reaper/ESP Chameleon Ultra/src/chameleonUltra.h
+Patched: .pio/libdeps/reaper/ESP PN32BLE/src/pn532_ble.h
+Patched: .pio/libdeps/reaper/ST25R3916-fork/src/rfal_rfst25r3916.cpp
+Patched: .pio/libdeps/reaper/ST25R3916-fork/src/rfal_rfst25r3916.cpp
+Patched: .pio/libdeps/reaper/ST25R3916-fork/src/rfal_rfst25r3916.cpp
+Patched: .pio/libdeps/reaper/ST25R3916-fork/src/rfal_rfst25r3916.h
+Patched: .pio/libdeps/reaper/ST25R3916-fork/src/rfal_rfst25r3916.cpp
+Patched: .pio/libdeps/reaper/ST25R3916-fork/src/st25r3916_interrupt.cpp
+Patched: .pio/libdeps/reaper/ST25R3916-fork/src/st25r3916_interrupt.cpp
+Patched: .pio/libdeps/reaper/ST25R3916-fork/src/rfal_rfst25r3916.cpp
+Patched: .pio/libdeps/reaper/NFC-RFAL-fork/src/rfal_nfca.h
+Patched: .pio/libdeps/reaper/NFC-RFAL-fork/src/rfal_nfca.cpp
+Patched: .pio/libdeps/reaper/NFC-RFAL-fork/src/rfal_nfca.cpp
+Patched: .pio/libdeps/reaper/NFC-RFAL-fork/src/rfal_nfca.cpp
+CONFIGURATION: https://docs.platformio.org/page/boards/espressif32/reaper.html
+PLATFORM: Espressif 32 (55.3.39) > reaper
+HARDWARE: ESP32S3 240MHz, 320KB RAM, 16MB Flash
+DEBUG: Current (esp-builtin) On-board (esp-builtin) External (cmsis-dap, esp-bridge, esp-prog, esp-prog-2, iot-bus-jtag, jlink, minimodule, olimex-arm-usb-ocd, olimex-arm-usb-ocd-h, olimex-arm-usb-tiny-h, olimex-jtag-tiny, tumpa)
+PACKAGES: 
+ - contrib-piohome @ 3.4.4 
+ - framework-arduinoespressif32 @ 3.3.9 
+ - framework-arduinoespressif32-libs @ 5.5.4+sha.735507283d 
+ - tool-esp-rom-elfs @ 2024.10.11 
+ - tool-esptoolpy @ 5.3.0 
+ - tool-xtensa-esp-elf-gdb @ 17.1.0+20260402 
+ - toolchain-xtensa-esp-elf @ 14.2.0+20260121
+LDF: Library Dependency Finder -> https://bit.ly/configure-pio-ldf
+LDF Modes: Finder ~ chain, Compatibility ~ soft
+Library Manager: Installing LibSSH-ESP32
+Unpacking 0% 10% 20% 30% 40% 50% 60% 70% 80% 90% 100%
+Library Manager: LibSSH-ESP32@5.10.0 has been installed!
+Library Manager: Installing NTPClient @ 3.2.1
+Unpacking 0% 10% 20% 30% 40% 50% 60% 70% 80% 90% 100%
+Library Manager: NTPClient@3.2.1 has been installed!
+Library Manager: Installing ESP32Time @ 2.0.6
+Unpacking 0% 10% 20% 30% 40% 50% 60% 70% 80% 90% 100%
+Library Manager: ESP32Time@2.0.6 has been installed!
+Library Manager: Installing ESP8266Audio @ ^2.4.1
+Downloading 0% 10% 20% 30% 40% 50% 60% 70% 80% 90% 100%
+Unpacking 0% 10% 20% 30% 40% 50% 60% 70% 80% 90% 100%
+Library Manager: ESP8266Audio@2.4.3 has been installed!
+Library Manager: Installing Adafruit Si4713 Library @ 1.2.3
+Unpacking 0% 10% 20% 30% 40% 50% 60% 70% 80% 90% 100%
+Library Manager: Adafruit Si4713 Library@1.2.3 has been installed!
+Library Manager: Resolving dependencies...
+Found 90 compatible libraries
+Scanning dependencies...
+Dependency Graph
+|-- WireGuard-ESP32 @ 0.1.5+sha.90aa6b4
+|-- IRremoteESP8266 @ 2.8.6+sha.22cd38c
+|-- Time @ 1.6.1
+|-- LibSSH-ESP32 @ 5.10.0
+|-- Adafruit BusIO @ 1.17.2-bruce.1+sha.27230c1
+|-- Adafruit PN532 @ 1.3.3-bruce.1+sha.e91d695
+|-- BER-TLV @ 0.0.0+20261119173341.sha.bd61b70
+|-- RFID_MFRC522v2 @ 2.0.6+sha.a6977df
+|-- ESP Chameleon Ultra @ 0.0.2+sha.f66f354
+|-- ESP Amiibolink @ 0.0.2+sha.fc26412
+|-- SimpleCLI @ 1.1.4+sha.b23d377
+|-- ESP PN32BLE @ 0.0.2+sha.542f121
+|-- ESP PN532 UART @ 0.0.2+sha.879e586
+|-- ESP PN532Killer @ 0.0.7+sha.71bf110
+|-- NTPClient @ 3.2.1
+|-- ESP32Time @ 2.0.6
+|-- FFat @ 3.3.9
+|-- ArduinoJson @ 7.4.3
+|-- ESP8266Audio @ 2.4.3
+|-- ESP8266SAM @ 1.1.0
+|-- TinyGPSPlus @ 1.1.0
+|-- FFT @ 0.0.1
+|-- NimBLE-Arduino @ 2.5.1
+|-- RF24 @ 1.4.11
+|-- Adafruit Si4713 Library @ 1.2.3
+|-- JPEGDecoder @ 2.0.0
+|-- SmartRC-CC1101-Driver-Lib @ 2.5.7+sha.7bba521
+|-- mquickjs @ 0.0.6+sha.169b5ea
+|-- OneWire @ 2.3.8+sha.42e045e
+|-- ESP32-PSRamFS @ 1.0.6+sha.5ace2e6
+|-- AnimatedGIF @ 2.2.3
+|-- PNGdec @ 1.1.6
+|-- ESPAsyncWebServer @ 3.12.1
+|-- FastLED @ 3.10.9
+|-- RadioLib @ 7.8.1
+|-- ST25R3916-fork @ 1.1.0+sha.0c8e00f
+|-- NFC-RFAL-fork @ 1.0.1+sha.7bde458
+|-- XPowersLib @ 0.3.2
+|-- Wire @ 3.3.9
+|-- utility
+|-- WiFi @ 3.3.9
+|-- BruceHAL @ 7.3.1
+|-- HTTPClient @ 3.3.9
+|-- LittleFS @ 3.3.9
+|-- Preferences @ 3.3.9
+|-- FS @ 3.3.9
+|-- Ethernet @ 3.3.9
+|-- Networking @ 3.3.9
+|-- SPI @ 3.3.9
+|-- Bad_Usb_Lib
+|-- TFT_eSPI QRcode @ 1.0.0
+|-- AsyncTCP @ 3.6.1
+|-- DNSServer @ 3.3.9
+|-- RTC
+|-- ESPmDNS @ 3.3.9
+|-- PN532_SRIX
+|-- NetworkClientSecure @ 3.3.9
+|-- SPIFFS @ 3.3.9
+Building in release mode
+Compiling .pio/build/reaper/FrameworkArduinoVariant/variant.cpp.o
+Compiling .pio/build/reaper/lib7cf/WireGuard-ESP32/WireGuard.cpp.o
+Compiling .pio/build/reaper/lib7cf/WireGuard-ESP32/crypto.c.o
+Compiling .pio/build/reaper/lib7cf/WireGuard-ESP32/crypto/refc/blake2s.c.o
+Compiling .pio/build/reaper/lib7cf/WireGuard-ESP32/crypto/refc/chacha20.c.o
+Compiling .pio/build/reaper/lib7cf/WireGuard-ESP32/crypto/refc/chacha20poly1305.c.o
+Compiling .pio/build/reaper/lib7cf/WireGuard-ESP32/crypto/refc/poly1305-donna.c.o
+Compiling .pio/build/reaper/lib7cf/WireGuard-ESP32/crypto/refc/x25519.c.o
+Compiling .pio/build/reaper/lib7cf/WireGuard-ESP32/wireguard-platform.c.o
+Compiling .pio/build/reaper/lib7cf/WireGuard-ESP32/wireguard.c.o
+Compiling .pio/build/reaper/lib7cf/WireGuard-ESP32/wireguardif.c.o
+Compiling .pio/build/reaper/libfbf/IRremoteESP8266/IRac.cpp.o
+Compiling .pio/build/reaper/libfbf/IRremoteESP8266/IRrecv.cpp.o
+Compiling .pio/build/reaper/libfbf/IRremoteESP8266/IRsend.cpp.o
+Compiling .pio/build/reaper/libfbf/IRremoteESP8266/IRtext.cpp.o
+.pio/libdeps/reaper/IRremoteESP8266/src/IRrecv.cpp: In function 'void gpio_intr()':
+.pio/libdeps/reaper/IRremoteESP8266/src/IRrecv.cpp:222:10: warning: '++' expression of 'volatile'-qualified type is deprecated [-Wvolatile]
+  222 |   params.rawlen++;
+      |   ~~~~~~~^~~~~~
+Compiling .pio/build/reaper/libfbf/IRremoteESP8266/IRtimer.cpp.o
+Compiling .pio/build/reaper/libfbf/IRremoteESP8266/IRutils.cpp.o
+Compiling .pio/build/reaper/libfbf/IRremoteESP8266/ir_Airton.cpp.o
+Compiling .pio/build/reaper/libfbf/IRremoteESP8266/ir_Airwell.cpp.o
+Compiling .pio/build/reaper/libfbf/IRremoteESP8266/ir_Aiwa.cpp.o
+Compiling .pio/build/reaper/libfbf/IRremoteESP8266/ir_Amcor.cpp.o
+Compiling .pio/build/reaper/libfbf/IRremoteESP8266/ir_Argo.cpp.o
+Compiling .pio/build/reaper/libfbf/IRremoteESP8266/ir_Arris.cpp.o
+Compiling .pio/build/reaper/libfbf/IRremoteESP8266/ir_BluestarHeavy.cpp.o
+Compiling .pio/build/reaper/libfbf/IRremoteESP8266/ir_Bosch.cpp.o
+Compiling .pio/build/reaper/libfbf/IRremoteESP8266/ir_Bose.cpp.o
+Compiling .pio/build/reaper/libfbf/IRremoteESP8266/ir_Carrier.cpp.o
+Compiling .pio/build/reaper/libfbf/IRremoteESP8266/ir_ClimaButler.cpp.o
+Compiling .pio/build/reaper/libfbf/IRremoteESP8266/ir_Coolix.cpp.o
+Compiling .pio/build/reaper/libfbf/IRremoteESP8266/ir_Corona.cpp.o
+Compiling .pio/build/reaper/libfbf/IRremoteESP8266/ir_Daikin.cpp.o
+Compiling .pio/build/reaper/libfbf/IRremoteESP8266/ir_Delonghi.cpp.o
+Compiling .pio/build/reaper/libfbf/IRremoteESP8266/ir_Denon.cpp.o
+Compiling .pio/build/reaper/libfbf/IRremoteESP8266/ir_Dish.cpp.o
+Compiling .pio/build/reaper/libfbf/IRremoteESP8266/ir_Doshisha.cpp.o
+Compiling .pio/build/reaper/libfbf/IRremoteESP8266/ir_Ecoclim.cpp.o
+Compiling .pio/build/reaper/libfbf/IRremoteESP8266/ir_Electra.cpp.o
+Compiling .pio/build/reaper/libfbf/IRremoteESP8266/ir_EliteScreens.cpp.o
+Compiling .pio/build/reaper/libfbf/IRremoteESP8266/ir_Epson.cpp.o
+Compiling .pio/build/reaper/libfbf/IRremoteESP8266/ir_Fujitsu.cpp.o
+Compiling .pio/build/reaper/libfbf/IRremoteESP8266/ir_GICable.cpp.o
+Compiling .pio/build/reaper/libfbf/IRremoteESP8266/ir_GlobalCache.cpp.o
+Compiling .pio/build/reaper/libfbf/IRremoteESP8266/ir_Goodweather.cpp.o
+Compiling .pio/build/reaper/libfbf/IRremoteESP8266/ir_Gorenje.cpp.o
+Compiling .pio/build/reaper/libfbf/IRremoteESP8266/ir_Gree.cpp.o
+Compiling .pio/build/reaper/libfbf/IRremoteESP8266/ir_Haier.cpp.o
+Compiling .pio/build/reaper/libfbf/IRremoteESP8266/ir_Hitachi.cpp.o
+Compiling .pio/build/reaper/libfbf/IRremoteESP8266/ir_Inax.cpp.o
+Compiling .pio/build/reaper/libfbf/IRremoteESP8266/ir_JVC.cpp.o
+Compiling .pio/build/reaper/libfbf/IRremoteESP8266/ir_Kelon.cpp.o
+Compiling .pio/build/reaper/libfbf/IRremoteESP8266/ir_Kelvinator.cpp.o
+Compiling .pio/build/reaper/libfbf/IRremoteESP8266/ir_LG.cpp.o
+Compiling .pio/build/reaper/libfbf/IRremoteESP8266/ir_Lasertag.cpp.o
+Compiling .pio/build/reaper/libfbf/IRremoteESP8266/ir_Lego.cpp.o
+Compiling .pio/build/reaper/libfbf/IRremoteESP8266/ir_Lutron.cpp.o
+Compiling .pio/build/reaper/libfbf/IRremoteESP8266/ir_MWM.cpp.o
+Compiling .pio/build/reaper/libfbf/IRremoteESP8266/ir_Magiquest.cpp.o
+Compiling .pio/build/reaper/libfbf/IRremoteESP8266/ir_Metz.cpp.o
+Compiling .pio/build/reaper/libfbf/IRremoteESP8266/ir_Midea.cpp.o
+Compiling .pio/build/reaper/libfbf/IRremoteESP8266/ir_MilesTag2.cpp.o
+Compiling .pio/build/reaper/libfbf/IRremoteESP8266/ir_Mirage.cpp.o
+Compiling .pio/build/reaper/libfbf/IRremoteESP8266/ir_Mitsubishi.cpp.o
+Compiling .pio/build/reaper/libfbf/IRremoteESP8266/ir_MitsubishiHeavy.cpp.o
+Compiling .pio/build/reaper/libfbf/IRremoteESP8266/ir_Multibrackets.cpp.o
+Compiling .pio/build/reaper/libfbf/IRremoteESP8266/ir_NEC.cpp.o
+Compiling .pio/build/reaper/libfbf/IRremoteESP8266/ir_Neoclima.cpp.o
+Compiling .pio/build/reaper/libfbf/IRremoteESP8266/ir_Nikai.cpp.o
+Compiling .pio/build/reaper/libfbf/IRremoteESP8266/ir_Panasonic.cpp.o
+Compiling .pio/build/reaper/libfbf/IRremoteESP8266/ir_Pioneer.cpp.o
+Compiling .pio/build/reaper/libfbf/IRremoteESP8266/ir_Pronto.cpp.o
+Compiling .pio/build/reaper/libfbf/IRremoteESP8266/ir_RC5_RC6.cpp.o
+Compiling .pio/build/reaper/libfbf/IRremoteESP8266/ir_RCMM.cpp.o
+Compiling .pio/build/reaper/libfbf/IRremoteESP8266/ir_Rhoss.cpp.o
+Compiling .pio/build/reaper/libfbf/IRremoteESP8266/ir_Samsung.cpp.o
+Compiling .pio/build/reaper/libfbf/IRremoteESP8266/ir_Sanyo.cpp.o
+Compiling .pio/build/reaper/libfbf/IRremoteESP8266/ir_Sharp.cpp.o
+Compiling .pio/build/reaper/libfbf/IRremoteESP8266/ir_Sherwood.cpp.o
+Compiling .pio/build/reaper/libfbf/IRremoteESP8266/ir_Sony.cpp.o
+Compiling .pio/build/reaper/libfbf/IRremoteESP8266/ir_Symphony.cpp.o
+Compiling .pio/build/reaper/libfbf/IRremoteESP8266/ir_Tcl.cpp.o
+Compiling .pio/build/reaper/libfbf/IRremoteESP8266/ir_Technibel.cpp.o
+Compiling .pio/build/reaper/libfbf/IRremoteESP8266/ir_Teco.cpp.o
+Compiling .pio/build/reaper/libfbf/IRremoteESP8266/ir_Teknopoint.cpp.o
+Compiling .pio/build/reaper/libfbf/IRremoteESP8266/ir_Toshiba.cpp.o
+Compiling .pio/build/reaper/libfbf/IRremoteESP8266/ir_Toto.cpp.o
+Compiling .pio/build/reaper/libfbf/IRremoteESP8266/ir_Transcold.cpp.o
+Compiling .pio/build/reaper/libfbf/IRremoteESP8266/ir_Trotec.cpp.o
+Compiling .pio/build/reaper/libfbf/IRremoteESP8266/ir_Truma.cpp.o
+Compiling .pio/build/reaper/libfbf/IRremoteESP8266/ir_Vestel.cpp.o
+Compiling .pio/build/reaper/libfbf/IRremoteESP8266/ir_Voltas.cpp.o
+Compiling .pio/build/reaper/libfbf/IRremoteESP8266/ir_Whirlpool.cpp.o
+Compiling .pio/build/reaper/libfbf/IRremoteESP8266/ir_Whynter.cpp.o
+Compiling .pio/build/reaper/libfbf/IRremoteESP8266/ir_Wowwee.cpp.o
+Compiling .pio/build/reaper/libfbf/IRremoteESP8266/ir_Xmp.cpp.o
+Compiling .pio/build/reaper/libfbf/IRremoteESP8266/ir_York.cpp.o
+Compiling .pio/build/reaper/libfbf/IRremoteESP8266/ir_Zepeal.cpp.o
+Compiling .pio/build/reaper/libcf8/Time/DateStrings.cpp.o
+Compiling .pio/build/reaper/libcf8/Time/Time.cpp.o
+Compiling .pio/build/reaper/liba33/PNGdec/PNGdec.cpp.o
+Compiling .pio/build/reaper/liba33/PNGdec/adler32.c.o
+Compiling .pio/build/reaper/liba33/PNGdec/crc32.c.o
+Compiling .pio/build/reaper/liba33/PNGdec/infback.c.o
+Compiling .pio/build/reaper/liba33/PNGdec/inffast.c.o
+Compiling .pio/build/reaper/liba33/PNGdec/inflate.c.o
+Compiling .pio/build/reaper/liba33/PNGdec/inftrees.c.o
+Compiling .pio/build/reaper/liba33/PNGdec/s3_simd_rgb565.S.o
+Compiling .pio/build/reaper/liba33/PNGdec/zutil.c.o
+Compiling .pio/build/reaper/libc5a/LibSSH-ESP32/agent.c.o
+Compiling .pio/build/reaper/libc5a/LibSSH-ESP32/auth.c.o
+Compiling .pio/build/reaper/libc5a/LibSSH-ESP32/base64.c.o
+Compiling .pio/build/reaper/libc5a/LibSSH-ESP32/bignum.c.o
+Compiling .pio/build/reaper/libc5a/LibSSH-ESP32/bind.c.o
+Compiling .pio/build/reaper/libc5a/LibSSH-ESP32/bind_config.c.o
+Compiling .pio/build/reaper/libc5a/LibSSH-ESP32/buffer.c.o
+Compiling .pio/build/reaper/libc5a/LibSSH-ESP32/callbacks.c.o
+Compiling .pio/build/reaper/libc5a/LibSSH-ESP32/channels.c.o
+Compiling .pio/build/reaper/libc5a/LibSSH-ESP32/client.c.o
+Compiling .pio/build/reaper/libc5a/LibSSH-ESP32/config.c.o
+Compiling .pio/build/reaper/libc5a/LibSSH-ESP32/config_parser.c.o
+Compiling .pio/build/reaper/libc5a/LibSSH-ESP32/connect.c.o
+Compiling .pio/build/reaper/libc5a/LibSSH-ESP32/crypto_common.c.o
+Compiling .pio/build/reaper/libc5a/LibSSH-ESP32/curve25519.c.o
+Compiling .pio/build/reaper/libc5a/LibSSH-ESP32/dh-gex.c.o
+Compiling .pio/build/reaper/libc5a/LibSSH-ESP32/dh.c.o
+Compiling .pio/build/reaper/libc5a/LibSSH-ESP32/dh_key.c.o
+Compiling .pio/build/reaper/libc5a/LibSSH-ESP32/ecdh.c.o
+Compiling .pio/build/reaper/libc5a/LibSSH-ESP32/ecdh_mbedcrypto.c.o
+Compiling .pio/build/reaper/libc5a/LibSSH-ESP32/error.c.o
+Compiling .pio/build/reaper/libc5a/LibSSH-ESP32/external/bcrypt_pbkdf.c.o
+Compiling .pio/build/reaper/libc5a/LibSSH-ESP32/external/blowfish.c.o
+Compiling .pio/build/reaper/libc5a/LibSSH-ESP32/external/curve25519_ref.c.o
+Compiling .pio/build/reaper/libc5a/LibSSH-ESP32/external/ed25519.c.o
+Compiling .pio/build/reaper/libc5a/LibSSH-ESP32/external/fe25519.c.o
+Compiling .pio/build/reaper/libc5a/LibSSH-ESP32/external/ge25519.c.o
+Compiling .pio/build/reaper/libc5a/LibSSH-ESP32/external/sc25519.c.o
+Compiling .pio/build/reaper/libc5a/LibSSH-ESP32/getpass.c.o
+Compiling .pio/build/reaper/libc5a/LibSSH-ESP32/getrandom_mbedcrypto.c.o
+Compiling .pio/build/reaper/libc5a/LibSSH-ESP32/gzip.c.o
+Compiling .pio/build/reaper/libc5a/LibSSH-ESP32/init.c.o
+Compiling .pio/build/reaper/libc5a/LibSSH-ESP32/kdf.c.o
+Compiling .pio/build/reaper/libc5a/LibSSH-ESP32/kex.c.o
+Compiling .pio/build/reaper/libc5a/LibSSH-ESP32/knownhosts.c.o
+Compiling .pio/build/reaper/libc5a/LibSSH-ESP32/libmbedcrypto.c.o
+Compiling .pio/build/reaper/libc5a/LibSSH-ESP32/libssh_esp32.cpp.o
+Compiling .pio/build/reaper/libc5a/LibSSH-ESP32/libssh_esp32_compat.c.o
+.pio/libdeps/reaper/LibSSH-ESP32/src/libssh_esp32_compat.c:13:38: warning: initialization discards 'const' qualifier from pointer target type [-Wdiscarded-qualifiers]
+   13 | #define LIBSSH_ESP32_COMPAT_USERNAME "root"
+      |                                      ^~~~~~
+.pio/libdeps/reaper/LibSSH-ESP32/src/libssh_esp32_compat.c:45:5: note: in expansion of macro 'LIBSSH_ESP32_COMPAT_USERNAME'
+   45 |   { LIBSSH_ESP32_COMPAT_USERNAME, /* password: */"", LIBSSH_ESP32_COMPAT_UID,
+      |     ^~~~~~~~~~~~~~~~~~~~~~~~~~~~
+.pio/libdeps/reaper/LibSSH-ESP32/src/libssh_esp32_compat.c:45:50: warning: initialization discards 'const' qualifier from pointer target type [-Wdiscarded-qualifiers]
+   45 |   { LIBSSH_ESP32_COMPAT_USERNAME, /* password: */"", LIBSSH_ESP32_COMPAT_UID,
+      |                                                  ^~
+.pio/libdeps/reaper/LibSSH-ESP32/src/libssh_esp32_compat.c:46:44: warning: initialization discards 'const' qualifier from pointer target type [-Wdiscarded-qualifiers]
+   46 |     LIBSSH_ESP32_COMPAT_GID, /* comment: */"", /* gecos: */"",
+      |                                            ^~
+.pio/libdeps/reaper/LibSSH-ESP32/src/libssh_esp32_compat.c:46:60: warning: initialization discards 'const' qualifier from pointer target type [-Wdiscarded-qualifiers]
+   46 |     LIBSSH_ESP32_COMPAT_GID, /* comment: */"", /* gecos: */"",
+      |                                                            ^~
+.pio/libdeps/reaper/LibSSH-ESP32/src/libssh_esp32_compat.c:22:37: warning: initialization discards 'const' qualifier from pointer target type [-Wdiscarded-qualifiers]
+   22 | #define LIBSSH_ESP32_COMPAT_HOMEDIR "/spiffs"
+      |                                     ^~~~~~~~~
+.pio/libdeps/reaper/LibSSH-ESP32/src/libssh_esp32_compat.c:47:5: note: in expansion of macro 'LIBSSH_ESP32_COMPAT_HOMEDIR'
+   47 |     LIBSSH_ESP32_COMPAT_HOMEDIR, /* shell: */"" };
+      |     ^~~~~~~~~~~~~~~~~~~~~~~~~~~
+.pio/libdeps/reaper/LibSSH-ESP32/src/libssh_esp32_compat.c:47:46: warning: initialization discards 'const' qualifier from pointer target type [-Wdiscarded-qualifiers]
+   47 |     LIBSSH_ESP32_COMPAT_HOMEDIR, /* shell: */"" };
+      |                                              ^~
+Compiling .pio/build/reaper/libc5a/LibSSH-ESP32/log.c.o
+Compiling .pio/build/reaper/libc5a/LibSSH-ESP32/match.c.o
+Compiling .pio/build/reaper/libc5a/LibSSH-ESP32/mbedcrypto_missing.c.o
+Compiling .pio/build/reaper/libc5a/LibSSH-ESP32/md_mbedcrypto.c.o
+Compiling .pio/build/reaper/libc5a/LibSSH-ESP32/messages.c.o
+Compiling .pio/build/reaper/libc5a/LibSSH-ESP32/misc.c.o
+Compiling .pio/build/reaper/libc5a/LibSSH-ESP32/options.c.o
+Compiling .pio/build/reaper/libc5a/LibSSH-ESP32/packet.c.o
+Compiling .pio/build/reaper/libc5a/LibSSH-ESP32/packet_cb.c.o
+Compiling .pio/build/reaper/libc5a/LibSSH-ESP32/packet_crypt.c.o
+Compiling .pio/build/reaper/libc5a/LibSSH-ESP32/pki.c.o
+Compiling .pio/build/reaper/libc5a/LibSSH-ESP32/pki_container_openssh.c.o
+Compiling .pio/build/reaper/libc5a/LibSSH-ESP32/pki_ed25519.c.o
+Compiling .pio/build/reaper/libc5a/LibSSH-ESP32/pki_ed25519_common.c.o
+Compiling .pio/build/reaper/libc5a/LibSSH-ESP32/pki_mbedcrypto.c.o
+Compiling .pio/build/reaper/libc5a/LibSSH-ESP32/poll.c.o
+Compiling .pio/build/reaper/libc5a/LibSSH-ESP32/scp.c.o
+Compiling .pio/build/reaper/libc5a/LibSSH-ESP32/server.c.o
+.pio/libdeps/reaper/LibSSH-ESP32/src/scp.c: In function 'ssh_scp_new':
+.pio/libdeps/reaper/LibSSH-ESP32/src/scp.c:110:5: warning: 'ssh_scp_free' is deprecated [-Wdeprecated-declarations]
+  110 |     ssh_scp_free(scp);
+      |     ^~~~~~~~~~~~
+In file included from .pio/libdeps/reaper/LibSSH-ESP32/src/libssh/priv.h:199,
+                 from .pio/libdeps/reaper/LibSSH-ESP32/src/scp.c:30:
+.pio/libdeps/reaper/LibSSH-ESP32/src/libssh/libssh.h:592:32: note: declared here
+  592 | SSH_DEPRECATED LIBSSH_API void ssh_scp_free(ssh_scp scp);
+      |                                ^~~~~~~~~~~~
+.pio/libdeps/reaper/LibSSH-ESP32/src/scp.c: In function 'ssh_scp_free':
+.pio/libdeps/reaper/LibSSH-ESP32/src/scp.c:303:9: warning: 'ssh_scp_close' is deprecated [-Wdeprecated-declarations]
+  303 |         ssh_scp_close(scp);
+      |         ^~~~~~~~~~~~~
+.pio/libdeps/reaper/LibSSH-ESP32/src/scp.c:249:5: note: declared here
+  249 | int ssh_scp_close(ssh_scp scp)
+      |     ^~~~~~~~~~~~~
+.pio/libdeps/reaper/LibSSH-ESP32/src/scp.c: In function 'ssh_scp_push_file':
+.pio/libdeps/reaper/LibSSH-ESP32/src/scp.c:577:5: warning: 'ssh_scp_push_file64' is deprecated [-Wdeprecated-declarations]
+  577 |     return ssh_scp_push_file64(scp, filename, (uint64_t) size, mode);
+      |     ^~~~~~
+.pio/libdeps/reaper/LibSSH-ESP32/src/scp.c:472:5: note: declared here
+  472 | int ssh_scp_push_file64(ssh_scp scp, const char *filename, uint64_t size,
+      |     ^~~~~~~~~~~~~~~~~~~
+.pio/libdeps/reaper/LibSSH-ESP32/src/scp.c: In function 'ssh_scp_read':
+.pio/libdeps/reaper/LibSSH-ESP32/src/scp.c:1039:9: warning: 'ssh_scp_accept_request' is deprecated [-Wdeprecated-declarations]
+ 1039 |         rc = ssh_scp_accept_request(scp);
+      |         ^~
+.pio/libdeps/reaper/LibSSH-ESP32/src/scp.c:985:5: note: declared here
+  985 | int ssh_scp_accept_request(ssh_scp scp)
+      |     ^~~~~~~~~~~~~~~~~~~~~~
+Compiling .pio/build/reaper/libc5a/LibSSH-ESP32/session.c.o
+Compiling .pio/build/reaper/libc5a/LibSSH-ESP32/socket.c.o
+Compiling .pio/build/reaper/libc5a/LibSSH-ESP32/string.c.o
+Compiling .pio/build/reaper/libc5a/LibSSH-ESP32/threads.c.o
+Compiling .pio/build/reaper/libc5a/LibSSH-ESP32/threads/mbedtls.c.o
+Compiling .pio/build/reaper/libc5a/LibSSH-ESP32/threads/noop.c.o
+Compiling .pio/build/reaper/libc5a/LibSSH-ESP32/token.c.o
+Compiling .pio/build/reaper/libc5a/LibSSH-ESP32/ttyopts.c.o
+Compiling .pio/build/reaper/libc5a/LibSSH-ESP32/wrapper.c.o
+Compiling .pio/build/reaper/liba33/Wire/Wire.cpp.o
+Compiling .pio/build/reaper/lib30b/SPI/SPI.cpp.o
+Compiling .pio/build/reaper/lib467/Adafruit BusIO/Adafruit_BusIO_Register.cpp.o
+Compiling .pio/build/reaper/lib467/Adafruit BusIO/Adafruit_GenericDevice.cpp.o
+Compiling .pio/build/reaper/lib467/Adafruit BusIO/Adafruit_I2CDevice.cpp.o
+Compiling .pio/build/reaper/lib467/Adafruit BusIO/Adafruit_SPIDevice.cpp.o
+Compiling .pio/build/reaper/libce4/Adafruit PN532/Adafruit_PN532.cpp.o
+Compiling .pio/build/reaper/lib44c/BER-TLV/BerTlv.cpp.o
+Compiling .pio/build/reaper/lib44c/BER-TLV/tests.cpp.o
+Compiling .pio/build/reaper/lib68c/RFID_MFRC522v2/MFRC522Debug.cpp.o
+Compiling .pio/build/reaper/lib68c/RFID_MFRC522v2/MFRC522DriverI2C.cpp.o
+Compiling .pio/build/reaper/lib68c/RFID_MFRC522v2/MFRC522DriverSPI.cpp.o
+Compiling .pio/build/reaper/lib68c/RFID_MFRC522v2/MFRC522Hack.cpp.o
+Compiling .pio/build/reaper/lib68c/RFID_MFRC522v2/MFRC522v2.cpp.o
+Compiling .pio/build/reaper/lib16b/NimBLE-Arduino/NimBLE2904.cpp.o
+Compiling .pio/build/reaper/lib16b/NimBLE-Arduino/NimBLEAddress.cpp.o
+Compiling .pio/build/reaper/lib16b/NimBLE-Arduino/NimBLEAdvertisedDevice.cpp.o
+Compiling .pio/build/reaper/lib16b/NimBLE-Arduino/NimBLEAdvertisementData.cpp.o
+Compiling .pio/build/reaper/lib16b/NimBLE-Arduino/NimBLEAdvertising.cpp.o
+Compiling .pio/build/reaper/lib16b/NimBLE-Arduino/NimBLEAttValue.cpp.o
+Compiling .pio/build/reaper/lib16b/NimBLE-Arduino/NimBLEBeacon.cpp.o
+Compiling .pio/build/reaper/lib16b/NimBLE-Arduino/NimBLECharacteristic.cpp.o
+Compiling .pio/build/reaper/lib16b/NimBLE-Arduino/NimBLEClient.cpp.o
+Compiling .pio/build/reaper/lib16b/NimBLE-Arduino/NimBLEDescriptor.cpp.o
+Compiling .pio/build/reaper/lib16b/NimBLE-Arduino/NimBLEDevice.cpp.o
+Compiling .pio/build/reaper/lib16b/NimBLE-Arduino/NimBLEEddystoneTLM.cpp.o
+Compiling .pio/build/reaper/lib16b/NimBLE-Arduino/NimBLEExtAdvertising.cpp.o
+Compiling .pio/build/reaper/lib16b/NimBLE-Arduino/NimBLEHIDDevice.cpp.o
+Compiling .pio/build/reaper/lib16b/NimBLE-Arduino/NimBLEL2CAPChannel.cpp.o
+Compiling .pio/build/reaper/lib16b/NimBLE-Arduino/NimBLEL2CAPServer.cpp.o
+Compiling .pio/build/reaper/lib16b/NimBLE-Arduino/NimBLERemoteCharacteristic.cpp.o
+Compiling .pio/build/reaper/lib16b/NimBLE-Arduino/NimBLERemoteDescriptor.cpp.o
+Compiling .pio/build/reaper/lib16b/NimBLE-Arduino/NimBLERemoteService.cpp.o
+Compiling .pio/build/reaper/lib16b/NimBLE-Arduino/NimBLERemoteValueAttribute.cpp.o
+Compiling .pio/build/reaper/lib16b/NimBLE-Arduino/NimBLEScan.cpp.o
+Compiling .pio/build/reaper/lib16b/NimBLE-Arduino/NimBLEServer.cpp.o
+Compiling .pio/build/reaper/lib16b/NimBLE-Arduino/NimBLEService.cpp.o
+Compiling .pio/build/reaper/lib16b/NimBLE-Arduino/NimBLEStream.cpp.o
+Compiling .pio/build/reaper/lib16b/NimBLE-Arduino/NimBLEUUID.cpp.o
+Compiling .pio/build/reaper/lib16b/NimBLE-Arduino/NimBLEUtils.cpp.o
+Compiling .pio/build/reaper/lib16b/NimBLE-Arduino/nimble/esp_port/esp-hci/src/esp_nimble_hci.c.o
+Compiling .pio/build/reaper/lib16b/NimBLE-Arduino/nimble/esp_port/esp-hci/src/na_hci_driver.c.o
+Compiling .pio/build/reaper/lib16b/NimBLE-Arduino/nimble/esp_port/esp-hci/src/na_hci_transport.c.o
+Compiling .pio/build/reaper/lib16b/NimBLE-Arduino/nimble/esp_port/port/src/exp_nimble_mem.c.o
+Compiling .pio/build/reaper/lib16b/NimBLE-Arduino/nimble/ext/tinycrypt/src/aes_decrypt.c.o
+Compiling .pio/build/reaper/lib16b/NimBLE-Arduino/nimble/ext/tinycrypt/src/aes_encrypt.c.o
+Compiling .pio/build/reaper/lib16b/NimBLE-Arduino/nimble/ext/tinycrypt/src/cbc_mode.c.o
+Compiling .pio/build/reaper/lib16b/NimBLE-Arduino/nimble/ext/tinycrypt/src/ccm_mode.c.o
+Compiling .pio/build/reaper/lib16b/NimBLE-Arduino/nimble/ext/tinycrypt/src/cmac_mode.c.o
+Compiling .pio/build/reaper/lib16b/NimBLE-Arduino/nimble/ext/tinycrypt/src/ctr_mode.c.o
+Compiling .pio/build/reaper/lib16b/NimBLE-Arduino/nimble/ext/tinycrypt/src/ctr_prng.c.o
+Compiling .pio/build/reaper/lib16b/NimBLE-Arduino/nimble/ext/tinycrypt/src/ecc.c.o
+Compiling .pio/build/reaper/lib16b/NimBLE-Arduino/nimble/ext/tinycrypt/src/ecc_dh.c.o
+Compiling .pio/build/reaper/lib16b/NimBLE-Arduino/nimble/ext/tinycrypt/src/ecc_dsa.c.o
+Compiling .pio/build/reaper/lib16b/NimBLE-Arduino/nimble/ext/tinycrypt/src/ecc_platform_specific.c.o
+Compiling .pio/build/reaper/lib16b/NimBLE-Arduino/nimble/ext/tinycrypt/src/hmac.c.o
+Compiling .pio/build/reaper/lib16b/NimBLE-Arduino/nimble/ext/tinycrypt/src/hmac_prng.c.o
+Compiling .pio/build/reaper/lib16b/NimBLE-Arduino/nimble/ext/tinycrypt/src/sha256.c.o
+Compiling .pio/build/reaper/lib16b/NimBLE-Arduino/nimble/ext/tinycrypt/src/utils.c.o
+Compiling .pio/build/reaper/lib16b/NimBLE-Arduino/nimble/nimble/controller/src/ble_ll.c.o
+Compiling .pio/build/reaper/lib16b/NimBLE-Arduino/nimble/nimble/controller/src/ble_ll_adv.c.o
+Compiling .pio/build/reaper/lib16b/NimBLE-Arduino/nimble/nimble/controller/src/ble_ll_conn_hci.c.o
+Compiling .pio/build/reaper/lib16b/NimBLE-Arduino/nimble/nimble/controller/src/ble_ll_conn.c.o
+Compiling .pio/build/reaper/lib16b/NimBLE-Arduino/nimble/nimble/controller/src/ble_ll_crypto.c.o
+Compiling .pio/build/reaper/lib16b/NimBLE-Arduino/nimble/nimble/controller/src/ble_ll_ctrl.c.o
+Compiling .pio/build/reaper/lib16b/NimBLE-Arduino/nimble/nimble/controller/src/ble_ll_dtm.c.o
+Compiling .pio/build/reaper/lib16b/NimBLE-Arduino/nimble/nimble/controller/src/ble_ll_hci.c.o
+Compiling .pio/build/reaper/lib16b/NimBLE-Arduino/nimble/nimble/controller/src/ble_ll_hci_ev.c.o
+Compiling .pio/build/reaper/lib16b/NimBLE-Arduino/nimble/nimble/controller/src/ble_ll_hci_supp_cmd.c.o
+Compiling .pio/build/reaper/lib16b/NimBLE-Arduino/nimble/nimble/controller/src/ble_ll_hci_vs.c.o
+Compiling .pio/build/reaper/lib16b/NimBLE-Arduino/nimble/nimble/controller/src/ble_ll_iso.c.o
+Compiling .pio/build/reaper/lib16b/NimBLE-Arduino/nimble/nimble/controller/src/ble_ll_iso_big.c.o
+Compiling .pio/build/reaper/lib16b/NimBLE-Arduino/nimble/nimble/controller/src/ble_ll_isoal.c.o
+Compiling .pio/build/reaper/lib16b/NimBLE-Arduino/nimble/nimble/controller/src/ble_ll_pdu.c.o
+Compiling .pio/build/reaper/lib16b/NimBLE-Arduino/nimble/nimble/controller/src/ble_ll_rand.c.o
+Compiling .pio/build/reaper/lib16b/NimBLE-Arduino/nimble/nimble/controller/src/ble_ll_resolv.c.o
+Compiling .pio/build/reaper/lib16b/NimBLE-Arduino/nimble/nimble/controller/src/ble_ll_rfmgmt.c.o
+Compiling .pio/build/reaper/lib16b/NimBLE-Arduino/nimble/nimble/controller/src/ble_ll_scan.c.o
+Compiling .pio/build/reaper/lib16b/NimBLE-Arduino/nimble/nimble/controller/src/ble_ll_scan_aux.c.o
+Compiling .pio/build/reaper/lib16b/NimBLE-Arduino/nimble/nimble/controller/src/ble_ll_sched.c.o
+Compiling .pio/build/reaper/lib16b/NimBLE-Arduino/nimble/nimble/controller/src/ble_ll_sync.c.o
+Compiling .pio/build/reaper/lib16b/NimBLE-Arduino/nimble/nimble/controller/src/ble_ll_trace.c.o
+Compiling .pio/build/reaper/lib16b/NimBLE-Arduino/nimble/nimble/controller/src/ble_ll_utils.c.o
+Compiling .pio/build/reaper/lib16b/NimBLE-Arduino/nimble/nimble/controller/src/ble_ll_whitelist.c.o
+Compiling .pio/build/reaper/lib16b/NimBLE-Arduino/nimble/nimble/drivers/nrf51/src/ble_hw.c.o
+Compiling .pio/build/reaper/lib16b/NimBLE-Arduino/nimble/nimble/drivers/nrf51/src/ble_phy.c.o
+Compiling .pio/build/reaper/lib16b/NimBLE-Arduino/nimble/nimble/drivers/nrf5x/src/ble_hw.c.o
+Compiling .pio/build/reaper/lib16b/NimBLE-Arduino/nimble/nimble/drivers/nrf5x/src/ble_phy.c.o
+Compiling .pio/build/reaper/lib16b/NimBLE-Arduino/nimble/nimble/drivers/nrf5x/src/ble_phy_trace.c.o
+Compiling .pio/build/reaper/lib16b/NimBLE-Arduino/nimble/nimble/drivers/nrf5x/src/nrf52/phy.c.o
+Compiling .pio/build/reaper/lib16b/NimBLE-Arduino/nimble/nimble/drivers/nrf5x/src/nrf53/phy.c.o
+Compiling .pio/build/reaper/lib16b/NimBLE-Arduino/nimble/nimble/host/mesh/src/access.c.o
+Compiling .pio/build/reaper/lib16b/NimBLE-Arduino/nimble/nimble/host/mesh/src/adv.c.o
+Compiling .pio/build/reaper/lib16b/NimBLE-Arduino/nimble/nimble/host/mesh/src/adv_ext.c.o
+Compiling .pio/build/reaper/lib16b/NimBLE-Arduino/nimble/nimble/host/mesh/src/adv_legacy.c.o
+Compiling .pio/build/reaper/lib16b/NimBLE-Arduino/nimble/nimble/host/mesh/src/aes-ccm.c.o
+Compiling .pio/build/reaper/lib16b/NimBLE-Arduino/nimble/nimble/host/mesh/src/app_keys.c.o
+Compiling .pio/build/reaper/lib16b/NimBLE-Arduino/nimble/nimble/host/mesh/src/beacon.c.o
+Compiling .pio/build/reaper/lib16b/NimBLE-Arduino/nimble/nimble/host/mesh/src/cdb.c.o
+Compiling .pio/build/reaper/lib16b/NimBLE-Arduino/nimble/nimble/host/mesh/src/cfg.c.o
+Compiling .pio/build/reaper/lib16b/NimBLE-Arduino/nimble/nimble/host/mesh/src/cfg_cli.c.o
+Compiling .pio/build/reaper/lib16b/NimBLE-Arduino/nimble/nimble/host/mesh/src/cfg_srv.c.o
+Compiling .pio/build/reaper/lib16b/NimBLE-Arduino/nimble/nimble/host/mesh/src/crypto.c.o
+Compiling .pio/build/reaper/lib16b/NimBLE-Arduino/nimble/nimble/host/mesh/src/friend.c.o
+Compiling .pio/build/reaper/lib16b/NimBLE-Arduino/nimble/nimble/host/mesh/src/glue.c.o
+Compiling .pio/build/reaper/lib16b/NimBLE-Arduino/nimble/nimble/host/mesh/src/health_cli.c.o
+Compiling .pio/build/reaper/lib16b/NimBLE-Arduino/nimble/nimble/host/mesh/src/health_srv.c.o
+Compiling .pio/build/reaper/lib16b/NimBLE-Arduino/nimble/nimble/host/mesh/src/heartbeat.c.o
+Compiling .pio/build/reaper/lib16b/NimBLE-Arduino/nimble/nimble/host/mesh/src/light_model.c.o
+Compiling .pio/build/reaper/lib16b/NimBLE-Arduino/nimble/nimble/host/mesh/src/lpn.c.o
+Compiling .pio/build/reaper/lib16b/NimBLE-Arduino/nimble/nimble/host/mesh/src/mesh.c.o
+Compiling .pio/build/reaper/lib16b/NimBLE-Arduino/nimble/nimble/host/mesh/src/model_cli.c.o
+Compiling .pio/build/reaper/lib16b/NimBLE-Arduino/nimble/nimble/host/mesh/src/model_srv.c.o
+Compiling .pio/build/reaper/lib16b/NimBLE-Arduino/nimble/nimble/host/mesh/src/msg.c.o
+Compiling .pio/build/reaper/lib16b/NimBLE-Arduino/nimble/nimble/host/mesh/src/net.c.o
+Compiling .pio/build/reaper/lib16b/NimBLE-Arduino/nimble/nimble/host/mesh/src/pb_adv.c.o
+Compiling .pio/build/reaper/lib16b/NimBLE-Arduino/nimble/nimble/host/mesh/src/pb_gatt.c.o
+Compiling .pio/build/reaper/lib16b/NimBLE-Arduino/nimble/nimble/host/mesh/src/pb_gatt_srv.c.o
+Compiling .pio/build/reaper/lib16b/NimBLE-Arduino/nimble/nimble/host/mesh/src/prov.c.o
+Compiling .pio/build/reaper/lib16b/NimBLE-Arduino/nimble/nimble/host/mesh/src/prov_device.c.o
+Compiling .pio/build/reaper/lib16b/NimBLE-Arduino/nimble/nimble/host/mesh/src/provisioner.c.o
+Compiling .pio/build/reaper/lib16b/NimBLE-Arduino/nimble/nimble/host/mesh/src/proxy.c.o
+Compiling .pio/build/reaper/lib16b/NimBLE-Arduino/nimble/nimble/host/mesh/src/proxy_msg.c.o
+Compiling .pio/build/reaper/lib16b/NimBLE-Arduino/nimble/nimble/host/mesh/src/proxy_srv.c.o
+Compiling .pio/build/reaper/lib16b/NimBLE-Arduino/nimble/nimble/host/mesh/src/rpl.c.o
+Compiling .pio/build/reaper/lib16b/NimBLE-Arduino/nimble/nimble/host/mesh/src/settings.c.o
+Compiling .pio/build/reaper/lib16b/NimBLE-Arduino/nimble/nimble/host/mesh/src/shell.c.o
+Compiling .pio/build/reaper/lib16b/NimBLE-Arduino/nimble/nimble/host/mesh/src/subnet.c.o
+Compiling .pio/build/reaper/lib16b/NimBLE-Arduino/nimble/nimble/host/mesh/src/testing.c.o
+Compiling .pio/build/reaper/lib16b/NimBLE-Arduino/nimble/nimble/host/mesh/src/transport.c.o
+Compiling .pio/build/reaper/lib16b/NimBLE-Arduino/nimble/nimble/host/services/gap/src/ble_svc_gap.c.o
+Compiling .pio/build/reaper/lib16b/NimBLE-Arduino/nimble/nimble/host/services/gatt/src/ble_svc_gatt.c.o
+Compiling .pio/build/reaper/lib16b/NimBLE-Arduino/nimble/nimble/host/src/ble_aes_ccm.c.o
+Compiling .pio/build/reaper/lib16b/NimBLE-Arduino/nimble/nimble/host/src/ble_att.c.o
+Compiling .pio/build/reaper/lib16b/NimBLE-Arduino/nimble/nimble/host/src/ble_att_clt.c.o
+Compiling .pio/build/reaper/lib16b/NimBLE-Arduino/nimble/nimble/host/src/ble_att_cmd.c.o
+Compiling .pio/build/reaper/lib16b/NimBLE-Arduino/nimble/nimble/host/src/ble_att_svr.c.o
+Compiling .pio/build/reaper/lib16b/NimBLE-Arduino/nimble/nimble/host/src/ble_dtm.c.o
+Compiling .pio/build/reaper/lib16b/NimBLE-Arduino/nimble/nimble/host/src/ble_ead.c.o
+Compiling .pio/build/reaper/lib16b/NimBLE-Arduino/nimble/nimble/host/src/ble_eatt.c.o
+Compiling .pio/build/reaper/lib16b/NimBLE-Arduino/nimble/nimble/host/src/ble_eddystone.c.o
+Compiling .pio/build/reaper/lib16b/NimBLE-Arduino/nimble/nimble/host/src/ble_gap.c.o
+Compiling .pio/build/reaper/lib16b/NimBLE-Arduino/nimble/nimble/host/src/ble_gattc.c.o
+Compiling .pio/build/reaper/lib16b/NimBLE-Arduino/nimble/nimble/host/src/ble_gattc_cache.c.o
+Compiling .pio/build/reaper/lib16b/NimBLE-Arduino/nimble/nimble/host/src/ble_gattc_cache_conn.c.o
+Compiling .pio/build/reaper/lib16b/NimBLE-Arduino/nimble/nimble/host/src/ble_gatts.c.o
+Compiling .pio/build/reaper/lib16b/NimBLE-Arduino/nimble/nimble/host/src/ble_gatts_lcl.c.o
+Compiling .pio/build/reaper/lib16b/NimBLE-Arduino/nimble/nimble/host/src/ble_hs.c.o
+Compiling .pio/build/reaper/lib16b/NimBLE-Arduino/nimble/nimble/host/src/ble_hs_adv.c.o
+Compiling .pio/build/reaper/lib16b/NimBLE-Arduino/nimble/nimble/host/src/ble_hs_atomic.c.o
+Compiling .pio/build/reaper/lib16b/NimBLE-Arduino/nimble/nimble/host/src/ble_hs_cfg.c.o
+Compiling .pio/build/reaper/lib16b/NimBLE-Arduino/nimble/nimble/host/src/ble_hs_conn.c.o
+Compiling .pio/build/reaper/lib16b/NimBLE-Arduino/nimble/nimble/host/src/ble_hs_flow.c.o
+Compiling .pio/build/reaper/lib16b/NimBLE-Arduino/nimble/nimble/host/src/ble_hs_hci.c.o
+Compiling .pio/build/reaper/lib16b/NimBLE-Arduino/nimble/nimble/host/src/ble_hs_hci_cmd.c.o
+Compiling .pio/build/reaper/lib16b/NimBLE-Arduino/nimble/nimble/host/src/ble_hs_hci_evt.c.o
+Compiling .pio/build/reaper/lib16b/NimBLE-Arduino/nimble/nimble/host/src/ble_hs_hci_util.c.o
+Compiling .pio/build/reaper/lib16b/NimBLE-Arduino/nimble/nimble/host/src/ble_hs_id.c.o
+Compiling .pio/build/reaper/lib16b/NimBLE-Arduino/nimble/nimble/host/src/ble_hs_log.c.o
+Compiling .pio/build/reaper/lib16b/NimBLE-Arduino/nimble/nimble/host/src/ble_hs_mbuf.c.o
+Compiling .pio/build/reaper/lib16b/NimBLE-Arduino/nimble/nimble/host/src/ble_hs_misc.c.o
+Compiling .pio/build/reaper/lib16b/NimBLE-Arduino/nimble/nimble/host/src/ble_hs_mqueue.c.o
+Compiling .pio/build/reaper/lib16b/NimBLE-Arduino/nimble/nimble/host/src/ble_hs_periodic_sync.c.o
+Compiling .pio/build/reaper/lib16b/NimBLE-Arduino/nimble/nimble/host/src/ble_hs_pvcy.c.o
+Compiling .pio/build/reaper/lib16b/NimBLE-Arduino/nimble/nimble/host/src/ble_hs_resolv.c.o
+Compiling .pio/build/reaper/lib16b/NimBLE-Arduino/nimble/nimble/host/src/ble_hs_shutdown.c.o
+Compiling .pio/build/reaper/lib16b/NimBLE-Arduino/nimble/nimble/host/src/ble_hs_startup.c.o
+Compiling .pio/build/reaper/lib16b/NimBLE-Arduino/nimble/nimble/host/src/ble_hs_stop.c.o
+Compiling .pio/build/reaper/lib16b/NimBLE-Arduino/nimble/nimble/host/src/ble_ibeacon.c.o
+Compiling .pio/build/reaper/lib16b/NimBLE-Arduino/nimble/nimble/host/src/ble_l2cap.c.o
+Compiling .pio/build/reaper/lib16b/NimBLE-Arduino/nimble/nimble/host/src/ble_l2cap_coc.c.o
+Compiling .pio/build/reaper/lib16b/NimBLE-Arduino/nimble/nimble/host/src/ble_l2cap_sig.c.o
+Compiling .pio/build/reaper/lib16b/NimBLE-Arduino/nimble/nimble/host/src/ble_l2cap_sig_cmd.c.o
+Compiling .pio/build/reaper/lib16b/NimBLE-Arduino/nimble/nimble/host/src/ble_sm.c.o
+Compiling .pio/build/reaper/lib16b/NimBLE-Arduino/nimble/nimble/host/src/ble_sm_alg.c.o
+Compiling .pio/build/reaper/lib16b/NimBLE-Arduino/nimble/nimble/host/src/ble_sm_cmd.c.o
+Compiling .pio/build/reaper/lib16b/NimBLE-Arduino/nimble/nimble/host/src/ble_sm_lgcy.c.o
+Compiling .pio/build/reaper/lib16b/NimBLE-Arduino/nimble/nimble/host/src/ble_sm_sc.c.o
+Compiling .pio/build/reaper/lib16b/NimBLE-Arduino/nimble/nimble/host/src/ble_store.c.o
+Compiling .pio/build/reaper/lib16b/NimBLE-Arduino/nimble/nimble/host/src/ble_store_util.c.o
+Compiling .pio/build/reaper/lib16b/NimBLE-Arduino/nimble/nimble/host/src/ble_uuid.c.o
+Compiling .pio/build/reaper/lib16b/NimBLE-Arduino/nimble/nimble/host/store/config/src/ble_store_config.c.o
+Compiling .pio/build/reaper/lib16b/NimBLE-Arduino/nimble/nimble/host/store/config/src/ble_store_config_conf.c.o
+Compiling .pio/build/reaper/lib16b/NimBLE-Arduino/nimble/nimble/host/store/config/src/ble_store_nvs.c.o
+Compiling .pio/build/reaper/lib16b/NimBLE-Arduino/nimble/nimble/host/store/ram/src/ble_store_ram.c.o
+Compiling .pio/build/reaper/lib16b/NimBLE-Arduino/nimble/nimble/host/util/src/addr.c.o
+Compiling .pio/build/reaper/lib16b/NimBLE-Arduino/nimble/nimble/transport/common/hci_h4/src/hci_h4.c.o
+Compiling .pio/build/reaper/lib16b/NimBLE-Arduino/nimble/nimble/transport/common/hci_ipc/src/hci_ipc.c.o
+Compiling .pio/build/reaper/lib16b/NimBLE-Arduino/nimble/nimble/transport/esp_ipc/src/hci_esp_ipc.c.o
+Compiling .pio/build/reaper/lib16b/NimBLE-Arduino/nimble/nimble/transport/esp_ipc_legacy/src/hci_esp_ipc_legacy.c.o
+Compiling .pio/build/reaper/lib16b/NimBLE-Arduino/nimble/nimble/transport/nrf5340/src/nrf5340_ble_hci.c.o
+Compiling .pio/build/reaper/lib16b/NimBLE-Arduino/nimble/nimble/transport/src/transport.c.o
+Compiling .pio/build/reaper/lib16b/NimBLE-Arduino/nimble/porting/nimble/src/endian.c.o
+Compiling .pio/build/reaper/lib16b/NimBLE-Arduino/nimble/porting/nimble/src/hal_timer.c.o
+Compiling .pio/build/reaper/lib16b/NimBLE-Arduino/nimble/porting/nimble/src/mem.c.o
+Compiling .pio/build/reaper/lib16b/NimBLE-Arduino/nimble/porting/nimble/src/nimble_port.c.o
+Compiling .pio/build/reaper/lib16b/NimBLE-Arduino/nimble/porting/nimble/src/os_cputime.c.o
+Compiling .pio/build/reaper/lib16b/NimBLE-Arduino/nimble/porting/nimble/src/os_cputime_pwr2.c.o
+Compiling .pio/build/reaper/lib16b/NimBLE-Arduino/nimble/porting/nimble/src/os_mbuf.c.o
+Compiling .pio/build/reaper/lib16b/NimBLE-Arduino/nimble/porting/nimble/src/os_mempool.c.o
+Compiling .pio/build/reaper/lib16b/NimBLE-Arduino/nimble/porting/nimble/src/os_msys_init.c.o
+Compiling .pio/build/reaper/lib16b/NimBLE-Arduino/nimble/porting/npl/freertos/src/nimble_port_freertos.c.o
+Compiling .pio/build/reaper/lib16b/NimBLE-Arduino/nimble/porting/npl/freertos/src/npl_os_freertos.c.o
+Compiling .pio/build/reaper/libbce/ESP Chameleon Ultra/chameleonUltra.cpp.o
+Compiling .pio/build/reaper/lib7ce/ESP Amiibolink/amiibolink.cpp.o
+Compiling .pio/build/reaper/lib50b/SimpleCLI/Argument.cpp.o
+Compiling .pio/build/reaper/lib50b/SimpleCLI/Command.cpp.o
+.pio/libdeps/reaper/ESP Chameleon Ultra/src/chameleonUltra.cpp: In member function 'bool ChameleonUltra::cmdEnableSlot(uint8_t, TagSenseType)':
+.pio/libdeps/reaper/ESP Chameleon Ultra/src/chameleonUltra.cpp:446:27: warning: narrowing conversion of '(((int)slot) - 1)' from 'int' to 'uint8_t' {aka 'unsigned char'} [-Wnarrowing]
+  446 |     uint8_t cmd[3] = {slot-1, freq, 0x01};
+      |                       ~~~~^~
+.pio/libdeps/reaper/ESP Chameleon Ultra/src/chameleonUltra.cpp: In member function 'bool ChameleonUltra::cmdChangeActiveSlot(uint8_t)':
+.pio/libdeps/reaper/ESP Chameleon Ultra/src/chameleonUltra.cpp:457:27: warning: narrowing conversion of '(((int)slot) - 1)' from 'int' to 'uint8_t' {aka 'unsigned char'} [-Wnarrowing]
+  457 |     uint8_t cmd[1] = {slot-1};
+      |                       ~~~~^~
+.pio/libdeps/reaper/ESP Chameleon Ultra/src/chameleonUltra.cpp: In member function 'bool ChameleonUltra::cmdChangeSlotType(uint8_t, TagType)':
+.pio/libdeps/reaper/ESP Chameleon Ultra/src/chameleonUltra.cpp:468:27: warning: narrowing conversion of '(((int)slot) - 1)' from 'int' to 'uint8_t' {aka 'unsigned char'} [-Wnarrowing]
+  468 |     uint8_t cmd[3] = {slot-1, (tagType >> 8) & 0xFF, tagType & 0xFF};
+      |                       ~~~~^~
+.pio/libdeps/reaper/ESP Chameleon Ultra/src/chameleonUltra.cpp:468:46: warning: narrowing conversion of '((((int)tagType) >> 8) & 255)' from 'int' to 'uint8_t' {aka 'unsigned char'} [-Wnarrowing]
+  468 |     uint8_t cmd[3] = {slot-1, (tagType >> 8) & 0xFF, tagType & 0xFF};
+      |                               ~~~~~~~~~~~~~~~^~~~~~
+.pio/libdeps/reaper/ESP Chameleon Ultra/src/chameleonUltra.cpp:468:62: warning: narrowing conversion of '(((int)tagType) & 255)' from 'int' to 'uint8_t' {aka 'unsigned char'} [-Wnarrowing]
+  468 |     uint8_t cmd[3] = {slot-1, (tagType >> 8) & 0xFF, tagType & 0xFF};
+      |                                                      ~~~~~~~~^~~~~~
+.pio/libdeps/reaper/ESP Chameleon Ultra/src/chameleonUltra.cpp: In member function 'bool ChameleonUltra::cmdMfEconfig(byte*, size_t, byte*, byte)':
+.pio/libdeps/reaper/ESP Chameleon Ultra/src/chameleonUltra.cpp:708:32: warning: narrowing conversion of 'length' from 'size_t' {aka 'unsigned int'} to 'uint8_t' {aka 'unsigned char'} [-Wnarrowing]
+  708 |     uint8_t cmd[length + 5] = {length};
+      |                                ^~~~~~
+Compiling .pio/build/reaper/lib50b/SimpleCLI/CommandError.cpp.o
+Compiling .pio/build/reaper/lib50b/SimpleCLI/SimpleCLI.cpp.o
+Compiling .pio/build/reaper/lib50b/SimpleCLI/c/arg.c.o
+Compiling .pio/build/reaper/lib50b/SimpleCLI/c/cmd.c.o
+Compiling .pio/build/reaper/lib50b/SimpleCLI/c/cmd_error.c.o
+Compiling .pio/build/reaper/lib50b/SimpleCLI/c/comparator.c.o
+Compiling .pio/build/reaper/lib50b/SimpleCLI/c/parser.c.o
+Compiling .pio/build/reaper/libf7a/ESP PN32BLE/pn532_ble.cpp.o
+Compiling .pio/build/reaper/libb8a/ESP PN532 UART/PN532_UART.cpp.o
+Compiling .pio/build/reaper/libb8a/ESP PN532 UART/TagTechnology.cpp.o
+Compiling .pio/build/reaper/libe03/ESP PN532Killer/PN532Killer.cpp.o
+Compiling .pio/build/reaper/libe03/ESP PN532Killer/PN532KillerTagTechnology.cpp.o
+Compiling .pio/build/reaper/lib1c8/NTPClient/NTPClient.cpp.o
+Compiling .pio/build/reaper/libf48/ESP32Time/ESP32Time.cpp.o
+Compiling .pio/build/reaper/lib7aa/FS/FS.cpp.o
+Compiling .pio/build/reaper/lib7aa/FS/vfs_api.cpp.o
+Compiling .pio/build/reaper/lib7a5/FFat/FFat.cpp.o
+Compiling .pio/build/reaper/lib864/SPIFFS/SPIFFS.cpp.o
+Compiling .pio/build/reaper/lib487/Network/NetworkClient.cpp.o
+Compiling .pio/build/reaper/lib487/Network/NetworkEvents.cpp.o
+Compiling .pio/build/reaper/lib487/Network/NetworkInterface.cpp.o
+Compiling .pio/build/reaper/lib487/Network/NetworkManager.cpp.o
+Compiling .pio/build/reaper/lib487/Network/NetworkServer.cpp.o
+Compiling .pio/build/reaper/lib487/Network/NetworkUdp.cpp.o
+Compiling .pio/build/reaper/libf0e/NetworkClientSecure/NetworkClientSecure.cpp.o
+Compiling .pio/build/reaper/libf0e/NetworkClientSecure/ssl_client.cpp.o
+Compiling .pio/build/reaper/lib67b/HTTPClient/HTTPClient.cpp.o
+Compiling .pio/build/reaper/lib620/LittleFS/LittleFS.cpp.o
+Compiling .pio/build/reaper/lib8f1/TFT_eSPI/TFT_eSPI.cpp.o
+Compiling .pio/build/reaper/libd2f/HAL/display/ardgfx.cpp.o
+Compiling .pio/build/reaper/libd2f/HAL/display/lovyan.cpp.o
+Compiling .pio/build/reaper/libd2f/HAL/display/m5gfx.cpp.o
+Compiling .pio/build/reaper/libd2f/HAL/display/tftespi.cpp.o
+Compiling .pio/build/reaper/libd2f/HAL/io_expander/Adafruit_AW9523.cpp.o
+Compiling .pio/build/reaper/libd2f/HAL/io_expander/PCA9555.cpp.o
+Compiling .pio/build/reaper/libd2f/HAL/sd_card/SD.cpp.o
+Compiling .pio/build/reaper/libd2f/HAL/sd_card/SD_MMC.cpp.o
+Compiling .pio/build/reaper/libd2f/HAL/sd_card/sd_diskio.cpp.o
+Compiling .pio/build/reaper/libd2f/HAL/sd_card/sd_diskio_crc.c.o
+Compiling .pio/build/reaper/libbca/ESP8266Audio/AudioFileSourceBuffer.cpp.o
+Compiling .pio/build/reaper/libbca/ESP8266Audio/AudioFileSourceFS.cpp.o
+Compiling .pio/build/reaper/libbca/ESP8266Audio/AudioFileSourceFunction.cpp.o
+Compiling .pio/build/reaper/libbca/ESP8266Audio/AudioFileSourceHTTPStream.cpp.o
+Compiling .pio/build/reaper/libbca/ESP8266Audio/AudioFileSourceICYStream.cpp.o
+Compiling .pio/build/reaper/libbca/ESP8266Audio/AudioFileSourceID3.cpp.o
+Compiling .pio/build/reaper/libbca/ESP8266Audio/AudioFileSourcePROGMEM.cpp.o
+Compiling .pio/build/reaper/libbca/ESP8266Audio/AudioFileSourceSD.cpp.o
+Compiling .pio/build/reaper/libbca/ESP8266Audio/AudioFileSourceSPIRAMBuffer.cpp.o
+Compiling .pio/build/reaper/libbca/ESP8266Audio/AudioFileSourceSTDIO.cpp.o
+Compiling .pio/build/reaper/libbca/ESP8266Audio/AudioFileStream.cpp.o
+Compiling .pio/build/reaper/libbca/ESP8266Audio/AudioGeneratorAAC.cpp.o
+Compiling .pio/build/reaper/libbca/ESP8266Audio/AudioGeneratorFLAC.cpp.o
+Compiling .pio/build/reaper/libbca/ESP8266Audio/AudioGeneratorMIDI.cpp.o
+Compiling .pio/build/reaper/libbca/ESP8266Audio/AudioGeneratorMOD.cpp.o
+Compiling .pio/build/reaper/libbca/ESP8266Audio/AudioGeneratorMP3.cpp.o
+Compiling .pio/build/reaper/libbca/ESP8266Audio/AudioGeneratorMP3a.cpp.o
+Compiling .pio/build/reaper/libbca/ESP8266Audio/AudioGeneratorOpus.cpp.o
+Compiling .pio/build/reaper/libbca/ESP8266Audio/AudioGeneratorRTTTL.cpp.o
+Compiling .pio/build/reaper/libbca/ESP8266Audio/AudioGeneratorTalkie.cpp.o
+Compiling .pio/build/reaper/libbca/ESP8266Audio/AudioGeneratorWAV.cpp.o
+Compiling .pio/build/reaper/libbca/ESP8266Audio/AudioLogger.cpp.o
+Compiling .pio/build/reaper/libbca/ESP8266Audio/AudioOutputBuffer.cpp.o
+Compiling .pio/build/reaper/libbca/ESP8266Audio/AudioOutputFilterBiquad.cpp.o
+Compiling .pio/build/reaper/libbca/ESP8266Audio/AudioOutputFilterDecimate.cpp.o
+Compiling .pio/build/reaper/libbca/ESP8266Audio/AudioOutputI2S.cpp.o
+Compiling .pio/build/reaper/libbca/ESP8266Audio/AudioOutputI2SNoDAC.cpp.o
+Compiling .pio/build/reaper/libbca/ESP8266Audio/AudioOutputMixer.cpp.o
+Compiling .pio/build/reaper/libbca/ESP8266Audio/AudioOutputPDM.cpp.o
+Compiling .pio/build/reaper/libbca/ESP8266Audio/AudioOutputPWM.cpp.o
+Compiling .pio/build/reaper/libbca/ESP8266Audio/AudioOutputSPDIF.cpp.o
+Compiling .pio/build/reaper/libbca/ESP8266Audio/AudioOutputSPIFFSWAV.cpp.o
+Compiling .pio/build/reaper/libbca/ESP8266Audio/AudioOutputSTDIO.cpp.o
+Compiling .pio/build/reaper/libbca/ESP8266Audio/AudioOutputSerialWAV.cpp.o
+Compiling .pio/build/reaper/libbca/ESP8266Audio/AudioOutputULP.cpp.o
+Compiling .pio/build/reaper/libbca/ESP8266Audio/driver/SinglePinI2SDriver.cpp.o
+Compiling .pio/build/reaper/libbca/ESP8266Audio/libflac/bitmath.c.o
+Compiling .pio/build/reaper/libbca/ESP8266Audio/libflac/bitreader.c.o
+Compiling .pio/build/reaper/libbca/ESP8266Audio/libflac/cpu.c.o
+Compiling .pio/build/reaper/libbca/ESP8266Audio/libflac/crc.c.o
+Compiling .pio/build/reaper/libbca/ESP8266Audio/libflac/fixed.c.o
+Compiling .pio/build/reaper/libbca/ESP8266Audio/libflac/float.c.o
+Compiling .pio/build/reaper/libbca/ESP8266Audio/libflac/format.c.o
+Compiling .pio/build/reaper/libbca/ESP8266Audio/libflac/lpc.c.o
+Compiling .pio/build/reaper/libbca/ESP8266Audio/libflac/md5.c.o
+Compiling .pio/build/reaper/libbca/ESP8266Audio/libflac/memory.c.o
+Compiling .pio/build/reaper/libbca/ESP8266Audio/libflac/stream_decoder.c.o
+Compiling .pio/build/reaper/libbca/ESP8266Audio/libflac/window.c.o
+Compiling .pio/build/reaper/libbca/ESP8266Audio/libhelix-aac/aacdec.c.o
+Compiling .pio/build/reaper/libbca/ESP8266Audio/libhelix-aac/aactabs.c.o
+Compiling .pio/build/reaper/libbca/ESP8266Audio/libhelix-aac/bitstream.c.o
+Compiling .pio/build/reaper/libbca/ESP8266Audio/libhelix-aac/buffers.c.o
+Compiling .pio/build/reaper/libbca/ESP8266Audio/libhelix-aac/dct4.c.o
+Compiling .pio/build/reaper/libbca/ESP8266Audio/libhelix-aac/decelmnt.c.o
+Compiling .pio/build/reaper/libbca/ESP8266Audio/libhelix-aac/dequant.c.o
+Compiling .pio/build/reaper/libbca/ESP8266Audio/libhelix-aac/fft.c.o
+Compiling .pio/build/reaper/libbca/ESP8266Audio/libhelix-aac/filefmt.c.o
+Compiling .pio/build/reaper/libbca/ESP8266Audio/libhelix-aac/huffmanaac.c.o
+Compiling .pio/build/reaper/libbca/ESP8266Audio/libhelix-aac/hufftabs.c.o
+Compiling .pio/build/reaper/libbca/ESP8266Audio/libhelix-aac/imdct.c.o
+Compiling .pio/build/reaper/libbca/ESP8266Audio/libhelix-aac/noiseless.c.o
+Compiling .pio/build/reaper/libbca/ESP8266Audio/libhelix-aac/pns.c.o
+Compiling .pio/build/reaper/libbca/ESP8266Audio/libhelix-aac/sbr.c.o
+Compiling .pio/build/reaper/libbca/ESP8266Audio/libhelix-aac/sbrfft.c.o
+Compiling .pio/build/reaper/libbca/ESP8266Audio/libhelix-aac/sbrfreq.c.o
+Compiling .pio/build/reaper/libbca/ESP8266Audio/libhelix-aac/sbrhfadj.c.o
+Compiling .pio/build/reaper/libbca/ESP8266Audio/libhelix-aac/sbrhfgen.c.o
+Compiling .pio/build/reaper/libbca/ESP8266Audio/libhelix-aac/sbrhuff.c.o
+Compiling .pio/build/reaper/libbca/ESP8266Audio/libhelix-aac/sbrimdct.c.o
+Compiling .pio/build/reaper/libbca/ESP8266Audio/libhelix-aac/sbrmath.c.o
+Compiling .pio/build/reaper/libbca/ESP8266Audio/libhelix-aac/sbrqmf.c.o
+Compiling .pio/build/reaper/libbca/ESP8266Audio/libhelix-aac/sbrside.c.o
+Compiling .pio/build/reaper/libbca/ESP8266Audio/libhelix-aac/sbrtabs.c.o
+Compiling .pio/build/reaper/libbca/ESP8266Audio/libhelix-aac/stproc.c.o
+Compiling .pio/build/reaper/libbca/ESP8266Audio/libhelix-aac/tns.c.o
+Compiling .pio/build/reaper/libbca/ESP8266Audio/libhelix-aac/trigtabs.c.o
+Compiling .pio/build/reaper/libbca/ESP8266Audio/libhelix-mp3/bitstream.c.o
+Compiling .pio/build/reaper/libbca/ESP8266Audio/libhelix-mp3/buffers.c.o
+Compiling .pio/build/reaper/libbca/ESP8266Audio/libhelix-mp3/dct32.c.o
+Compiling .pio/build/reaper/libbca/ESP8266Audio/libhelix-mp3/dequant.c.o
+Compiling .pio/build/reaper/libbca/ESP8266Audio/libhelix-mp3/dqchan.c.o
+Compiling .pio/build/reaper/libbca/ESP8266Audio/libhelix-mp3/huffman.c.o
+Compiling .pio/build/reaper/libbca/ESP8266Audio/libhelix-mp3/hufftabs.c.o
+Compiling .pio/build/reaper/libbca/ESP8266Audio/libhelix-mp3/imdct.c.o
+Compiling .pio/build/reaper/libbca/ESP8266Audio/libhelix-mp3/mp3dec.c.o
+Compiling .pio/build/reaper/libbca/ESP8266Audio/libhelix-mp3/mp3tabs.c.o
+Compiling .pio/build/reaper/libbca/ESP8266Audio/libhelix-mp3/polyphase.c.o
+Compiling .pio/build/reaper/libbca/ESP8266Audio/libhelix-mp3/scalfact.c.o
+Compiling .pio/build/reaper/libbca/ESP8266Audio/libhelix-mp3/stproc.c.o
+Compiling .pio/build/reaper/libbca/ESP8266Audio/libhelix-mp3/subband.c.o
+Compiling .pio/build/reaper/libbca/ESP8266Audio/libhelix-mp3/trigtabs.c.o
+Compiling .pio/build/reaper/libbca/ESP8266Audio/libmad/bit.c.o
+Compiling .pio/build/reaper/libbca/ESP8266Audio/libmad/decoder.c.o
+Compiling .pio/build/reaper/libbca/ESP8266Audio/libmad/fixed.c.o
+Compiling .pio/build/reaper/libbca/ESP8266Audio/libmad/frame.c.o
+Compiling .pio/build/reaper/libbca/ESP8266Audio/libmad/huffman.c.o
+Compiling .pio/build/reaper/libbca/ESP8266Audio/libmad/layer3.c.o
+Compiling .pio/build/reaper/libbca/ESP8266Audio/libmad/stream.c.o
+Compiling .pio/build/reaper/libbca/ESP8266Audio/libmad/synth.c.o
+Compiling .pio/build/reaper/libbca/ESP8266Audio/libmad/timer.c.o
+Compiling .pio/build/reaper/libbca/ESP8266Audio/libmad/version.c.o
+Compiling .pio/build/reaper/libbca/ESP8266Audio/libopus/celt/bands.c.o
+Compiling .pio/build/reaper/libbca/ESP8266Audio/libopus/celt/celt.c.o
+Compiling .pio/build/reaper/libbca/ESP8266Audio/libopus/celt/celt_decoder.c.o
+Compiling .pio/build/reaper/libbca/ESP8266Audio/libopus/celt/celt_lpc.c.o
+Compiling .pio/build/reaper/libbca/ESP8266Audio/libopus/celt/cwrs.c.o
+Compiling .pio/build/reaper/libbca/ESP8266Audio/libopus/celt/entcode.c.o
+Compiling .pio/build/reaper/libbca/ESP8266Audio/libopus/celt/entdec.c.o
+Compiling .pio/build/reaper/libbca/ESP8266Audio/libopus/celt/entenc.c.o
+Compiling .pio/build/reaper/libbca/ESP8266Audio/libopus/celt/kiss_fft.c.o
+Compiling .pio/build/reaper/libbca/ESP8266Audio/libopus/celt/laplace.c.o
+Compiling .pio/build/reaper/libbca/ESP8266Audio/libopus/celt/mathops.c.o
+Compiling .pio/build/reaper/libbca/ESP8266Audio/libopus/celt/mdct.c.o
+Compiling .pio/build/reaper/libbca/ESP8266Audio/libopus/celt/modes.c.o
+Compiling .pio/build/reaper/libbca/ESP8266Audio/libopus/celt/pitch.c.o
+Compiling .pio/build/reaper/libbca/ESP8266Audio/libopus/celt/quant_bands.c.o
+Compiling .pio/build/reaper/libbca/ESP8266Audio/libopus/celt/rate.c.o
+Compiling .pio/build/reaper/libbca/ESP8266Audio/libopus/celt/vq.c.o
+Compiling .pio/build/reaper/libbca/ESP8266Audio/libopus/silk/A2NLSF.c.o
+Compiling .pio/build/reaper/libbca/ESP8266Audio/libopus/silk/CNG.c.o
+Compiling .pio/build/reaper/libbca/ESP8266Audio/libopus/silk/HP_variable_cutoff.c.o
+Compiling .pio/build/reaper/libbca/ESP8266Audio/libopus/silk/LPC_analysis_filter.c.o
+Compiling .pio/build/reaper/libbca/ESP8266Audio/libopus/silk/LPC_fit.c.o
+Compiling .pio/build/reaper/libbca/ESP8266Audio/libopus/silk/LPC_inv_pred_gain.c.o
+Compiling .pio/build/reaper/libbca/ESP8266Audio/libopus/silk/LP_variable_cutoff.c.o
+Compiling .pio/build/reaper/libbca/ESP8266Audio/libopus/silk/NLSF2A.c.o
+Compiling .pio/build/reaper/libbca/ESP8266Audio/libopus/silk/NLSF_VQ.c.o
+Compiling .pio/build/reaper/libbca/ESP8266Audio/libopus/silk/NLSF_VQ_weights_laroia.c.o
+Compiling .pio/build/reaper/libbca/ESP8266Audio/libopus/silk/NLSF_decode.c.o
+Compiling .pio/build/reaper/libbca/ESP8266Audio/libopus/silk/NLSF_del_dec_quant.c.o
+Compiling .pio/build/reaper/libbca/ESP8266Audio/libopus/silk/NLSF_encode.c.o
+Compiling .pio/build/reaper/libbca/ESP8266Audio/libopus/silk/NLSF_stabilize.c.o
+Compiling .pio/build/reaper/libbca/ESP8266Audio/libopus/silk/NLSF_unpack.c.o
+Compiling .pio/build/reaper/libbca/ESP8266Audio/libopus/silk/PLC.c.o
+Compiling .pio/build/reaper/libbca/ESP8266Audio/libopus/silk/VQ_WMat_EC.c.o
+Compiling .pio/build/reaper/libbca/ESP8266Audio/libopus/silk/ana_filt_bank_1.c.o
+Compiling .pio/build/reaper/libbca/ESP8266Audio/libopus/silk/biquad_alt.c.o
+Compiling .pio/build/reaper/libbca/ESP8266Audio/libopus/silk/bwexpander.c.o
+Compiling .pio/build/reaper/libbca/ESP8266Audio/libopus/silk/bwexpander_32.c.o
+Compiling .pio/build/reaper/libbca/ESP8266Audio/libopus/silk/check_control_input.c.o
+Compiling .pio/build/reaper/libbca/ESP8266Audio/libopus/silk/code_signs.c.o
+Compiling .pio/build/reaper/libbca/ESP8266Audio/libopus/silk/control_SNR.c.o
+Compiling .pio/build/reaper/libbca/ESP8266Audio/libopus/silk/control_audio_bandwidth.c.o
+Compiling .pio/build/reaper/libbca/ESP8266Audio/libopus/silk/control_codec.c.o
+Compiling .pio/build/reaper/libbca/ESP8266Audio/libopus/silk/debug.c.o
+Compiling .pio/build/reaper/libbca/ESP8266Audio/libopus/silk/dec_API.c.o
+Compiling .pio/build/reaper/libbca/ESP8266Audio/libopus/silk/decode_core.c.o
+Compiling .pio/build/reaper/libbca/ESP8266Audio/libopus/silk/decode_frame.c.o
+Compiling .pio/build/reaper/libbca/ESP8266Audio/libopus/silk/decode_indices.c.o
+Compiling .pio/build/reaper/libbca/ESP8266Audio/libopus/silk/decode_parameters.c.o
+Compiling .pio/build/reaper/libbca/ESP8266Audio/libopus/silk/decode_pitch.c.o
+Compiling .pio/build/reaper/libbca/ESP8266Audio/libopus/silk/decode_pulses.c.o
+Compiling .pio/build/reaper/libbca/ESP8266Audio/libopus/silk/decoder_set_fs.c.o
+Compiling .pio/build/reaper/libbca/ESP8266Audio/libopus/silk/encode_indices.c.o
+Compiling .pio/build/reaper/libbca/ESP8266Audio/libopus/silk/encode_pulses.c.o
+Compiling .pio/build/reaper/libbca/ESP8266Audio/libopus/silk/fixed/LTP_analysis_filter_FIX.c.o
+Compiling .pio/build/reaper/libbca/ESP8266Audio/libopus/silk/fixed/LTP_scale_ctrl_FIX.c.o
+Compiling .pio/build/reaper/libbca/ESP8266Audio/libopus/silk/fixed/apply_sine_window_FIX.c.o
+Compiling .pio/build/reaper/libbca/ESP8266Audio/libopus/silk/fixed/autocorr_FIX.c.o
+Compiling .pio/build/reaper/libbca/ESP8266Audio/libopus/silk/fixed/burg_modified_FIX.c.o
+Compiling .pio/build/reaper/libbca/ESP8266Audio/libopus/silk/fixed/corrMatrix_FIX.c.o
+Compiling .pio/build/reaper/libbca/ESP8266Audio/libopus/silk/fixed/find_LPC_FIX.c.o
+Compiling .pio/build/reaper/libbca/ESP8266Audio/libopus/silk/fixed/find_LTP_FIX.c.o
+Compiling .pio/build/reaper/libbca/ESP8266Audio/libopus/silk/fixed/find_pred_coefs_FIX.c.o
+Compiling .pio/build/reaper/libbca/ESP8266Audio/libopus/silk/fixed/k2a_FIX.c.o
+Compiling .pio/build/reaper/libbca/ESP8266Audio/libopus/silk/fixed/k2a_Q16_FIX.c.o
+Compiling .pio/build/reaper/libbca/ESP8266Audio/libopus/silk/fixed/process_gains_FIX.c.o
+Compiling .pio/build/reaper/libbca/ESP8266Audio/libopus/silk/fixed/regularize_correlations_FIX.c.o
+Compiling .pio/build/reaper/libbca/ESP8266Audio/libopus/silk/fixed/residual_energy16_FIX.c.o
+Compiling .pio/build/reaper/libbca/ESP8266Audio/libopus/silk/fixed/residual_energy_FIX.c.o
+Compiling .pio/build/reaper/libbca/ESP8266Audio/libopus/silk/fixed/schur64_FIX.c.o
+Compiling .pio/build/reaper/libbca/ESP8266Audio/libopus/silk/fixed/schur_FIX.c.o
+Compiling .pio/build/reaper/libbca/ESP8266Audio/libopus/silk/fixed/vector_ops_FIX.c.o
+Compiling .pio/build/reaper/libbca/ESP8266Audio/libopus/silk/fixed/warped_autocorrelation_FIX.c.o
+Compiling .pio/build/reaper/libbca/ESP8266Audio/libopus/silk/gain_quant.c.o
+Compiling .pio/build/reaper/libbca/ESP8266Audio/libopus/silk/init_decoder.c.o
+Compiling .pio/build/reaper/libbca/ESP8266Audio/libopus/silk/inner_prod_aligned.c.o
+Compiling .pio/build/reaper/libbca/ESP8266Audio/libopus/silk/interpolate.c.o
+Compiling .pio/build/reaper/libbca/ESP8266Audio/libopus/silk/lin2log.c.o
+Compiling .pio/build/reaper/libbca/ESP8266Audio/libopus/silk/log2lin.c.o
+Compiling .pio/build/reaper/libbca/ESP8266Audio/libopus/silk/pitch_est_tables.c.o
+Compiling .pio/build/reaper/libbca/ESP8266Audio/libopus/silk/process_NLSFs.c.o
+Compiling .pio/build/reaper/libbca/ESP8266Audio/libopus/silk/quant_LTP_gains.c.o
+Compiling .pio/build/reaper/libbca/ESP8266Audio/libopus/silk/resampler.c.o
+Compiling .pio/build/reaper/libbca/ESP8266Audio/libopus/silk/resampler_down2.c.o
+Compiling .pio/build/reaper/libbca/ESP8266Audio/libopus/silk/resampler_down2_3.c.o
+Compiling .pio/build/reaper/libbca/ESP8266Audio/libopus/silk/resampler_private_AR2.c.o
+Compiling .pio/build/reaper/libbca/ESP8266Audio/libopus/silk/resampler_private_IIR_FIR.c.o
+Compiling .pio/build/reaper/libbca/ESP8266Audio/libopus/silk/resampler_private_down_FIR.c.o
+Compiling .pio/build/reaper/libbca/ESP8266Audio/libopus/silk/resampler_private_up2_HQ.c.o
+Compiling .pio/build/reaper/libbca/ESP8266Audio/libopus/silk/resampler_rom.c.o
+Compiling .pio/build/reaper/libbca/ESP8266Audio/libopus/silk/shell_coder.c.o
+Compiling .pio/build/reaper/libbca/ESP8266Audio/libopus/silk/sigm_Q15.c.o
+Compiling .pio/build/reaper/libbca/ESP8266Audio/libopus/silk/sort.c.o
+Compiling .pio/build/reaper/libbca/ESP8266Audio/libopus/silk/stereo_LR_to_MS.c.o
+Compiling .pio/build/reaper/libbca/ESP8266Audio/libopus/silk/stereo_MS_to_LR.c.o
+Compiling .pio/build/reaper/libbca/ESP8266Audio/libopus/silk/stereo_decode_pred.c.o
+Compiling .pio/build/reaper/libbca/ESP8266Audio/libopus/silk/stereo_encode_pred.c.o
+Compiling .pio/build/reaper/libbca/ESP8266Audio/libopus/silk/stereo_find_predictor.c.o
+Compiling .pio/build/reaper/libbca/ESP8266Audio/libopus/silk/stereo_quant_pred.c.o
+Compiling .pio/build/reaper/libbca/ESP8266Audio/libopus/silk/sum_sqr_shift.c.o
+Compiling .pio/build/reaper/libbca/ESP8266Audio/libopus/silk/table_LSF_cos.c.o
+Compiling .pio/build/reaper/libbca/ESP8266Audio/libopus/silk/tables_LTP.c.o
+Compiling .pio/build/reaper/libbca/ESP8266Audio/libopus/silk/tables_NLSF_CB_NB_MB.c.o
+Compiling .pio/build/reaper/libbca/ESP8266Audio/libopus/silk/tables_NLSF_CB_WB.c.o
+Compiling .pio/build/reaper/libbca/ESP8266Audio/libopus/silk/tables_gain.c.o
+Compiling .pio/build/reaper/libbca/ESP8266Audio/libopus/silk/tables_other.c.o
+Compiling .pio/build/reaper/libbca/ESP8266Audio/libopus/silk/tables_pitch_lag.c.o
+Compiling .pio/build/reaper/libbca/ESP8266Audio/libopus/silk/tables_pulses_per_block.c.o
+Compiling .pio/build/reaper/libbca/ESP8266Audio/libopus/src/opus.c.o
+Compiling .pio/build/reaper/libbca/ESP8266Audio/libopus/src/opus_decoder.c.o
+Compiling .pio/build/reaper/lib045/ESP8266SAM/ESP8266SAM.cpp.o
+Compiling .pio/build/reaper/lib045/ESP8266SAM/esp8266sam_debug.c.o
+Compiling .pio/build/reaper/lib045/ESP8266SAM/reciter.c.o
+Compiling .pio/build/reaper/lib045/ESP8266SAM/render.c.o
+Compiling .pio/build/reaper/lib045/ESP8266SAM/sam.c.o
+Compiling .pio/build/reaper/lib61e/TinyGPSPlus/TinyGPS++.cpp.o
+Compiling .pio/build/reaper/lib9e6/FFT/fft.cpp.o
+Compiling .pio/build/reaper/lib630/RF24/RF24.cpp.o
+Compiling .pio/build/reaper/libcaf/Adafruit Si4713 Library/Adafruit_Si4713.cpp.o
+Compiling .pio/build/reaper/libf52/JPEGDecoder/JPEGDecoder.cpp.o
+Compiling .pio/build/reaper/libf52/JPEGDecoder/picojpeg.c.o
+Compiling .pio/build/reaper/lib4ad/SmartRC-CC1101-Driver-Lib/ELECHOUSE_CC1101_SRC_DRV.cpp.o
+Compiling .pio/build/reaper/lib334/mquickjs/cutils.c.o
+Compiling .pio/build/reaper/lib334/mquickjs/dtoa.c.o
+Compiling .pio/build/reaper/lib334/mquickjs/libm.c.o
+Compiling .pio/build/reaper/lib334/mquickjs/mquickjs.c.o
+.pio/libdeps/reaper/mquickjs/mquickjs.c: In function 'js_vprintf':
+.pio/libdeps/reaper/mquickjs/mquickjs.c:746:21: warning: assignment discards 'const' qualifier from pointer target type [-Wdiscarded-qualifiers]
+  746 |                 buf = "null";
+      |                     ^
+.pio/libdeps/reaper/mquickjs/mquickjs.c:790:29: warning: assignment discards 'const' qualifier from pointer target type [-Wdiscarded-qualifiers]
+  790 |                         buf = "null";
+      |                             ^
+.pio/libdeps/reaper/mquickjs/mquickjs.c:793:29: warning: assignment discards 'const' qualifier from pointer target type [-Wdiscarded-qualifiers]
+  793 |                         buf = "undefined";
+      |                             ^
+.pio/libdeps/reaper/mquickjs/mquickjs.c:796:29: warning: assignment discards 'const' qualifier from pointer target type [-Wdiscarded-qualifiers]
+  796 |                         buf = "uninitialized";
+      |                             ^
+.pio/libdeps/reaper/mquickjs/mquickjs.c:799:29: warning: assignment discards 'const' qualifier from pointer target type [-Wdiscarded-qualifiers]
+  799 |                         buf = JS_VALUE_GET_SPECIAL_VALUE(val) ? "true" : "false";
+      |                             ^
+.pio/libdeps/reaper/mquickjs/mquickjs.c:805:29: warning: assignment discards 'const' qualifier from pointer target type [-Wdiscarded-qualifiers]
+  805 |                         buf = "[tag]";
+      |                             ^
+.pio/libdeps/reaper/mquickjs/mquickjs.c:820:29: warning: assignment discards 'const' qualifier from pointer target type [-Wdiscarded-qualifiers]
+  820 |                         buf = "[mtag]";
+      |                             ^
+Compiling .pio/build/reaper/libee5/OneWire/OneWire.cpp.o
+.pio/libdeps/reaper/OneWire/OneWire.cpp:599:22: warning: extra tokens at end of #undef directive
+  599 | #  undef noInterrupts() {portMUX_TYPE mux = portMUX_INITIALIZER_UNLOCKED;portENTER_CRITICAL(&mux)
+      |                      ^
+.pio/libdeps/reaper/OneWire/OneWire.cpp:600:20: warning: extra tokens at end of #undef directive
+  600 | #  undef interrupts() portEXIT_CRITICAL(&mux);}
+      |                    ^
+Compiling .pio/build/reaper/lib3c8/ESP32-PSRamFS/PSRamFS.cpp.o
+Compiling .pio/build/reaper/lib3c8/ESP32-PSRamFS/pfs.c.o
+.pio/libdeps/reaper/ESP32-PSRamFS/src/pfs.c:36:4: warning: #warning "Will use PSRAM or heap" [-Wcpp]
+   36 |   #warning "Will use PSRAM or heap"
+      |    ^~~~~~~
+Compiling .pio/build/reaper/libeb0/AnimatedGIF/AnimatedGIF.cpp.o
+Compiling .pio/build/reaper/libeb0/AnimatedGIF/p4_transparent.S.o
+Compiling .pio/build/reaper/libeb0/AnimatedGIF/s3_transparent.S.o
+Compiling .pio/build/reaper/lib92c/Hash/PBKDF2_HMACBuilder.cpp.o
+Compiling .pio/build/reaper/lib92c/Hash/SHA1Builder.cpp.o
+Compiling .pio/build/reaper/lib92c/Hash/SHA2Builder.cpp.o
+Compiling .pio/build/reaper/lib92c/Hash/SHA3Builder.cpp.o
+Compiling .pio/build/reaper/libcca/AsyncTCP/AsyncTCP.cpp.o
+Compiling .pio/build/reaper/lib989/WiFi/AP.cpp.o
+Compiling .pio/build/reaper/lib989/WiFi/STA.cpp.o
+Compiling .pio/build/reaper/lib989/WiFi/WiFi.cpp.o
+Compiling .pio/build/reaper/lib989/WiFi/WiFiAP.cpp.o
+Compiling .pio/build/reaper/lib989/WiFi/WiFiGeneric.cpp.o
+Compiling .pio/build/reaper/lib989/WiFi/WiFiMulti.cpp.o
+Compiling .pio/build/reaper/lib989/WiFi/WiFiSTA.cpp.o
+Compiling .pio/build/reaper/lib989/WiFi/WiFiScan.cpp.o
+Compiling .pio/build/reaper/libf1f/ESPAsyncWebServer/AsyncEventSource.cpp.o
+Compiling .pio/build/reaper/libf1f/ESPAsyncWebServer/AsyncJson.cpp.o
+Compiling .pio/build/reaper/libf1f/ESPAsyncWebServer/AsyncWebHeader.cpp.o
+Compiling .pio/build/reaper/libf1f/ESPAsyncWebServer/AsyncWebServerRequest.cpp.o
+Compiling .pio/build/reaper/libf1f/ESPAsyncWebServer/AsyncWebSocket.cpp.o
+Compiling .pio/build/reaper/libf1f/ESPAsyncWebServer/BackPort_SHA1Builder.cpp.o
+Compiling .pio/build/reaper/libf1f/ESPAsyncWebServer/ChunkPrint.cpp.o
+Compiling .pio/build/reaper/libf1f/ESPAsyncWebServer/Middleware.cpp.o
+Compiling .pio/build/reaper/libf1f/ESPAsyncWebServer/WebAuthentication.cpp.o
+Compiling .pio/build/reaper/libf1f/ESPAsyncWebServer/WebHandlers.cpp.o
+Compiling .pio/build/reaper/libf1f/ESPAsyncWebServer/WebRequest.cpp.o
+Compiling .pio/build/reaper/libf1f/ESPAsyncWebServer/WebResponses.cpp.o
+Compiling .pio/build/reaper/libf1f/ESPAsyncWebServer/WebServer.cpp.o
+Compiling .pio/build/reaper/lib4b6/Update/HttpsOTAUpdate.cpp.o
+Compiling .pio/build/reaper/lib4b6/Update/Updater.cpp.o
+Compiling .pio/build/reaper/lib4b6/Update/Updater_Signing.cpp.o
+Compiling .pio/build/reaper/lib4b6/ESPmDNS/ESPmDNS.cpp.o
+Compiling .pio/build/reaper/lib134/ArduinoOTA/ArduinoOTA.cpp.o
+Compiling .pio/build/reaper/libfb3/FastLED/fl/build/extras+.cpp.o
+Compiling .pio/build/reaper/libfb3/FastLED/fl/build/fl.asset+.cpp.o
+Compiling .pio/build/reaper/libfb3/FastLED/fl/build/fl.audio+.cpp.o
+Compiling .pio/build/reaper/libfb3/FastLED/fl/build/fl.channels+.cpp.o
+Compiling .pio/build/reaper/libfb3/FastLED/fl/build/fl.chipsets+.cpp.o
+Compiling .pio/build/reaper/libfb3/FastLED/fl/build/fl.codec+.cpp.o
+Compiling .pio/build/reaper/libfb3/FastLED/fl/build/fl.control+.cpp.o
+Compiling .pio/build/reaper/libfb3/FastLED/fl/build/fl.fled+.cpp.o
+In file included from /home/runner/.platformio/packages/framework-arduinoespressif32/cores/esp32/Arduino.h:43,
+                 from .pio/libdeps/reaper/FastLED/src/fl/system/arduino.h:7,
+                 from .pio/libdeps/reaper/FastLED/src/fl/build/fl.audio+.cpp:7:
+.pio/libdeps/reaper/FastLED/src/fl/audio/fft/fft_impl.cpp.hpp: In static member function 'static void fl::audio::fft::Context::computeWindow(fl::vector<fl::alpha16>&, int, fl::audio::fft::Window)':
+boards/reaper/pins_arduino.h:72:12: error: expected nested-name-specifier before numeric constant
+   72 | #define FP 1
+      |            ^
+.pio/libdeps/reaper/FastLED/src/fl/audio/fft/fft_impl.cpp.hpp:502:15: note: in expansion of macro 'FP'
+  502 |         using FP = fl::fixed_point<16, 16>;
+      |               ^~
+boards/reaper/pins_arduino.h:72:12: error: expected unqualified-id before numeric constant
+   72 | #define FP 1
+      |            ^
+.pio/libdeps/reaper/FastLED/src/fl/audio/fft/fft_impl.cpp.hpp:513:15: note: in expansion of macro 'FP'
+  513 |         const FP two_pi(6.2831853f);   // 2π
+      |               ^~
+boards/reaper/pins_arduino.h:72:12: error: expected unqualified-id before numeric constant
+   72 | #define FP 1
+      |            ^
+.pio/libdeps/reaper/FastLED/src/fl/audio/fft/fft_impl.cpp.hpp:514:15: note: in expansion of macro 'FP'
+  514 |         const FP invNm1 = FP(1) / FP(N - 1);
+      |               ^~
+boards/reaper/pins_arduino.h:72:12: error: expected unqualified-id before numeric constant
+   72 | #define FP 1
+      |            ^
+.pio/libdeps/reaper/FastLED/src/fl/audio/fft/fft_impl.cpp.hpp:515:15: note: in expansion of macro 'FP'
+  515 |         const FP phase_step = two_pi * invNm1;
+      |               ^~
+boards/reaper/pins_arduino.h:72:12: error: expected unqualified-id before numeric constant
+   72 | #define FP 1
+      |            ^
+.pio/libdeps/reaper/FastLED/src/fl/audio/fft/fft_impl.cpp.hpp:518:19: note: in expansion of macro 'FP'
+  518 |         constexpr FP bh_a0(0.35875f);
+      |                   ^~
+boards/reaper/pins_arduino.h:72:12: error: expected unqualified-id before numeric constant
+   72 | #define FP 1
+      |            ^
+.pio/libdeps/reaper/FastLED/src/fl/audio/fft/fft_impl.cpp.hpp:519:19: note: in expansion of macro 'FP'
+  519 |         constexpr FP bh_a1(0.48829f);
+      |                   ^~
+boards/reaper/pins_arduino.h:72:12: error: expected unqualified-id before numeric constant
+   72 | #define FP 1
+      |            ^
+.pio/libdeps/reaper/FastLED/src/fl/audio/fft/fft_impl.cpp.hpp:520:19: note: in expansion of macro 'FP'
+  520 |         constexpr FP bh_a2(0.14128f);
+      |                   ^~
+boards/reaper/pins_arduino.h:72:12: error: expected unqualified-id before numeric constant
+   72 | #define FP 1
+      |            ^
+.pio/libdeps/reaper/FastLED/src/fl/audio/fft/fft_impl.cpp.hpp:521:19: note: in expansion of macro 'FP'
+  521 |         constexpr FP bh_a3(0.01168f);
+      |                   ^~
+boards/reaper/pins_arduino.h:72:12: error: expected unqualified-id before numeric constant
+   72 | #define FP 1
+      |            ^
+.pio/libdeps/reaper/FastLED/src/fl/audio/fft/fft_impl.cpp.hpp:523:19: note: in expansion of macro 'FP'
+  523 |         constexpr FP half(0.5f);
+      |                   ^~
+boards/reaper/pins_arduino.h:72:12: error: expected unqualified-id before numeric constant
+   72 | #define FP 1
+      |            ^
+.pio/libdeps/reaper/FastLED/src/fl/audio/fft/fft_impl.cpp.hpp:524:19: note: in expansion of macro 'FP'
+  524 |         constexpr FP one(1.0f);
+      |                   ^~
+In file included from .pio/libdeps/reaper/FastLED/src/fl/audio/fft/_build.cpp.hpp:6,
+                 from .pio/libdeps/reaper/FastLED/src/fl/audio/_build.cpp.hpp:22,
+                 from .pio/libdeps/reaper/FastLED/src/fl/build/fl.audio+.cpp:10:
+.pio/libdeps/reaper/FastLED/src/fl/audio/fft/fft_impl.cpp.hpp:526:12: error: expected ';' before 'phase'
+  526 |         FP phase(0.0f);
+      |            ^~~~~
+.pio/libdeps/reaper/FastLED/src/fl/audio/fft/fft_impl.cpp.hpp:528:16: error: expected ';' before 'w'
+  528 |             FP w;
+      |                ^
+.pio/libdeps/reaper/FastLED/src/fl/audio/fft/fft_impl.cpp.hpp:532:20: error: expected ';' before 'phase2'
+  532 |                 FP phase2 = phase + phase;
+      |                    ^~~~~~
+.pio/libdeps/reaper/FastLED/src/fl/audio/fft/fft_impl.cpp.hpp:533:20: error: expected ';' before 'phase3'
+  533 |                 FP phase3 = phase2 + phase;
+      |                    ^~~~~~
+.pio/libdeps/reaper/FastLED/src/fl/audio/fft/fft_impl.cpp.hpp:534:17: error: 'w' was not declared in this scope; did you mean 'hw'?
+  534 |                 w = bh_a0 - bh_a1 * FP::cos(phase)
+      |                 ^
+      |                 hw
+.pio/libdeps/reaper/FastLED/src/fl/audio/fft/fft_impl.cpp.hpp:534:21: error: 'bh_a0' was not declared in this scope
+  534 |                 w = bh_a0 - bh_a1 * FP::cos(phase)
+      |                     ^~~~~
+.pio/libdeps/reaper/FastLED/src/fl/audio/fft/fft_impl.cpp.hpp:534:29: error: 'bh_a1' was not declared in this scope
+  534 |                 w = bh_a0 - bh_a1 * FP::cos(phase)
+      |                             ^~~~~
+.pio/libdeps/reaper/FastLED/src/fl/audio/fft/fft_impl.cpp.hpp:541:17: error: 'w' was not declared in this scope; did you mean 'hw'?
+  541 |                 w = half * (one - FP::cos(phase));
+      |                 ^
+      |                 hw
+.pio/libdeps/reaper/FastLED/src/fl/audio/fft/fft_impl.cpp.hpp:541:21: error: 'half' was not declared in this scope
+  541 |                 w = half * (one - FP::cos(phase));
+      |                     ^~~~
+.pio/libdeps/reaper/FastLED/src/fl/audio/fft/fft_impl.cpp.hpp:541:29: error: 'one' was not declared in this scope; did you mean 'tone'?
+  541 |                 w = half * (one - FP::cos(phase));
+      |                             ^~~
+      |                             tone
+.pio/libdeps/reaper/FastLED/src/fl/audio/fft/fft_impl.cpp.hpp:541:37: error: expected ')' before '::' token
+  541 |                 w = half * (one - FP::cos(phase));
+      |                                     ^~
+.pio/libdeps/reaper/FastLED/src/fl/audio/fft/fft_impl.cpp.hpp:541:28: note: to match this '('
+  541 |                 w = half * (one - FP::cos(phase));
+      |                            ^
+.pio/libdeps/reaper/FastLED/src/fl/audio/fft/fft_impl.cpp.hpp:544:23: error: 'w' was not declared in this scope; did you mean 'hw'?
+  544 |             i32 raw = w.raw();
+      |                       ^
+      |                       hw
+.pio/libdeps/reaper/FastLED/src/fl/audio/fft/fft_impl.cpp.hpp:548:13: error: 'phase' was not declared in this scope
+  548 |             phase = phase + phase_step;
+      |             ^~~~~
+.pio/libdeps/reaper/FastLED/src/fl/audio/fft/fft_impl.cpp.hpp:548:29: error: 'phase_step' was not declared in this scope
+  548 |             phase = phase + phase_step;
+      |                             ^~~~~~~~~~
+In file included from /home/runner/.platformio/packages/framework-arduinoespressif32/cores/esp32/Arduino.h:43,
+                 from .pio/libdeps/reaper/FastLED/src/fl/system/arduino.h:7,
+                 from .pio/libdeps/reaper/FastLED/src/fl/build/fl.control+.cpp:7:
+boards/reaper/pins_arduino.h:72:12: error: expected nested-name-specifier before numeric constant
+   72 | #define FP 1
+      |            ^
+.pio/libdeps/reaper/FastLED/src/fl/stl/json.h:255:20: note: in expansion of macro 'FP'
+  255 | template <typename FP>
+      |                    ^~
+boards/reaper/pins_arduino.h:72:12: error: expected '>' before numeric constant
+   72 | #define FP 1
+      |            ^
+.pio/libdeps/reaper/FastLED/src/fl/stl/json.h:255:20: note: in expansion of macro 'FP'
+  255 | template <typename FP>
+      |                    ^~
+In file included from .pio/libdeps/reaper/FastLED/src/fl/remote/remote.h:3,
+                 from .pio/libdeps/reaper/FastLED/src/fl/fx/wled.h:3,
+                 from .pio/libdeps/reaper/FastLED/src/fl/control/wled.cpp.hpp:2,
+                 from .pio/libdeps/reaper/FastLED/src/fl/control/_build.cpp.hpp:5,
+                 from .pio/libdeps/reaper/FastLED/src/fl/build/fl.control+.cpp:10:
+.pio/libdeps/reaper/FastLED/src/fl/stl/json.h:256:31: error: expected ')' before 'value'
+  256 | float fixed_point_to_float(FP value) FL_NO_EXCEPT {
+      |                           ~   ^~~~~
+.pio/libdeps/reaper/FastLED/src/fl/stl/json.h:256:37: error: expected ';' before 'noexcept'
+  256 | float fixed_point_to_float(FP value) FL_NO_EXCEPT {
+      |                                     ^
+      |                                     ;
+boards/reaper/pins_arduino.h:72:12: error: expected nested-name-specifier before numeric constant
+   72 | #define FP 1
+      |            ^
+.pio/libdeps/reaper/FastLED/src/fl/stl/json.h:276:24: note: in expansion of macro 'FP'
+  276 |     template <typename FP, typename fl::enable_if<detail::is_fl_fixed_point<FP>::value, int>::type = 0>
+      |                        ^~
+boards/reaper/pins_arduino.h:72:12: error: expected '>' before numeric constant
+   72 | #define FP 1
+      |            ^
+.pio/libdeps/reaper/FastLED/src/fl/stl/json.h:276:24: note: in expansion of macro 'FP'
+  276 |     template <typename FP, typename fl::enable_if<detail::is_fl_fixed_point<FP>::value, int>::type = 0>
+      |                        ^~
+boards/reaper/pins_arduino.h:72:12: error: expected unqualified-id before numeric constant
+   72 | #define FP 1
+      |            ^
+.pio/libdeps/reaper/FastLED/src/fl/stl/json.h:277:10: note: in expansion of macro 'FP'
+  277 |     json(FP v) FL_NO_EXCEPT : mValue(fl::make_shared<json_value>(detail::fixed_point_to_float(v))) {}
+      |          ^~
+.pio/libdeps/reaper/FastLED/src/fl/stl/json.h:277:10: error: expected ')' before numeric constant
+  277 |     json(FP v) FL_NO_EXCEPT : mValue(fl::make_shared<json_value>(detail::fixed_point_to_float(v))) {}
+      |         ~^
+      |          )
+boards/reaper/pins_arduino.h:72:12: error: expected nested-name-specifier before numeric constant
+   72 | #define FP 1
+      |            ^
+.pio/libdeps/reaper/FastLED/src/fl/stl/json.h:353:24: note: in expansion of macro 'FP'
+  353 |     template <typename FP, typename fl::enable_if<detail::is_fl_fixed_point<FP>::value, int>::type = 0>
+      |                        ^~
+boards/reaper/pins_arduino.h:72:12: error: expected '>' before numeric constant
+   72 | #define FP 1
+      |            ^
+.pio/libdeps/reaper/FastLED/src/fl/stl/json.h:353:24: note: in expansion of macro 'FP'
+  353 |     template <typename FP, typename fl::enable_if<detail::is_fl_fixed_point<FP>::value, int>::type = 0>
+      |                        ^~
+boards/reaper/pins_arduino.h:72:12: error: expected identifier before numeric constant
+   72 | #define FP 1
+      |            ^
+.pio/libdeps/reaper/FastLED/src/fl/stl/json.h:354:21: note: in expansion of macro 'FP'
+  354 |     json& operator=(FP v) FL_NO_EXCEPT {
+      |                     ^~
+boards/reaper/pins_arduino.h:72:12: error: expected ',' or '...' before numeric constant
+   72 | #define FP 1
+      |            ^
+.pio/libdeps/reaper/FastLED/src/fl/stl/json.h:354:21: note: in expansion of macro 'FP'
+  354 |     json& operator=(FP v) FL_NO_EXCEPT {
+      |                     ^~
+boards/reaper/pins_arduino.h:72:12: error: expected nested-name-specifier before numeric constant
+   72 | #define FP 1
+      |            ^
+.pio/libdeps/reaper/FastLED/src/fl/stl/json.h:427:24: note: in expansion of macro 'FP'
+  427 |     template <typename FP>
+      |                        ^~
+boards/reaper/pins_arduino.h:72:12: error: expected '>' before numeric constant
+   72 | #define FP 1
+      |            ^
+.pio/libdeps/reaper/FastLED/src/fl/stl/json.h:427:24: note: in expansion of macro 'FP'
+  427 |     template <typename FP>
+      |                        ^~
+.pio/libdeps/reaper/FastLED/src/fl/stl/json.h:428:56: error: type/value mismatch at argument 1 in template parameter list for 'template<class T, class> struct fl::detail::is_fl_fixed_point'
+  428 |     typename fl::enable_if<detail::is_fl_fixed_point<FP>::value, fl::optional<FP>>::type
+      |                                                        ^
+.pio/libdeps/reaper/FastLED/src/fl/stl/json.h:428:56: note:   expected a type, got '1'
+boards/reaper/pins_arduino.h:72:12: error: type/value mismatch at argument 1 in template parameter list for 'template<class T> using fl::optional = fl::Optional<T>'
+   72 | #define FP 1
+      |            ^
+.pio/libdeps/reaper/FastLED/src/fl/stl/json.h:428:79: note: in expansion of macro 'FP'
+  428 |     typename fl::enable_if<detail::is_fl_fixed_point<FP>::value, fl::optional<FP>>::type
+      |                                                                               ^~
+boards/reaper/pins_arduino.h:72:12: note:   expected a type, got '1'
+   72 | #define FP 1
+      |            ^
+.pio/libdeps/reaper/FastLED/src/fl/stl/json.h:428:79: note: in expansion of macro 'FP'
+  428 |     typename fl::enable_if<detail::is_fl_fixed_point<FP>::value, fl::optional<FP>>::type
+      |                                                                               ^~
+.pio/libdeps/reaper/FastLED/src/fl/stl/json.h:428:81: error: template argument 1 is invalid
+  428 |     typename fl::enable_if<detail::is_fl_fixed_point<FP>::value, fl::optional<FP>>::type
+      |                                                                                 ^~
+.pio/libdeps/reaper/FastLED/src/fl/stl/json.h:428:81: error: template argument 2 is invalid
+.pio/libdeps/reaper/FastLED/src/fl/stl/json.h:428:83: error: '<declaration error>' is not a template [-fpermissive]
+  428 |     typename fl::enable_if<detail::is_fl_fixed_point<FP>::value, fl::optional<FP>>::type
+      |                                                                                   ^~
+boards/reaper/pins_arduino.h:72:12: error: expected nested-name-specifier before numeric constant
+   72 | #define FP 1
+      |            ^
+.pio/libdeps/reaper/FastLED/src/fl/stl/json.h:903:24: note: in expansion of macro 'FP'
+  903 |     template <typename FP, typename fl::enable_if<detail::is_fl_fixed_point<FP>::value, int>::type = 0>
+      |                        ^~
+boards/reaper/pins_arduino.h:72:12: error: expected '>' before numeric constant
+   72 | #define FP 1
+      |            ^
+.pio/libdeps/reaper/FastLED/src/fl/stl/json.h:903:24: note: in expansion of macro 'FP'
+  903 |     template <typename FP, typename fl::enable_if<detail::is_fl_fixed_point<FP>::value, int>::type = 0>
+      |                        ^~
+boards/reaper/pins_arduino.h:72:12: error: expected identifier before numeric constant
+   72 | #define FP 1
+      |            ^
+.pio/libdeps/reaper/FastLED/src/fl/stl/json.h:904:37: note: in expansion of macro 'FP'
+  904 |     void set(const fl::string& key, FP value) FL_NO_EXCEPT { set(key, json(value)); }
+      |                                     ^~
+boards/reaper/pins_arduino.h:72:12: error: expected ',' or '...' before numeric constant
+   72 | #define FP 1
+      |            ^
+.pio/libdeps/reaper/FastLED/src/fl/stl/json.h:904:37: note: in expansion of macro 'FP'
+  904 |     void set(const fl::string& key, FP value) FL_NO_EXCEPT { set(key, json(value)); }
+      |                                     ^~
+.pio/libdeps/reaper/FastLED/src/fl/stl/json.h: In member function 'fl::json& fl::json::operator=(int)':
+.pio/libdeps/reaper/FastLED/src/fl/stl/json.h:355:74: error: missing template arguments before '(' token
+  355 |         mValue = fl::make_shared<json_value>(detail::fixed_point_to_float(v));
+      |                                                                          ^
+.pio/libdeps/reaper/FastLED/src/fl/stl/json.h:355:75: error: 'v' was not declared in this scope
+  355 |         mValue = fl::make_shared<json_value>(detail::fixed_point_to_float(v));
+      |                                                                           ^
+.pio/libdeps/reaper/FastLED/src/fl/stl/json.h: In member function 'int fl::json::as_fixed_point() const':
+.pio/libdeps/reaper/FastLED/src/fl/stl/json.h:430:33: error: cannot convert 'const fl::nullopt_t' to 'int' in return
+  430 |         if (!mValue) return fl::nullopt;
+      |                             ~~~~^~~~~~~
+      |                                 |
+      |                                 const fl::nullopt_t
+.pio/libdeps/reaper/FastLED/src/fl/stl/json.h:432:22: error: expected ';' before '::' token
+  432 |             return FP::from_raw(static_cast<decltype(FP().raw())>(*raw));
+      |                      ^~
+.pio/libdeps/reaper/FastLED/src/fl/stl/json.h:432:24: error: '::from_raw' has not been declared; did you mean 'from_char'?
+  432 |             return FP::from_raw(static_cast<decltype(FP().raw())>(*raw));
+      |                        ^~~~~~~~
+      |                        from_char
+.pio/libdeps/reaper/FastLED/src/fl/stl/json.h:432:56: error: expression cannot be used as a function
+  432 |             return FP::from_raw(static_cast<decltype(FP().raw())>(*raw));
+.pio/libdeps/reaper/FastLED/src/fl/stl/json.h:432:56: error: expression cannot be used as a function
+.pio/libdeps/reaper/FastLED/src/fl/stl/json.h:437:46: error: expected ')' before '::' token
+  437 |                     fl::bit_cast<u32>(*f), FP::FRAC_BITS, &raw)) {
+      |                                              ^~
+.pio/libdeps/reaper/FastLED/src/fl/stl/json.h:436:53: note: to match this '('
+  436 |             if (!detail::fixed_raw_from_ieee754_bits(
+      |                                                     ^
+.pio/libdeps/reaper/FastLED/src/fl/stl/json.h:438:28: error: cannot convert 'const fl::nullopt_t' to 'int' in return
+  438 |                 return fl::nullopt;
+      |                        ~~~~^~~~~~~
+      |                            |
+      |                            const fl::nullopt_t
+.pio/libdeps/reaper/FastLED/src/fl/stl/json.h:440:22: error: expected ';' before '::' token
+  440 |             return FP::from_raw(static_cast<decltype(FP().raw())>(raw));
+      |                      ^~
+.pio/libdeps/reaper/FastLED/src/fl/stl/json.h:440:24: error: '::from_raw' has not been declared; did you mean 'from_char'?
+  440 |             return FP::from_raw(static_cast<decltype(FP().raw())>(raw));
+      |                        ^~~~~~~~
+      |                        from_char
+.pio/libdeps/reaper/FastLED/src/fl/stl/json.h:440:56: error: expression cannot be used as a function
+  440 |             return FP::from_raw(static_cast<decltype(FP().raw())>(raw));
+.pio/libdeps/reaper/FastLED/src/fl/stl/json.h:440:56: error: expression cannot be used as a function
+.pio/libdeps/reaper/FastLED/src/fl/stl/json.h:442:20: error: cannot convert 'const fl::nullopt_t' to 'int' in return
+  442 |         return fl::nullopt;
+      |                ~~~~^~~~~~~
+      |                    |
+      |                    const fl::nullopt_t
+In file included from /home/runner/.platformio/packages/framework-arduinoespressif32/cores/esp32/Arduino.h:43,
+                 from .pio/libdeps/reaper/FastLED/src/fl/system/arduino.h:7,
+                 from .pio/libdeps/reaper/FastLED/src/fl/build/fl.fled+.cpp:7:
+boards/reaper/pins_arduino.h:72:12: error: expected nested-name-specifier before numeric constant
+   72 | #define FP 1
+      |            ^
+.pio/libdeps/reaper/FastLED/src/fl/stl/json.h:255:20: note: in expansion of macro 'FP'
+  255 | template <typename FP>
+      |                    ^~
+boards/reaper/pins_arduino.h:72:12: error: expected '>' before numeric constant
+   72 | #define FP 1
+      |            ^
+.pio/libdeps/reaper/FastLED/src/fl/stl/json.h:255:20: note: in expansion of macro 'FP'
+  255 | template <typename FP>
+      |                    ^~
+In file included from .pio/libdeps/reaper/FastLED/src/fl/fled/color.cpp.hpp:8,
+                 from .pio/libdeps/reaper/FastLED/src/fl/fled/_build.cpp.hpp:6,
+                 from .pio/libdeps/reaper/FastLED/src/fl/build/fl.fled+.cpp:10:
+.pio/libdeps/reaper/FastLED/src/fl/stl/json.h:256:31: error: expected ')' before 'value'
+  256 | float fixed_point_to_float(FP value) FL_NO_EXCEPT {
+      |                           ~   ^~~~~
+.pio/libdeps/reaper/FastLED/src/fl/stl/json.h:256:37: error: expected ';' before 'noexcept'
+  256 | float fixed_point_to_float(FP value) FL_NO_EXCEPT {
+      |                                     ^
+      |                                     ;
+boards/reaper/pins_arduino.h:72:12: error: expected nested-name-specifier before numeric constant
+   72 | #define FP 1
+      |            ^
+.pio/libdeps/reaper/FastLED/src/fl/stl/json.h:276:24: note: in expansion of macro 'FP'
+  276 |     template <typename FP, typename fl::enable_if<detail::is_fl_fixed_point<FP>::value, int>::type = 0>
+      |                        ^~
+boards/reaper/pins_arduino.h:72:12: error: expected '>' before numeric constant
+   72 | #define FP 1
+      |            ^
+.pio/libdeps/reaper/FastLED/src/fl/stl/json.h:276:24: note: in expansion of macro 'FP'
+  276 |     template <typename FP, typename fl::enable_if<detail::is_fl_fixed_point<FP>::value, int>::type = 0>
+      |                        ^~
+boards/reaper/pins_arduino.h:72:12: error: expected unqualified-id before numeric constant
+   72 | #define FP 1
+      |            ^
+.pio/libdeps/reaper/FastLED/src/fl/stl/json.h:277:10: note: in expansion of macro 'FP'
+  277 |     json(FP v) FL_NO_EXCEPT : mValue(fl::make_shared<json_value>(detail::fixed_point_to_float(v))) {}
+      |          ^~
+.pio/libdeps/reaper/FastLED/src/fl/stl/json.h:277:10: error: expected ')' before numeric constant
+  277 |     json(FP v) FL_NO_EXCEPT : mValue(fl::make_shared<json_value>(detail::fixed_point_to_float(v))) {}
+      |         ~^
+      |          )
+boards/reaper/pins_arduino.h:72:12: error: expected nested-name-specifier before numeric constant
+   72 | #define FP 1
+      |            ^
+.pio/libdeps/reaper/FastLED/src/fl/stl/json.h:353:24: note: in expansion of macro 'FP'
+  353 |     template <typename FP, typename fl::enable_if<detail::is_fl_fixed_point<FP>::value, int>::type = 0>
+      |                        ^~
+boards/reaper/pins_arduino.h:72:12: error: expected '>' before numeric constant
+   72 | #define FP 1
+      |            ^
+.pio/libdeps/reaper/FastLED/src/fl/stl/json.h:353:24: note: in expansion of macro 'FP'
+  353 |     template <typename FP, typename fl::enable_if<detail::is_fl_fixed_point<FP>::value, int>::type = 0>
+      |                        ^~
+boards/reaper/pins_arduino.h:72:12: error: expected identifier before numeric constant
+   72 | #define FP 1
+      |            ^
+.pio/libdeps/reaper/FastLED/src/fl/stl/json.h:354:21: note: in expansion of macro 'FP'
+  354 |     json& operator=(FP v) FL_NO_EXCEPT {
+      |                     ^~
+boards/reaper/pins_arduino.h:72:12: error: expected ',' or '...' before numeric constant
+   72 | #define FP 1
+      |            ^
+.pio/libdeps/reaper/FastLED/src/fl/stl/json.h:354:21: note: in expansion of macro 'FP'
+  354 |     json& operator=(FP v) FL_NO_EXCEPT {
+      |                     ^~
+boards/reaper/pins_arduino.h:72:12: error: expected nested-name-specifier before numeric constant
+   72 | #define FP 1
+      |            ^
+.pio/libdeps/reaper/FastLED/src/fl/stl/json.h:427:24: note: in expansion of macro 'FP'
+  427 |     template <typename FP>
+      |                        ^~
+boards/reaper/pins_arduino.h:72:12: error: expected '>' before numeric constant
+   72 | #define FP 1
+      |            ^
+.pio/libdeps/reaper/FastLED/src/fl/stl/json.h:427:24: note: in expansion of macro 'FP'
+  427 |     template <typename FP>
+      |                        ^~
+.pio/libdeps/reaper/FastLED/src/fl/stl/json.h:428:56: error: type/value mismatch at argument 1 in template parameter list for 'template<class T, class> struct fl::detail::is_fl_fixed_point'
+  428 |     typename fl::enable_if<detail::is_fl_fixed_point<FP>::value, fl::optional<FP>>::type
+      |                                                        ^
+.pio/libdeps/reaper/FastLED/src/fl/stl/json.h:428:56: note:   expected a type, got '1'
+boards/reaper/pins_arduino.h:72:12: error: type/value mismatch at argument 1 in template parameter list for 'template<class T> using fl::optional = fl::Optional<T>'
+   72 | #define FP 1
+      |            ^
+.pio/libdeps/reaper/FastLED/src/fl/stl/json.h:428:79: note: in expansion of macro 'FP'
+  428 |     typename fl::enable_if<detail::is_fl_fixed_point<FP>::value, fl::optional<FP>>::type
+      |                                                                               ^~
+boards/reaper/pins_arduino.h:72:12: note:   expected a type, got '1'
+   72 | #define FP 1
+      |            ^
+.pio/libdeps/reaper/FastLED/src/fl/stl/json.h:428:79: note: in expansion of macro 'FP'
+  428 |     typename fl::enable_if<detail::is_fl_fixed_point<FP>::value, fl::optional<FP>>::type
+      |                                                                               ^~
+.pio/libdeps/reaper/FastLED/src/fl/stl/json.h:428:81: error: template argument 1 is invalid
+  428 |     typename fl::enable_if<detail::is_fl_fixed_point<FP>::value, fl::optional<FP>>::type
+      |                                                                                 ^~
+.pio/libdeps/reaper/FastLED/src/fl/stl/json.h:428:81: error: template argument 2 is invalid
+.pio/libdeps/reaper/FastLED/src/fl/stl/json.h:428:83: error: '<declaration error>' is not a template [-fpermissive]
+  428 |     typename fl::enable_if<detail::is_fl_fixed_point<FP>::value, fl::optional<FP>>::type
+      |                                                                                   ^~
+boards/reaper/pins_arduino.h:72:12: error: expected nested-name-specifier before numeric constant
+   72 | #define FP 1
+      |            ^
+.pio/libdeps/reaper/FastLED/src/fl/stl/json.h:903:24: note: in expansion of macro 'FP'
+  903 |     template <typename FP, typename fl::enable_if<detail::is_fl_fixed_point<FP>::value, int>::type = 0>
+      |                        ^~
+boards/reaper/pins_arduino.h:72:12: error: expected '>' before numeric constant
+   72 | #define FP 1
+      |            ^
+.pio/libdeps/reaper/FastLED/src/fl/stl/json.h:903:24: note: in expansion of macro 'FP'
+  903 |     template <typename FP, typename fl::enable_if<detail::is_fl_fixed_point<FP>::value, int>::type = 0>
+      |                        ^~
+boards/reaper/pins_arduino.h:72:12: error: expected identifier before numeric constant
+   72 | #define FP 1
+      |            ^
+.pio/libdeps/reaper/FastLED/src/fl/stl/json.h:904:37: note: in expansion of macro 'FP'
+  904 |     void set(const fl::string& key, FP value) FL_NO_EXCEPT { set(key, json(value)); }
+      |                                     ^~
+boards/reaper/pins_arduino.h:72:12: error: expected ',' or '...' before numeric constant
+   72 | #define FP 1
+      |            ^
+.pio/libdeps/reaper/FastLED/src/fl/stl/json.h:904:37: note: in expansion of macro 'FP'
+  904 |     void set(const fl::string& key, FP value) FL_NO_EXCEPT { set(key, json(value)); }
+      |                                     ^~
+.pio/libdeps/reaper/FastLED/src/fl/stl/json.h: In member function 'fl::json& fl::json::operator=(int)':
+.pio/libdeps/reaper/FastLED/src/fl/stl/json.h:355:74: error: missing template arguments before '(' token
+  355 |         mValue = fl::make_shared<json_value>(detail::fixed_point_to_float(v));
+      |                                                                          ^
+.pio/libdeps/reaper/FastLED/src/fl/stl/json.h:355:75: error: 'v' was not declared in this scope
+  355 |         mValue = fl::make_shared<json_value>(detail::fixed_point_to_float(v));
+      |                                                                           ^
+.pio/libdeps/reaper/FastLED/src/fl/stl/json.h: In member function 'int fl::json::as_fixed_point() const':
+.pio/libdeps/reaper/FastLED/src/fl/stl/json.h:430:33: error: cannot convert 'const fl::nullopt_t' to 'int' in return
+  430 |         if (!mValue) return fl::nullopt;
+      |                             ~~~~^~~~~~~
+      |                                 |
+      |                                 const fl::nullopt_t
+.pio/libdeps/reaper/FastLED/src/fl/stl/json.h:432:22: error: expected ';' before '::' token
+  432 |             return FP::from_raw(static_cast<decltype(FP().raw())>(*raw));
+      |                      ^~
+.pio/libdeps/reaper/FastLED/src/fl/stl/json.h:432:24: error: '::from_raw' has not been declared; did you mean 'from_char'?
+  432 |             return FP::from_raw(static_cast<decltype(FP().raw())>(*raw));
+      |                        ^~~~~~~~
+      |                        from_char
+.pio/libdeps/reaper/FastLED/src/fl/stl/json.h:432:56: error: expression cannot be used as a function
+  432 |             return FP::from_raw(static_cast<decltype(FP().raw())>(*raw));
+.pio/libdeps/reaper/FastLED/src/fl/stl/json.h:432:56: error: expression cannot be used as a function
+.pio/libdeps/reaper/FastLED/src/fl/stl/json.h:437:46: error: expected ')' before '::' token
+  437 |                     fl::bit_cast<u32>(*f), FP::FRAC_BITS, &raw)) {
+      |                                              ^~
+.pio/libdeps/reaper/FastLED/src/fl/stl/json.h:436:53: note: to match this '('
+  436 |             if (!detail::fixed_raw_from_ieee754_bits(
+      |                                                     ^
+.pio/libdeps/reaper/FastLED/src/fl/stl/json.h:438:28: error: cannot convert 'const fl::nullopt_t' to 'int' in return
+  438 |                 return fl::nullopt;
+      |                        ~~~~^~~~~~~
+      |                            |
+      |                            const fl::nullopt_t
+.pio/libdeps/reaper/FastLED/src/fl/stl/json.h:440:22: error: expected ';' before '::' token
+  440 |             return FP::from_raw(static_cast<decltype(FP().raw())>(raw));
+      |                      ^~
+.pio/libdeps/reaper/FastLED/src/fl/stl/json.h:440:24: error: '::from_raw' has not been declared; did you mean 'from_char'?
+  440 |             return FP::from_raw(static_cast<decltype(FP().raw())>(raw));
+      |                        ^~~~~~~~
+      |                        from_char
+.pio/libdeps/reaper/FastLED/src/fl/stl/json.h:440:56: error: expression cannot be used as a function
+  440 |             return FP::from_raw(static_cast<decltype(FP().raw())>(raw));
+.pio/libdeps/reaper/FastLED/src/fl/stl/json.h:440:56: error: expression cannot be used as a function
+.pio/libdeps/reaper/FastLED/src/fl/stl/json.h:442:20: error: cannot convert 'const fl::nullopt_t' to 'int' in return
+  442 |         return fl::nullopt;
+      |                ~~~~^~~~~~~
+      |                    |
+      |                    const fl::nullopt_t
+*** [.pio/build/reaper/libfb3/FastLED/fl/build/fl.fled+.cpp.o] Error 1
+*** [.pio/build/reaper/libfb3/FastLED/fl/build/fl.audio+.cpp.o] Error 1
+*** [.pio/build/reaper/libfb3/FastLED/fl/build/fl.control+.cpp.o] Error 1
+========================= [FAILED] Took 161.74 seconds =========================
+
+Environment    Status    Duration
+-------------  --------  ------------
+reaper         FAILED    00:02:41.741
+==================== 1 failed, 0 succeeded in 00:02:41.741 ====================

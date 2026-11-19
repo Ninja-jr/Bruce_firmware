@@ -1,0 +1,181 @@
+.pio/libdeps/lilygo-t-embed-cc1101/IRremoteESP8266/src/IRrecv.cpp:222:10: warning: '++' expression of 'volatile'-qualified type is deprecated [-Wvolatile]
+.pio/libdeps/lilygo-t-embed-cc1101/LibSSH-ESP32/src/libssh_esp32_compat.c:13:38: warning: initialization discards 'const' qualifier from pointer target type [-Wdiscarded-qualifiers]
+.pio/libdeps/lilygo-t-embed-cc1101/LibSSH-ESP32/src/libssh_esp32_compat.c:45:5: note: in expansion of macro 'LIBSSH_ESP32_COMPAT_USERNAME'
+.pio/libdeps/lilygo-t-embed-cc1101/LibSSH-ESP32/src/libssh_esp32_compat.c:45:50: warning: initialization discards 'const' qualifier from pointer target type [-Wdiscarded-qualifiers]
+.pio/libdeps/lilygo-t-embed-cc1101/LibSSH-ESP32/src/libssh_esp32_compat.c:46:44: warning: initialization discards 'const' qualifier from pointer target type [-Wdiscarded-qualifiers]
+.pio/libdeps/lilygo-t-embed-cc1101/LibSSH-ESP32/src/libssh_esp32_compat.c:46:60: warning: initialization discards 'const' qualifier from pointer target type [-Wdiscarded-qualifiers]
+.pio/libdeps/lilygo-t-embed-cc1101/LibSSH-ESP32/src/libssh_esp32_compat.c:22:37: warning: initialization discards 'const' qualifier from pointer target type [-Wdiscarded-qualifiers]
+.pio/libdeps/lilygo-t-embed-cc1101/LibSSH-ESP32/src/libssh_esp32_compat.c:47:5: note: in expansion of macro 'LIBSSH_ESP32_COMPAT_HOMEDIR'
+.pio/libdeps/lilygo-t-embed-cc1101/LibSSH-ESP32/src/libssh_esp32_compat.c:47:46: warning: initialization discards 'const' qualifier from pointer target type [-Wdiscarded-qualifiers]
+.pio/libdeps/lilygo-t-embed-cc1101/LibSSH-ESP32/src/scp.c:110:5: warning: 'ssh_scp_free' is deprecated [-Wdeprecated-declarations]
+.pio/libdeps/lilygo-t-embed-cc1101/LibSSH-ESP32/src/libssh/libssh.h:592:32: note: declared here
+.pio/libdeps/lilygo-t-embed-cc1101/LibSSH-ESP32/src/scp.c:303:9: warning: 'ssh_scp_close' is deprecated [-Wdeprecated-declarations]
+.pio/libdeps/lilygo-t-embed-cc1101/LibSSH-ESP32/src/scp.c:249:5: note: declared here
+.pio/libdeps/lilygo-t-embed-cc1101/LibSSH-ESP32/src/scp.c:577:5: warning: 'ssh_scp_push_file64' is deprecated [-Wdeprecated-declarations]
+.pio/libdeps/lilygo-t-embed-cc1101/LibSSH-ESP32/src/scp.c:472:5: note: declared here
+.pio/libdeps/lilygo-t-embed-cc1101/LibSSH-ESP32/src/scp.c:1039:9: warning: 'ssh_scp_accept_request' is deprecated [-Wdeprecated-declarations]
+.pio/libdeps/lilygo-t-embed-cc1101/LibSSH-ESP32/src/scp.c:985:5: note: declared here
+lib/TFT_eSPI/TFT_eSPI.h:1029:2: warning: #warning >>>>------>> TOUCH_CS pin not defined, TFT_eSPI touch functions will not be available! [-Wcpp]
+lib/TFT_eSPI/TFT_eSPI.h:1029:2: warning: #warning >>>>------>> TOUCH_CS pin not defined, TFT_eSPI touch functions will not be available! [-Wcpp]
+lib/TFT_eSPI/TFT_eSPI.h:1029:2: warning: #warning >>>>------>> TOUCH_CS pin not defined, TFT_eSPI touch functions will not be available! [-Wcpp]
+lib/TFT_eSPI/TFT_eSPI.h:1029:2: warning: #warning >>>>------>> TOUCH_CS pin not defined, TFT_eSPI touch functions will not be available! [-Wcpp]
+lib/TFT_eSPI/TFT_eSPI.h:1029:2: warning: #warning >>>>------>> TOUCH_CS pin not defined, TFT_eSPI touch functions will not be available! [-Wcpp]
+.pio/libdeps/lilygo-t-embed-cc1101/mquickjs/mquickjs.c:746:21: warning: assignment discards 'const' qualifier from pointer target type [-Wdiscarded-qualifiers]
+.pio/libdeps/lilygo-t-embed-cc1101/mquickjs/mquickjs.c:790:29: warning: assignment discards 'const' qualifier from pointer target type [-Wdiscarded-qualifiers]
+.pio/libdeps/lilygo-t-embed-cc1101/mquickjs/mquickjs.c:793:29: warning: assignment discards 'const' qualifier from pointer target type [-Wdiscarded-qualifiers]
+.pio/libdeps/lilygo-t-embed-cc1101/mquickjs/mquickjs.c:796:29: warning: assignment discards 'const' qualifier from pointer target type [-Wdiscarded-qualifiers]
+.pio/libdeps/lilygo-t-embed-cc1101/mquickjs/mquickjs.c:799:29: warning: assignment discards 'const' qualifier from pointer target type [-Wdiscarded-qualifiers]
+.pio/libdeps/lilygo-t-embed-cc1101/mquickjs/mquickjs.c:805:29: warning: assignment discards 'const' qualifier from pointer target type [-Wdiscarded-qualifiers]
+.pio/libdeps/lilygo-t-embed-cc1101/mquickjs/mquickjs.c:820:29: warning: assignment discards 'const' qualifier from pointer target type [-Wdiscarded-qualifiers]
+.pio/libdeps/lilygo-t-embed-cc1101/OneWire/OneWire.cpp:599:22: warning: extra tokens at end of #undef directive
+.pio/libdeps/lilygo-t-embed-cc1101/OneWire/OneWire.cpp:600:20: warning: extra tokens at end of #undef directive
+.pio/libdeps/lilygo-t-embed-cc1101/ESP32-PSRamFS/src/pfs.c:36:4: warning: #warning "Will use PSRAM or heap" [-Wcpp]
+boards/lilygo-t-embed-cc1101/pins_arduino.h:52:12: error: expected nested-name-specifier before numeric constant
+.pio/libdeps/lilygo-t-embed-cc1101/FastLED/src/fl/audio/fft/fft_impl.cpp.hpp:502:15: note: in expansion of macro 'FP'
+boards/lilygo-t-embed-cc1101/pins_arduino.h:52:12: error: expected unqualified-id before numeric constant
+.pio/libdeps/lilygo-t-embed-cc1101/FastLED/src/fl/audio/fft/fft_impl.cpp.hpp:513:15: note: in expansion of macro 'FP'
+boards/lilygo-t-embed-cc1101/pins_arduino.h:52:12: error: expected unqualified-id before numeric constant
+.pio/libdeps/lilygo-t-embed-cc1101/FastLED/src/fl/audio/fft/fft_impl.cpp.hpp:514:15: note: in expansion of macro 'FP'
+boards/lilygo-t-embed-cc1101/pins_arduino.h:52:12: error: expected unqualified-id before numeric constant
+.pio/libdeps/lilygo-t-embed-cc1101/FastLED/src/fl/audio/fft/fft_impl.cpp.hpp:515:15: note: in expansion of macro 'FP'
+boards/lilygo-t-embed-cc1101/pins_arduino.h:52:12: error: expected unqualified-id before numeric constant
+.pio/libdeps/lilygo-t-embed-cc1101/FastLED/src/fl/audio/fft/fft_impl.cpp.hpp:518:19: note: in expansion of macro 'FP'
+boards/lilygo-t-embed-cc1101/pins_arduino.h:52:12: error: expected unqualified-id before numeric constant
+.pio/libdeps/lilygo-t-embed-cc1101/FastLED/src/fl/audio/fft/fft_impl.cpp.hpp:519:19: note: in expansion of macro 'FP'
+boards/lilygo-t-embed-cc1101/pins_arduino.h:52:12: error: expected unqualified-id before numeric constant
+.pio/libdeps/lilygo-t-embed-cc1101/FastLED/src/fl/audio/fft/fft_impl.cpp.hpp:520:19: note: in expansion of macro 'FP'
+boards/lilygo-t-embed-cc1101/pins_arduino.h:52:12: error: expected unqualified-id before numeric constant
+.pio/libdeps/lilygo-t-embed-cc1101/FastLED/src/fl/audio/fft/fft_impl.cpp.hpp:521:19: note: in expansion of macro 'FP'
+boards/lilygo-t-embed-cc1101/pins_arduino.h:52:12: error: expected unqualified-id before numeric constant
+.pio/libdeps/lilygo-t-embed-cc1101/FastLED/src/fl/audio/fft/fft_impl.cpp.hpp:523:19: note: in expansion of macro 'FP'
+boards/lilygo-t-embed-cc1101/pins_arduino.h:52:12: error: expected unqualified-id before numeric constant
+.pio/libdeps/lilygo-t-embed-cc1101/FastLED/src/fl/audio/fft/fft_impl.cpp.hpp:524:19: note: in expansion of macro 'FP'
+.pio/libdeps/lilygo-t-embed-cc1101/FastLED/src/fl/audio/fft/fft_impl.cpp.hpp:526:12: error: expected ';' before 'phase'
+.pio/libdeps/lilygo-t-embed-cc1101/FastLED/src/fl/audio/fft/fft_impl.cpp.hpp:528:16: error: expected ';' before 'w'
+.pio/libdeps/lilygo-t-embed-cc1101/FastLED/src/fl/audio/fft/fft_impl.cpp.hpp:532:20: error: expected ';' before 'phase2'
+.pio/libdeps/lilygo-t-embed-cc1101/FastLED/src/fl/audio/fft/fft_impl.cpp.hpp:533:20: error: expected ';' before 'phase3'
+.pio/libdeps/lilygo-t-embed-cc1101/FastLED/src/fl/audio/fft/fft_impl.cpp.hpp:534:17: error: 'w' was not declared in this scope; did you mean 'hw'?
+.pio/libdeps/lilygo-t-embed-cc1101/FastLED/src/fl/audio/fft/fft_impl.cpp.hpp:534:21: error: 'bh_a0' was not declared in this scope
+.pio/libdeps/lilygo-t-embed-cc1101/FastLED/src/fl/audio/fft/fft_impl.cpp.hpp:534:29: error: 'bh_a1' was not declared in this scope
+.pio/libdeps/lilygo-t-embed-cc1101/FastLED/src/fl/audio/fft/fft_impl.cpp.hpp:541:17: error: 'w' was not declared in this scope; did you mean 'hw'?
+.pio/libdeps/lilygo-t-embed-cc1101/FastLED/src/fl/audio/fft/fft_impl.cpp.hpp:541:21: error: 'half' was not declared in this scope
+.pio/libdeps/lilygo-t-embed-cc1101/FastLED/src/fl/audio/fft/fft_impl.cpp.hpp:541:29: error: 'one' was not declared in this scope; did you mean 'tone'?
+.pio/libdeps/lilygo-t-embed-cc1101/FastLED/src/fl/audio/fft/fft_impl.cpp.hpp:541:37: error: expected ')' before '::' token
+.pio/libdeps/lilygo-t-embed-cc1101/FastLED/src/fl/audio/fft/fft_impl.cpp.hpp:541:28: note: to match this '('
+.pio/libdeps/lilygo-t-embed-cc1101/FastLED/src/fl/audio/fft/fft_impl.cpp.hpp:544:23: error: 'w' was not declared in this scope; did you mean 'hw'?
+.pio/libdeps/lilygo-t-embed-cc1101/FastLED/src/fl/audio/fft/fft_impl.cpp.hpp:548:13: error: 'phase' was not declared in this scope
+.pio/libdeps/lilygo-t-embed-cc1101/FastLED/src/fl/audio/fft/fft_impl.cpp.hpp:548:29: error: 'phase_step' was not declared in this scope
+boards/lilygo-t-embed-cc1101/pins_arduino.h:52:12: error: expected nested-name-specifier before numeric constant
+.pio/libdeps/lilygo-t-embed-cc1101/FastLED/src/fl/stl/json.h:255:20: note: in expansion of macro 'FP'
+boards/lilygo-t-embed-cc1101/pins_arduino.h:52:12: error: expected '>' before numeric constant
+.pio/libdeps/lilygo-t-embed-cc1101/FastLED/src/fl/stl/json.h:255:20: note: in expansion of macro 'FP'
+.pio/libdeps/lilygo-t-embed-cc1101/FastLED/src/fl/stl/json.h:256:31: error: expected ')' before 'value'
+.pio/libdeps/lilygo-t-embed-cc1101/FastLED/src/fl/stl/json.h:256:37: error: expected ';' before 'noexcept'
+boards/lilygo-t-embed-cc1101/pins_arduino.h:52:12: error: expected nested-name-specifier before numeric constant
+.pio/libdeps/lilygo-t-embed-cc1101/FastLED/src/fl/stl/json.h:276:24: note: in expansion of macro 'FP'
+boards/lilygo-t-embed-cc1101/pins_arduino.h:52:12: error: expected '>' before numeric constant
+.pio/libdeps/lilygo-t-embed-cc1101/FastLED/src/fl/stl/json.h:276:24: note: in expansion of macro 'FP'
+boards/lilygo-t-embed-cc1101/pins_arduino.h:52:12: error: expected unqualified-id before numeric constant
+.pio/libdeps/lilygo-t-embed-cc1101/FastLED/src/fl/stl/json.h:277:10: note: in expansion of macro 'FP'
+.pio/libdeps/lilygo-t-embed-cc1101/FastLED/src/fl/stl/json.h:277:10: error: expected ')' before numeric constant
+boards/lilygo-t-embed-cc1101/pins_arduino.h:52:12: error: expected nested-name-specifier before numeric constant
+.pio/libdeps/lilygo-t-embed-cc1101/FastLED/src/fl/stl/json.h:353:24: note: in expansion of macro 'FP'
+boards/lilygo-t-embed-cc1101/pins_arduino.h:52:12: error: expected '>' before numeric constant
+.pio/libdeps/lilygo-t-embed-cc1101/FastLED/src/fl/stl/json.h:353:24: note: in expansion of macro 'FP'
+boards/lilygo-t-embed-cc1101/pins_arduino.h:52:12: error: expected identifier before numeric constant
+.pio/libdeps/lilygo-t-embed-cc1101/FastLED/src/fl/stl/json.h:354:21: note: in expansion of macro 'FP'
+boards/lilygo-t-embed-cc1101/pins_arduino.h:52:12: error: expected ',' or '...' before numeric constant
+.pio/libdeps/lilygo-t-embed-cc1101/FastLED/src/fl/stl/json.h:354:21: note: in expansion of macro 'FP'
+boards/lilygo-t-embed-cc1101/pins_arduino.h:52:12: error: expected nested-name-specifier before numeric constant
+.pio/libdeps/lilygo-t-embed-cc1101/FastLED/src/fl/stl/json.h:427:24: note: in expansion of macro 'FP'
+boards/lilygo-t-embed-cc1101/pins_arduino.h:52:12: error: expected '>' before numeric constant
+.pio/libdeps/lilygo-t-embed-cc1101/FastLED/src/fl/stl/json.h:427:24: note: in expansion of macro 'FP'
+.pio/libdeps/lilygo-t-embed-cc1101/FastLED/src/fl/stl/json.h:428:56: error: type/value mismatch at argument 1 in template parameter list for 'template<class T, class> struct fl::detail::is_fl_fixed_point'
+.pio/libdeps/lilygo-t-embed-cc1101/FastLED/src/fl/stl/json.h:428:56: note:   expected a type, got '1'
+boards/lilygo-t-embed-cc1101/pins_arduino.h:52:12: error: type/value mismatch at argument 1 in template parameter list for 'template<class T> using fl::optional = fl::Optional<T>'
+.pio/libdeps/lilygo-t-embed-cc1101/FastLED/src/fl/stl/json.h:428:79: note: in expansion of macro 'FP'
+boards/lilygo-t-embed-cc1101/pins_arduino.h:52:12: note:   expected a type, got '1'
+.pio/libdeps/lilygo-t-embed-cc1101/FastLED/src/fl/stl/json.h:428:79: note: in expansion of macro 'FP'
+.pio/libdeps/lilygo-t-embed-cc1101/FastLED/src/fl/stl/json.h:428:81: error: template argument 1 is invalid
+.pio/libdeps/lilygo-t-embed-cc1101/FastLED/src/fl/stl/json.h:428:81: error: template argument 2 is invalid
+.pio/libdeps/lilygo-t-embed-cc1101/FastLED/src/fl/stl/json.h:428:83: error: '<declaration error>' is not a template [-fpermissive]
+boards/lilygo-t-embed-cc1101/pins_arduino.h:52:12: error: expected nested-name-specifier before numeric constant
+.pio/libdeps/lilygo-t-embed-cc1101/FastLED/src/fl/stl/json.h:903:24: note: in expansion of macro 'FP'
+boards/lilygo-t-embed-cc1101/pins_arduino.h:52:12: error: expected '>' before numeric constant
+.pio/libdeps/lilygo-t-embed-cc1101/FastLED/src/fl/stl/json.h:903:24: note: in expansion of macro 'FP'
+boards/lilygo-t-embed-cc1101/pins_arduino.h:52:12: error: expected identifier before numeric constant
+.pio/libdeps/lilygo-t-embed-cc1101/FastLED/src/fl/stl/json.h:904:37: note: in expansion of macro 'FP'
+boards/lilygo-t-embed-cc1101/pins_arduino.h:52:12: error: expected ',' or '...' before numeric constant
+.pio/libdeps/lilygo-t-embed-cc1101/FastLED/src/fl/stl/json.h:904:37: note: in expansion of macro 'FP'
+.pio/libdeps/lilygo-t-embed-cc1101/FastLED/src/fl/stl/json.h:355:74: error: missing template arguments before '(' token
+.pio/libdeps/lilygo-t-embed-cc1101/FastLED/src/fl/stl/json.h:355:75: error: 'v' was not declared in this scope
+.pio/libdeps/lilygo-t-embed-cc1101/FastLED/src/fl/stl/json.h:430:33: error: cannot convert 'const fl::nullopt_t' to 'int' in return
+.pio/libdeps/lilygo-t-embed-cc1101/FastLED/src/fl/stl/json.h:432:22: error: expected ';' before '::' token
+.pio/libdeps/lilygo-t-embed-cc1101/FastLED/src/fl/stl/json.h:432:24: error: '::from_raw' has not been declared; did you mean 'from_char'?
+.pio/libdeps/lilygo-t-embed-cc1101/FastLED/src/fl/stl/json.h:432:56: error: expression cannot be used as a function
+.pio/libdeps/lilygo-t-embed-cc1101/FastLED/src/fl/stl/json.h:432:56: error: expression cannot be used as a function
+.pio/libdeps/lilygo-t-embed-cc1101/FastLED/src/fl/stl/json.h:437:46: error: expected ')' before '::' token
+.pio/libdeps/lilygo-t-embed-cc1101/FastLED/src/fl/stl/json.h:436:53: note: to match this '('
+.pio/libdeps/lilygo-t-embed-cc1101/FastLED/src/fl/stl/json.h:438:28: error: cannot convert 'const fl::nullopt_t' to 'int' in return
+.pio/libdeps/lilygo-t-embed-cc1101/FastLED/src/fl/stl/json.h:440:22: error: expected ';' before '::' token
+.pio/libdeps/lilygo-t-embed-cc1101/FastLED/src/fl/stl/json.h:440:24: error: '::from_raw' has not been declared; did you mean 'from_char'?
+.pio/libdeps/lilygo-t-embed-cc1101/FastLED/src/fl/stl/json.h:440:56: error: expression cannot be used as a function
+.pio/libdeps/lilygo-t-embed-cc1101/FastLED/src/fl/stl/json.h:440:56: error: expression cannot be used as a function
+.pio/libdeps/lilygo-t-embed-cc1101/FastLED/src/fl/stl/json.h:442:20: error: cannot convert 'const fl::nullopt_t' to 'int' in return
+boards/lilygo-t-embed-cc1101/pins_arduino.h:52:12: error: expected nested-name-specifier before numeric constant
+.pio/libdeps/lilygo-t-embed-cc1101/FastLED/src/fl/stl/json.h:255:20: note: in expansion of macro 'FP'
+boards/lilygo-t-embed-cc1101/pins_arduino.h:52:12: error: expected '>' before numeric constant
+.pio/libdeps/lilygo-t-embed-cc1101/FastLED/src/fl/stl/json.h:255:20: note: in expansion of macro 'FP'
+.pio/libdeps/lilygo-t-embed-cc1101/FastLED/src/fl/stl/json.h:256:31: error: expected ')' before 'value'
+.pio/libdeps/lilygo-t-embed-cc1101/FastLED/src/fl/stl/json.h:256:37: error: expected ';' before 'noexcept'
+boards/lilygo-t-embed-cc1101/pins_arduino.h:52:12: error: expected nested-name-specifier before numeric constant
+.pio/libdeps/lilygo-t-embed-cc1101/FastLED/src/fl/stl/json.h:276:24: note: in expansion of macro 'FP'
+boards/lilygo-t-embed-cc1101/pins_arduino.h:52:12: error: expected '>' before numeric constant
+.pio/libdeps/lilygo-t-embed-cc1101/FastLED/src/fl/stl/json.h:276:24: note: in expansion of macro 'FP'
+boards/lilygo-t-embed-cc1101/pins_arduino.h:52:12: error: expected unqualified-id before numeric constant
+.pio/libdeps/lilygo-t-embed-cc1101/FastLED/src/fl/stl/json.h:277:10: note: in expansion of macro 'FP'
+.pio/libdeps/lilygo-t-embed-cc1101/FastLED/src/fl/stl/json.h:277:10: error: expected ')' before numeric constant
+boards/lilygo-t-embed-cc1101/pins_arduino.h:52:12: error: expected nested-name-specifier before numeric constant
+.pio/libdeps/lilygo-t-embed-cc1101/FastLED/src/fl/stl/json.h:353:24: note: in expansion of macro 'FP'
+boards/lilygo-t-embed-cc1101/pins_arduino.h:52:12: error: expected '>' before numeric constant
+.pio/libdeps/lilygo-t-embed-cc1101/FastLED/src/fl/stl/json.h:353:24: note: in expansion of macro 'FP'
+boards/lilygo-t-embed-cc1101/pins_arduino.h:52:12: error: expected identifier before numeric constant
+.pio/libdeps/lilygo-t-embed-cc1101/FastLED/src/fl/stl/json.h:354:21: note: in expansion of macro 'FP'
+boards/lilygo-t-embed-cc1101/pins_arduino.h:52:12: error: expected ',' or '...' before numeric constant
+.pio/libdeps/lilygo-t-embed-cc1101/FastLED/src/fl/stl/json.h:354:21: note: in expansion of macro 'FP'
+boards/lilygo-t-embed-cc1101/pins_arduino.h:52:12: error: expected nested-name-specifier before numeric constant
+.pio/libdeps/lilygo-t-embed-cc1101/FastLED/src/fl/stl/json.h:427:24: note: in expansion of macro 'FP'
+boards/lilygo-t-embed-cc1101/pins_arduino.h:52:12: error: expected '>' before numeric constant
+.pio/libdeps/lilygo-t-embed-cc1101/FastLED/src/fl/stl/json.h:427:24: note: in expansion of macro 'FP'
+.pio/libdeps/lilygo-t-embed-cc1101/FastLED/src/fl/stl/json.h:428:56: error: type/value mismatch at argument 1 in template parameter list for 'template<class T, class> struct fl::detail::is_fl_fixed_point'
+.pio/libdeps/lilygo-t-embed-cc1101/FastLED/src/fl/stl/json.h:428:56: note:   expected a type, got '1'
+boards/lilygo-t-embed-cc1101/pins_arduino.h:52:12: error: type/value mismatch at argument 1 in template parameter list for 'template<class T> using fl::optional = fl::Optional<T>'
+.pio/libdeps/lilygo-t-embed-cc1101/FastLED/src/fl/stl/json.h:428:79: note: in expansion of macro 'FP'
+boards/lilygo-t-embed-cc1101/pins_arduino.h:52:12: note:   expected a type, got '1'
+.pio/libdeps/lilygo-t-embed-cc1101/FastLED/src/fl/stl/json.h:428:79: note: in expansion of macro 'FP'
+.pio/libdeps/lilygo-t-embed-cc1101/FastLED/src/fl/stl/json.h:428:81: error: template argument 1 is invalid
+.pio/libdeps/lilygo-t-embed-cc1101/FastLED/src/fl/stl/json.h:428:81: error: template argument 2 is invalid
+.pio/libdeps/lilygo-t-embed-cc1101/FastLED/src/fl/stl/json.h:428:83: error: '<declaration error>' is not a template [-fpermissive]
+boards/lilygo-t-embed-cc1101/pins_arduino.h:52:12: error: expected nested-name-specifier before numeric constant
+.pio/libdeps/lilygo-t-embed-cc1101/FastLED/src/fl/stl/json.h:903:24: note: in expansion of macro 'FP'
+boards/lilygo-t-embed-cc1101/pins_arduino.h:52:12: error: expected '>' before numeric constant
+.pio/libdeps/lilygo-t-embed-cc1101/FastLED/src/fl/stl/json.h:903:24: note: in expansion of macro 'FP'
+boards/lilygo-t-embed-cc1101/pins_arduino.h:52:12: error: expected identifier before numeric constant
+.pio/libdeps/lilygo-t-embed-cc1101/FastLED/src/fl/stl/json.h:904:37: note: in expansion of macro 'FP'
+boards/lilygo-t-embed-cc1101/pins_arduino.h:52:12: error: expected ',' or '...' before numeric constant
+.pio/libdeps/lilygo-t-embed-cc1101/FastLED/src/fl/stl/json.h:904:37: note: in expansion of macro 'FP'
+.pio/libdeps/lilygo-t-embed-cc1101/FastLED/src/fl/stl/json.h:355:74: error: missing template arguments before '(' token
+.pio/libdeps/lilygo-t-embed-cc1101/FastLED/src/fl/stl/json.h:355:75: error: 'v' was not declared in this scope
+.pio/libdeps/lilygo-t-embed-cc1101/FastLED/src/fl/stl/json.h:430:33: error: cannot convert 'const fl::nullopt_t' to 'int' in return
+.pio/libdeps/lilygo-t-embed-cc1101/FastLED/src/fl/stl/json.h:432:22: error: expected ';' before '::' token
+.pio/libdeps/lilygo-t-embed-cc1101/FastLED/src/fl/stl/json.h:432:24: error: '::from_raw' has not been declared; did you mean 'from_char'?
+.pio/libdeps/lilygo-t-embed-cc1101/FastLED/src/fl/stl/json.h:432:56: error: expression cannot be used as a function
+.pio/libdeps/lilygo-t-embed-cc1101/FastLED/src/fl/stl/json.h:432:56: error: expression cannot be used as a function
+.pio/libdeps/lilygo-t-embed-cc1101/FastLED/src/fl/stl/json.h:437:46: error: expected ')' before '::' token
+.pio/libdeps/lilygo-t-embed-cc1101/FastLED/src/fl/stl/json.h:436:53: note: to match this '('
+.pio/libdeps/lilygo-t-embed-cc1101/FastLED/src/fl/stl/json.h:438:28: error: cannot convert 'const fl::nullopt_t' to 'int' in return
+.pio/libdeps/lilygo-t-embed-cc1101/FastLED/src/fl/stl/json.h:440:22: error: expected ';' before '::' token
+.pio/libdeps/lilygo-t-embed-cc1101/FastLED/src/fl/stl/json.h:440:24: error: '::from_raw' has not been declared; did you mean 'from_char'?
+.pio/libdeps/lilygo-t-embed-cc1101/FastLED/src/fl/stl/json.h:440:56: error: expression cannot be used as a function
+.pio/libdeps/lilygo-t-embed-cc1101/FastLED/src/fl/stl/json.h:440:56: error: expression cannot be used as a function
+.pio/libdeps/lilygo-t-embed-cc1101/FastLED/src/fl/stl/json.h:442:20: error: cannot convert 'const fl::nullopt_t' to 'int' in return
