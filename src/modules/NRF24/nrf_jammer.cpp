@@ -4,7 +4,7 @@
 #include "nrf_common.h"
 #include <globals.h>
 
-static constexpr unsigned long NRF_SAFETY_TIMEOUT_MS = 30000UL;
+static constexpr unsigned long NRF_SAFETY_TIMEOUT_MS = 7200000UL;
 
 static void shuffleChannels(uint8_t *arr, size_t count) {
     for (size_t i = count - 1; i > 0; i--) {
@@ -213,7 +213,7 @@ void nrf_jammer() {
         }
         if ((CHECK_NRF_UART(mode)) || (CHECK_NRF_BOTH(mode))) { NRFSerial.println("OFF"); }
 
-        if (safetyTimeoutReached) { displayWarning("Safety timeout (30s) reached", true); }
+        if (safetyTimeoutReached) { displayWarning("Safety timeout reached", true); }
 
     } else {
         displayError("NRF24 not found", true);
