@@ -1,0 +1,548 @@
+.pio/libdeps/arduino-nesso-n1/IRremoteESP8266/src/IRrecv.cpp:222:10: warning: '++' expression of 'volatile'-qualified type is deprecated [-Wvolatile]
+.pio/libdeps/arduino-nesso-n1/LibSSH-ESP32/src/libssh_esp32_compat.c:13:38: warning: initialization discards 'const' qualifier from pointer target type [-Wdiscarded-qualifiers]
+.pio/libdeps/arduino-nesso-n1/LibSSH-ESP32/src/libssh_esp32_compat.c:45:5: note: in expansion of macro 'LIBSSH_ESP32_COMPAT_USERNAME'
+.pio/libdeps/arduino-nesso-n1/LibSSH-ESP32/src/libssh_esp32_compat.c:45:50: warning: initialization discards 'const' qualifier from pointer target type [-Wdiscarded-qualifiers]
+.pio/libdeps/arduino-nesso-n1/LibSSH-ESP32/src/libssh_esp32_compat.c:46:44: warning: initialization discards 'const' qualifier from pointer target type [-Wdiscarded-qualifiers]
+.pio/libdeps/arduino-nesso-n1/LibSSH-ESP32/src/libssh_esp32_compat.c:46:60: warning: initialization discards 'const' qualifier from pointer target type [-Wdiscarded-qualifiers]
+.pio/libdeps/arduino-nesso-n1/LibSSH-ESP32/src/libssh_esp32_compat.c:22:37: warning: initialization discards 'const' qualifier from pointer target type [-Wdiscarded-qualifiers]
+.pio/libdeps/arduino-nesso-n1/LibSSH-ESP32/src/libssh_esp32_compat.c:47:5: note: in expansion of macro 'LIBSSH_ESP32_COMPAT_HOMEDIR'
+.pio/libdeps/arduino-nesso-n1/LibSSH-ESP32/src/libssh_esp32_compat.c:47:46: warning: initialization discards 'const' qualifier from pointer target type [-Wdiscarded-qualifiers]
+.pio/libdeps/arduino-nesso-n1/LibSSH-ESP32/src/scp.c:110:5: warning: 'ssh_scp_free' is deprecated [-Wdeprecated-declarations]
+.pio/libdeps/arduino-nesso-n1/LibSSH-ESP32/src/libssh/libssh.h:592:32: note: declared here
+.pio/libdeps/arduino-nesso-n1/LibSSH-ESP32/src/scp.c:303:9: warning: 'ssh_scp_close' is deprecated [-Wdeprecated-declarations]
+.pio/libdeps/arduino-nesso-n1/LibSSH-ESP32/src/scp.c:249:5: note: declared here
+.pio/libdeps/arduino-nesso-n1/LibSSH-ESP32/src/scp.c:577:5: warning: 'ssh_scp_push_file64' is deprecated [-Wdeprecated-declarations]
+.pio/libdeps/arduino-nesso-n1/LibSSH-ESP32/src/scp.c:472:5: note: declared here
+.pio/libdeps/arduino-nesso-n1/LibSSH-ESP32/src/scp.c:1039:9: warning: 'ssh_scp_accept_request' is deprecated [-Wdeprecated-declarations]
+.pio/libdeps/arduino-nesso-n1/LibSSH-ESP32/src/scp.c:985:5: note: declared here
+.pio/libdeps/arduino-nesso-n1/mquickjs/mquickjs.c:746:21: warning: assignment discards 'const' qualifier from pointer target type [-Wdiscarded-qualifiers]
+.pio/libdeps/arduino-nesso-n1/mquickjs/mquickjs.c:790:29: warning: assignment discards 'const' qualifier from pointer target type [-Wdiscarded-qualifiers]
+.pio/libdeps/arduino-nesso-n1/mquickjs/mquickjs.c:793:29: warning: assignment discards 'const' qualifier from pointer target type [-Wdiscarded-qualifiers]
+.pio/libdeps/arduino-nesso-n1/mquickjs/mquickjs.c:796:29: warning: assignment discards 'const' qualifier from pointer target type [-Wdiscarded-qualifiers]
+.pio/libdeps/arduino-nesso-n1/mquickjs/mquickjs.c:799:29: warning: assignment discards 'const' qualifier from pointer target type [-Wdiscarded-qualifiers]
+.pio/libdeps/arduino-nesso-n1/mquickjs/mquickjs.c:805:29: warning: assignment discards 'const' qualifier from pointer target type [-Wdiscarded-qualifiers]
+.pio/libdeps/arduino-nesso-n1/mquickjs/mquickjs.c:820:29: warning: assignment discards 'const' qualifier from pointer target type [-Wdiscarded-qualifiers]
+.pio/libdeps/arduino-nesso-n1/OneWire/OneWire.cpp:599:22: warning: extra tokens at end of #undef directive
+.pio/libdeps/arduino-nesso-n1/OneWire/OneWire.cpp:600:20: warning: extra tokens at end of #undef directive
+.pio/libdeps/arduino-nesso-n1/ESP32-PSRamFS/src/pfs.c:38:4: warning: #warning "No SPIRAM detected, will use heap" [-Wcpp]
+.pio/libdeps/arduino-nesso-n1/FastLED/src/platforms/esp/32/rmt_5/idf5_rmt.cpp:8:2: warning: #warning "FASTLED_RMT_BUILTIN_DRIVER is not supported in RMT5 and will be ignored." [-Wcpp]
+lib/ESP32_Button/src/original/button_adc.c:199:13: warning: 'ADC_ATTEN_DB_11' is deprecated [-Wdeprecated-declarations]
+/home/runner/.platformio/packages/framework-arduinoespressif32-libs/esp32c6/include/hal/include/hal/adc_types.h:52:5: note: declared here
+lib/ESP32_Button/src/original/button_adc.c:204:9: warning: 'ADC_ATTEN_DB_11' is deprecated [-Wdeprecated-declarations]
+/home/runner/.platformio/packages/framework-arduinoespressif32-libs/esp32c6/include/hal/include/hal/adc_types.h:52:5: note: declared here
+include/precompiler_flags.h:50:4: warning: #warning "Remove HAS_3_BUTTONS after implement keyboard logic for 1 button" [-Wcpp]
+include/precompiler_flags.h:50:4: warning: #warning "Remove HAS_3_BUTTONS after implement keyboard logic for 1 button" [-Wcpp]
+include/precompiler_flags.h:50:4: warning: #warning "Remove HAS_3_BUTTONS after implement keyboard logic for 1 button" [-Wcpp]
+include/precompiler_flags.h:50:4: warning: #warning "Remove HAS_3_BUTTONS after implement keyboard logic for 1 button" [-Wcpp]
+include/precompiler_flags.h:50:4: warning: #warning "Remove HAS_3_BUTTONS after implement keyboard logic for 1 button" [-Wcpp]
+include/precompiler_flags.h:50:4: warning: #warning "Remove HAS_3_BUTTONS after implement keyboard logic for 1 button" [-Wcpp]
+include/precompiler_flags.h:50:4: warning: #warning "Remove HAS_3_BUTTONS after implement keyboard logic for 1 button" [-Wcpp]
+include/precompiler_flags.h:50:4: warning: #warning "Remove HAS_3_BUTTONS after implement keyboard logic for 1 button" [-Wcpp]
+include/precompiler_flags.h:50:4: warning: #warning "Remove HAS_3_BUTTONS after implement keyboard logic for 1 button" [-Wcpp]
+include/precompiler_flags.h:50:4: warning: #warning "Remove HAS_3_BUTTONS after implement keyboard logic for 1 button" [-Wcpp]
+include/precompiler_flags.h:50:4: warning: #warning "Remove HAS_3_BUTTONS after implement keyboard logic for 1 button" [-Wcpp]
+include/precompiler_flags.h:50:4: warning: #warning "Remove HAS_3_BUTTONS after implement keyboard logic for 1 button" [-Wcpp]
+include/precompiler_flags.h:50:4: warning: #warning "Remove HAS_3_BUTTONS after implement keyboard logic for 1 button" [-Wcpp]
+include/precompiler_flags.h:50:4: warning: #warning "Remove HAS_3_BUTTONS after implement keyboard logic for 1 button" [-Wcpp]
+include/precompiler_flags.h:50:4: warning: #warning "Remove HAS_3_BUTTONS after implement keyboard logic for 1 button" [-Wcpp]
+include/precompiler_flags.h:50:4: warning: #warning "Remove HAS_3_BUTTONS after implement keyboard logic for 1 button" [-Wcpp]
+include/precompiler_flags.h:50:4: warning: #warning "Remove HAS_3_BUTTONS after implement keyboard logic for 1 button" [-Wcpp]
+lib/Bad_Usb_Lib/BleKeyboard.cpp:181:23: warning: 'void NimBLEHIDDevice::startServices()' is deprecated: Services are now started by the server when start() is called, this function is no longer needed and will be removed in a future release. [-Wdeprecated-declarations]
+.pio/libdeps/arduino-nesso-n1/NimBLE-Arduino/src/NimBLEHIDDevice.h:52:27: note: declared here
+include/precompiler_flags.h:50:4: warning: #warning "Remove HAS_3_BUTTONS after implement keyboard logic for 1 button" [-Wcpp]
+include/precompiler_flags.h:50:4: warning: #warning "Remove HAS_3_BUTTONS after implement keyboard logic for 1 button" [-Wcpp]
+include/precompiler_flags.h:50:4: warning: #warning "Remove HAS_3_BUTTONS after implement keyboard logic for 1 button" [-Wcpp]
+include/precompiler_flags.h:50:4: warning: #warning "Remove HAS_3_BUTTONS after implement keyboard logic for 1 button" [-Wcpp]
+include/precompiler_flags.h:50:4: warning: #warning "Remove HAS_3_BUTTONS after implement keyboard logic for 1 button" [-Wcpp]
+src/core/config.cpp:886:27: warning: comparison is always false due to limited range of data type [-Wtype-limits]
+include/precompiler_flags.h:50:4: warning: #warning "Remove HAS_3_BUTTONS after implement keyboard logic for 1 button" [-Wcpp]
+include/precompiler_flags.h:50:4: warning: #warning "Remove HAS_3_BUTTONS after implement keyboard logic for 1 button" [-Wcpp]
+include/precompiler_flags.h:50:4: warning: #warning "Remove HAS_3_BUTTONS after implement keyboard logic for 1 button" [-Wcpp]
+include/precompiler_flags.h:50:4: warning: #warning "Remove HAS_3_BUTTONS after implement keyboard logic for 1 button" [-Wcpp]
+include/precompiler_flags.h:50:4: warning: #warning "Remove HAS_3_BUTTONS after implement keyboard logic for 1 button" [-Wcpp]
+include/precompiler_flags.h:50:4: warning: #warning "Remove HAS_3_BUTTONS after implement keyboard logic for 1 button" [-Wcpp]
+include/precompiler_flags.h:50:4: warning: #warning "Remove HAS_3_BUTTONS after implement keyboard logic for 1 button" [-Wcpp]
+.pio/libdeps/arduino-nesso-n1/PNGdec/src/PNGdec.h:217:9: warning: "INTELSHORT" redefined
+.pio/libdeps/arduino-nesso-n1/AnimatedGIF/src/AnimatedGIF.h:289:9: note: this is the location of the previous definition
+.pio/libdeps/arduino-nesso-n1/PNGdec/src/PNGdec.h:218:9: warning: "INTELLONG" redefined
+.pio/libdeps/arduino-nesso-n1/AnimatedGIF/src/AnimatedGIF.h:290:9: note: this is the location of the previous definition
+include/precompiler_flags.h:50:4: warning: #warning "Remove HAS_3_BUTTONS after implement keyboard logic for 1 button" [-Wcpp]
+include/precompiler_flags.h:50:4: warning: #warning "Remove HAS_3_BUTTONS after implement keyboard logic for 1 button" [-Wcpp]
+include/precompiler_flags.h:50:4: warning: #warning "Remove HAS_3_BUTTONS after implement keyboard logic for 1 button" [-Wcpp]
+include/precompiler_flags.h:50:4: warning: #warning "Remove HAS_3_BUTTONS after implement keyboard logic for 1 button" [-Wcpp]
+include/precompiler_flags.h:50:4: warning: #warning "Remove HAS_3_BUTTONS after implement keyboard logic for 1 button" [-Wcpp]
+include/precompiler_flags.h:50:4: warning: #warning "Remove HAS_3_BUTTONS after implement keyboard logic for 1 button" [-Wcpp]
+include/precompiler_flags.h:50:4: warning: #warning "Remove HAS_3_BUTTONS after implement keyboard logic for 1 button" [-Wcpp]
+include/precompiler_flags.h:50:4: warning: #warning "Remove HAS_3_BUTTONS after implement keyboard logic for 1 button" [-Wcpp]
+include/precompiler_flags.h:50:4: warning: #warning "Remove HAS_3_BUTTONS after implement keyboard logic for 1 button" [-Wcpp]
+include/precompiler_flags.h:50:4: warning: #warning "Remove HAS_3_BUTTONS after implement keyboard logic for 1 button" [-Wcpp]
+include/precompiler_flags.h:50:4: warning: #warning "Remove HAS_3_BUTTONS after implement keyboard logic for 1 button" [-Wcpp]
+include/precompiler_flags.h:50:4: warning: #warning "Remove HAS_3_BUTTONS after implement keyboard logic for 1 button" [-Wcpp]
+src/core/menu_items/FileMenu.cpp:17:35: warning: implicit capture of 'this' via '[=]' is deprecated in C++20 [-Wdeprecated]
+src/core/menu_items/FileMenu.cpp:17:35: note: add explicit 'this' or '*this' capture
+src/core/menu_items/FileMenu.cpp:23:27: warning: implicit capture of 'this' via '[=]' is deprecated in C++20 [-Wdeprecated]
+src/core/menu_items/FileMenu.cpp:23:27: note: add explicit 'this' or '*this' capture
+include/precompiler_flags.h:50:4: warning: #warning "Remove HAS_3_BUTTONS after implement keyboard logic for 1 button" [-Wcpp]
+include/precompiler_flags.h:50:4: warning: #warning "Remove HAS_3_BUTTONS after implement keyboard logic for 1 button" [-Wcpp]
+include/precompiler_flags.h:50:4: warning: #warning "Remove HAS_3_BUTTONS after implement keyboard logic for 1 button" [-Wcpp]
+include/precompiler_flags.h:50:4: warning: #warning "Remove HAS_3_BUTTONS after implement keyboard logic for 1 button" [-Wcpp]
+include/precompiler_flags.h:50:4: warning: #warning "Remove HAS_3_BUTTONS after implement keyboard logic for 1 button" [-Wcpp]
+include/precompiler_flags.h:50:4: warning: #warning "Remove HAS_3_BUTTONS after implement keyboard logic for 1 button" [-Wcpp]
+include/precompiler_flags.h:50:4: warning: #warning "Remove HAS_3_BUTTONS after implement keyboard logic for 1 button" [-Wcpp]
+include/precompiler_flags.h:50:4: warning: #warning "Remove HAS_3_BUTTONS after implement keyboard logic for 1 button" [-Wcpp]
+include/precompiler_flags.h:50:4: warning: #warning "Remove HAS_3_BUTTONS after implement keyboard logic for 1 button" [-Wcpp]
+include/precompiler_flags.h:50:4: warning: #warning "Remove HAS_3_BUTTONS after implement keyboard logic for 1 button" [-Wcpp]
+src/core/mykeyboard.cpp:1417:78:   required from here
+src/core/mykeyboard.cpp:592:13: warning: variable 'longNextPress' set but not used [-Wunused-but-set-variable]
+src/core/mykeyboard.cpp:593:13: warning: variable 'longPrevPress' set but not used [-Wunused-but-set-variable]
+src/core/mykeyboard.cpp:1435:68:   required from here
+src/core/mykeyboard.cpp:592:13: warning: variable 'longNextPress' set but not used [-Wunused-but-set-variable]
+src/core/mykeyboard.cpp:593:13: warning: variable 'longPrevPress' set but not used [-Wunused-but-set-variable]
+src/core/mykeyboard.cpp:1443:74:   required from here
+src/core/mykeyboard.cpp:592:13: warning: variable 'longNextPress' set but not used [-Wunused-but-set-variable]
+src/core/mykeyboard.cpp:593:13: warning: variable 'longPrevPress' set but not used [-Wunused-but-set-variable]
+src/core/ram_profile.cpp:24:54: warning: format '%u' expects argument of type 'unsigned int', but argument 5 has type 'uint32_t' {aka 'long unsigned int'} [-Wformat=]
+src/core/ram_profile.cpp:24:66: warning: format '%u' expects argument of type 'unsigned int', but argument 6 has type 'uint32_t' {aka 'long unsigned int'} [-Wformat=]
+src/core/ram_profile.cpp:24:86: warning: format '%u' expects argument of type 'unsigned int', but argument 7 has type 'uint32_t' {aka 'long unsigned int'} [-Wformat=]
+src/core/ram_profile.cpp:25:20: warning: format '%u' expects argument of type 'unsigned int', but argument 8 has type 'uint32_t' {aka 'long unsigned int'} [-Wformat=]
+src/core/ram_profile.cpp:25:28: warning: format '%u' expects argument of type 'unsigned int', but argument 9 has type 'uint32_t' {aka 'long unsigned int'} [-Wformat=]
+src/core/ram_profile.cpp:25:45: warning: format '%u' expects argument of type 'unsigned int', but argument 10 has type 'uint32_t' {aka 'long unsigned int'} [-Wformat=]
+include/precompiler_flags.h:50:4: warning: #warning "Remove HAS_3_BUTTONS after implement keyboard logic for 1 button" [-Wcpp]
+include/precompiler_flags.h:50:4: warning: #warning "Remove HAS_3_BUTTONS after implement keyboard logic for 1 button" [-Wcpp]
+include/precompiler_flags.h:50:4: warning: #warning "Remove HAS_3_BUTTONS after implement keyboard logic for 1 button" [-Wcpp]
+include/precompiler_flags.h:50:4: warning: #warning "Remove HAS_3_BUTTONS after implement keyboard logic for 1 button" [-Wcpp]
+include/precompiler_flags.h:50:4: warning: #warning "Remove HAS_3_BUTTONS after implement keyboard logic for 1 button" [-Wcpp]
+include/precompiler_flags.h:50:4: warning: #warning "Remove HAS_3_BUTTONS after implement keyboard logic for 1 button" [-Wcpp]
+include/precompiler_flags.h:50:4: warning: #warning "Remove HAS_3_BUTTONS after implement keyboard logic for 1 button" [-Wcpp]
+include/precompiler_flags.h:50:4: warning: #warning "Remove HAS_3_BUTTONS after implement keyboard logic for 1 button" [-Wcpp]
+include/precompiler_flags.h:50:4: warning: #warning "Remove HAS_3_BUTTONS after implement keyboard logic for 1 button" [-Wcpp]
+include/precompiler_flags.h:50:4: warning: #warning "Remove HAS_3_BUTTONS after implement keyboard logic for 1 button" [-Wcpp]
+include/precompiler_flags.h:50:4: warning: #warning "Remove HAS_3_BUTTONS after implement keyboard logic for 1 button" [-Wcpp]
+include/precompiler_flags.h:50:4: warning: #warning "Remove HAS_3_BUTTONS after implement keyboard logic for 1 button" [-Wcpp]
+include/precompiler_flags.h:50:4: warning: #warning "Remove HAS_3_BUTTONS after implement keyboard logic for 1 button" [-Wcpp]
+include/precompiler_flags.h:50:4: warning: #warning "Remove HAS_3_BUTTONS after implement keyboard logic for 1 button" [-Wcpp]
+include/precompiler_flags.h:50:4: warning: #warning "Remove HAS_3_BUTTONS after implement keyboard logic for 1 button" [-Wcpp]
+include/precompiler_flags.h:50:4: warning: #warning "Remove HAS_3_BUTTONS after implement keyboard logic for 1 button" [-Wcpp]
+include/precompiler_flags.h:50:4: warning: #warning "Remove HAS_3_BUTTONS after implement keyboard logic for 1 button" [-Wcpp]
+include/precompiler_flags.h:50:4: warning: #warning "Remove HAS_3_BUTTONS after implement keyboard logic for 1 button" [-Wcpp]
+include/precompiler_flags.h:50:4: warning: #warning "Remove HAS_3_BUTTONS after implement keyboard logic for 1 button" [-Wcpp]
+src/core/serial_commands/storage_commands.cpp:269:10: warning: variable 'headerReceived' set but not used [-Wunused-but-set-variable]
+include/precompiler_flags.h:50:4: warning: #warning "Remove HAS_3_BUTTONS after implement keyboard logic for 1 button" [-Wcpp]
+include/precompiler_flags.h:50:4: warning: #warning "Remove HAS_3_BUTTONS after implement keyboard logic for 1 button" [-Wcpp]
+include/precompiler_flags.h:50:4: warning: #warning "Remove HAS_3_BUTTONS after implement keyboard logic for 1 button" [-Wcpp]
+include/precompiler_flags.h:50:4: warning: #warning "Remove HAS_3_BUTTONS after implement keyboard logic for 1 button" [-Wcpp]
+include/precompiler_flags.h:50:4: warning: #warning "Remove HAS_3_BUTTONS after implement keyboard logic for 1 button" [-Wcpp]
+include/precompiler_flags.h:50:4: warning: #warning "Remove HAS_3_BUTTONS after implement keyboard logic for 1 button" [-Wcpp]
+include/precompiler_flags.h:50:4: warning: #warning "Remove HAS_3_BUTTONS after implement keyboard logic for 1 button" [-Wcpp]
+include/precompiler_flags.h:50:4: warning: #warning "Remove HAS_3_BUTTONS after implement keyboard logic for 1 button" [-Wcpp]
+include/precompiler_flags.h:50:4: warning: #warning "Remove HAS_3_BUTTONS after implement keyboard logic for 1 button" [-Wcpp]
+include/precompiler_flags.h:50:4: warning: #warning "Remove HAS_3_BUTTONS after implement keyboard logic for 1 button" [-Wcpp]
+include/precompiler_flags.h:50:4: warning: #warning "Remove HAS_3_BUTTONS after implement keyboard logic for 1 button" [-Wcpp]
+include/precompiler_flags.h:50:4: warning: #warning "Remove HAS_3_BUTTONS after implement keyboard logic for 1 button" [-Wcpp]
+include/precompiler_flags.h:50:4: warning: #warning "Remove HAS_3_BUTTONS after implement keyboard logic for 1 button" [-Wcpp]
+include/precompiler_flags.h:50:4: warning: #warning "Remove HAS_3_BUTTONS after implement keyboard logic for 1 button" [-Wcpp]
+include/precompiler_flags.h:50:4: warning: #warning "Remove HAS_3_BUTTONS after implement keyboard logic for 1 button" [-Wcpp]
+include/precompiler_flags.h:50:4: warning: #warning "Remove HAS_3_BUTTONS after implement keyboard logic for 1 button" [-Wcpp]
+include/precompiler_flags.h:50:4: warning: #warning "Remove HAS_3_BUTTONS after implement keyboard logic for 1 button" [-Wcpp]
+src/hal/inputs/touch.cpp:19:13: warning: 'void panelSize(int16_t&, int16_t&)' defined but not used [-Wunused-function]
+include/precompiler_flags.h:50:4: warning: #warning "Remove HAS_3_BUTTONS after implement keyboard logic for 1 button" [-Wcpp]
+include/precompiler_flags.h:50:4: warning: #warning "Remove HAS_3_BUTTONS after implement keyboard logic for 1 button" [-Wcpp]
+include/precompiler_flags.h:50:4: warning: #warning "Remove HAS_3_BUTTONS after implement keyboard logic for 1 button" [-Wcpp]
+include/precompiler_flags.h:50:4: warning: #warning "Remove HAS_3_BUTTONS after implement keyboard logic for 1 button" [-Wcpp]
+include/precompiler_flags.h:50:4: warning: #warning "Remove HAS_3_BUTTONS after implement keyboard logic for 1 button" [-Wcpp]
+include/precompiler_flags.h:50:4: warning: #warning "Remove HAS_3_BUTTONS after implement keyboard logic for 1 button" [-Wcpp]
+src/modules/bjs_interpreter/audio_js.cpp:23:10: warning: variable 'nonBlocking' set but not used [-Wunused-but-set-variable]
+include/precompiler_flags.h:50:4: warning: #warning "Remove HAS_3_BUTTONS after implement keyboard logic for 1 button" [-Wcpp]
+include/precompiler_flags.h:50:4: warning: #warning "Remove HAS_3_BUTTONS after implement keyboard logic for 1 button" [-Wcpp]
+include/precompiler_flags.h:50:4: warning: #warning "Remove HAS_3_BUTTONS after implement keyboard logic for 1 button" [-Wcpp]
+include/precompiler_flags.h:50:4: warning: #warning "Remove HAS_3_BUTTONS after implement keyboard logic for 1 button" [-Wcpp]
+include/precompiler_flags.h:50:4: warning: #warning "Remove HAS_3_BUTTONS after implement keyboard logic for 1 button" [-Wcpp]
+include/precompiler_flags.h:50:4: warning: #warning "Remove HAS_3_BUTTONS after implement keyboard logic for 1 button" [-Wcpp]
+include/precompiler_flags.h:50:4: warning: #warning "Remove HAS_3_BUTTONS after implement keyboard logic for 1 button" [-Wcpp]
+include/precompiler_flags.h:50:4: warning: #warning "Remove HAS_3_BUTTONS after implement keyboard logic for 1 button" [-Wcpp]
+include/precompiler_flags.h:50:4: warning: #warning "Remove HAS_3_BUTTONS after implement keyboard logic for 1 button" [-Wcpp]
+include/precompiler_flags.h:50:4: warning: #warning "Remove HAS_3_BUTTONS after implement keyboard logic for 1 button" [-Wcpp]
+include/precompiler_flags.h:50:4: warning: #warning "Remove HAS_3_BUTTONS after implement keyboard logic for 1 button" [-Wcpp]
+include/precompiler_flags.h:50:4: warning: #warning "Remove HAS_3_BUTTONS after implement keyboard logic for 1 button" [-Wcpp]
+include/precompiler_flags.h:50:4: warning: #warning "Remove HAS_3_BUTTONS after implement keyboard logic for 1 button" [-Wcpp]
+include/precompiler_flags.h:50:4: warning: #warning "Remove HAS_3_BUTTONS after implement keyboard logic for 1 button" [-Wcpp]
+include/precompiler_flags.h:50:4: warning: #warning "Remove HAS_3_BUTTONS after implement keyboard logic for 1 button" [-Wcpp]
+include/precompiler_flags.h:50:4: warning: #warning "Remove HAS_3_BUTTONS after implement keyboard logic for 1 button" [-Wcpp]
+include/precompiler_flags.h:50:4: warning: #warning "Remove HAS_3_BUTTONS after implement keyboard logic for 1 button" [-Wcpp]
+include/precompiler_flags.h:50:4: warning: #warning "Remove HAS_3_BUTTONS after implement keyboard logic for 1 button" [-Wcpp]
+include/precompiler_flags.h:50:4: warning: #warning "Remove HAS_3_BUTTONS after implement keyboard logic for 1 button" [-Wcpp]
+include/precompiler_flags.h:50:4: warning: #warning "Remove HAS_3_BUTTONS after implement keyboard logic for 1 button" [-Wcpp]
+include/precompiler_flags.h:50:4: warning: #warning "Remove HAS_3_BUTTONS after implement keyboard logic for 1 button" [-Wcpp]
+include/precompiler_flags.h:50:4: warning: #warning "Remove HAS_3_BUTTONS after implement keyboard logic for 1 button" [-Wcpp]
+include/precompiler_flags.h:50:4: warning: #warning "Remove HAS_3_BUTTONS after implement keyboard logic for 1 button" [-Wcpp]
+include/precompiler_flags.h:50:4: warning: #warning "Remove HAS_3_BUTTONS after implement keyboard logic for 1 button" [-Wcpp]
+include/precompiler_flags.h:50:4: warning: #warning "Remove HAS_3_BUTTONS after implement keyboard logic for 1 button" [-Wcpp]
+include/precompiler_flags.h:50:4: warning: #warning "Remove HAS_3_BUTTONS after implement keyboard logic for 1 button" [-Wcpp]
+include/precompiler_flags.h:50:4: warning: #warning "Remove HAS_3_BUTTONS after implement keyboard logic for 1 button" [-Wcpp]
+include/precompiler_flags.h:50:4: warning: #warning "Remove HAS_3_BUTTONS after implement keyboard logic for 1 button" [-Wcpp]
+include/precompiler_flags.h:50:4: warning: #warning "Remove HAS_3_BUTTONS after implement keyboard logic for 1 button" [-Wcpp]
+include/precompiler_flags.h:50:4: warning: #warning "Remove HAS_3_BUTTONS after implement keyboard logic for 1 button" [-Wcpp]
+include/precompiler_flags.h:50:4: warning: #warning "Remove HAS_3_BUTTONS after implement keyboard logic for 1 button" [-Wcpp]
+include/precompiler_flags.h:50:4: warning: #warning "Remove HAS_3_BUTTONS after implement keyboard logic for 1 button" [-Wcpp]
+src/modules/ble/fastpair_crypto.cpp:628:38: warning: format '%u' expects argument of type 'unsigned int', but argument 3 has type 'uint32_t' {aka 'long unsigned int'} [-Wformat=]
+include/precompiler_flags.h:50:4: warning: #warning "Remove HAS_3_BUTTONS after implement keyboard logic for 1 button" [-Wcpp]
+include/precompiler_flags.h:50:4: warning: #warning "Remove HAS_3_BUTTONS after implement keyboard logic for 1 button" [-Wcpp]
+include/precompiler_flags.h:50:4: warning: #warning "Remove HAS_3_BUTTONS after implement keyboard logic for 1 button" [-Wcpp]
+src/modules/ble/gatt_explorer.cpp:801:11: warning: 'void* memset(void*, int, size_t)' clearing an object of non-trivial type 'struct BleConnDiagInfo'; use assignment or value-initialization instead [-Wclass-memaccess]
+src/modules/ble/gatt_explorer.cpp:531:8: note: 'struct BleConnDiagInfo' declared here
+include/precompiler_flags.h:50:4: warning: #warning "Remove HAS_3_BUTTONS after implement keyboard logic for 1 button" [-Wcpp]
+include/precompiler_flags.h:50:4: warning: #warning "Remove HAS_3_BUTTONS after implement keyboard logic for 1 button" [-Wcpp]
+src/modules/ble_api/services/BLESerialService.cpp:51:20: warning: 'bool NimBLEService::start()' is deprecated: NimBLEService::start() has no effect. Services are started when the server is started. [-Wdeprecated-declarations]
+.pio/libdeps/arduino-nesso-n1/NimBLE-Arduino/src/NimBLEService.h:51:10: note: declared here
+include/precompiler_flags.h:50:4: warning: #warning "Remove HAS_3_BUTTONS after implement keyboard logic for 1 button" [-Wcpp]
+include/precompiler_flags.h:50:4: warning: #warning "Remove HAS_3_BUTTONS after implement keyboard logic for 1 button" [-Wcpp]
+include/precompiler_flags.h:50:4: warning: #warning "Remove HAS_3_BUTTONS after implement keyboard logic for 1 button" [-Wcpp]
+src/modules/ble_api/services/BatteryService.cpp:35:20: warning: 'bool NimBLEService::start()' is deprecated: NimBLEService::start() has no effect. Services are started when the server is started. [-Wdeprecated-declarations]
+.pio/libdeps/arduino-nesso-n1/NimBLE-Arduino/src/NimBLEService.h:51:10: note: declared here
+include/precompiler_flags.h:50:4: warning: #warning "Remove HAS_3_BUTTONS after implement keyboard logic for 1 button" [-Wcpp]
+include/precompiler_flags.h:50:4: warning: #warning "Remove HAS_3_BUTTONS after implement keyboard logic for 1 button" [-Wcpp]
+include/precompiler_flags.h:50:4: warning: #warning "Remove HAS_3_BUTTONS after implement keyboard logic for 1 button" [-Wcpp]
+include/precompiler_flags.h:50:4: warning: #warning "Remove HAS_3_BUTTONS after implement keyboard logic for 1 button" [-Wcpp]
+include/precompiler_flags.h:50:4: warning: #warning "Remove HAS_3_BUTTONS after implement keyboard logic for 1 button" [-Wcpp]
+include/precompiler_flags.h:50:4: warning: #warning "Remove HAS_3_BUTTONS after implement keyboard logic for 1 button" [-Wcpp]
+include/precompiler_flags.h:50:4: warning: #warning "Remove HAS_3_BUTTONS after implement keyboard logic for 1 button" [-Wcpp]
+include/precompiler_flags.h:50:4: warning: #warning "Remove HAS_3_BUTTONS after implement keyboard logic for 1 button" [-Wcpp]
+include/precompiler_flags.h:50:4: warning: #warning "Remove HAS_3_BUTTONS after implement keyboard logic for 1 button" [-Wcpp]
+include/precompiler_flags.h:50:4: warning: #warning "Remove HAS_3_BUTTONS after implement keyboard logic for 1 button" [-Wcpp]
+include/precompiler_flags.h:50:4: warning: #warning "Remove HAS_3_BUTTONS after implement keyboard logic for 1 button" [-Wcpp]
+include/precompiler_flags.h:50:4: warning: #warning "Remove HAS_3_BUTTONS after implement keyboard logic for 1 button" [-Wcpp]
+include/precompiler_flags.h:50:4: warning: #warning "Remove HAS_3_BUTTONS after implement keyboard logic for 1 button" [-Wcpp]
+include/precompiler_flags.h:50:4: warning: #warning "Remove HAS_3_BUTTONS after implement keyboard logic for 1 button" [-Wcpp]
+include/precompiler_flags.h:50:4: warning: #warning "Remove HAS_3_BUTTONS after implement keyboard logic for 1 button" [-Wcpp]
+include/precompiler_flags.h:50:4: warning: #warning "Remove HAS_3_BUTTONS after implement keyboard logic for 1 button" [-Wcpp]
+include/precompiler_flags.h:50:4: warning: #warning "Remove HAS_3_BUTTONS after implement keyboard logic for 1 button" [-Wcpp]
+include/precompiler_flags.h:50:4: warning: #warning "Remove HAS_3_BUTTONS after implement keyboard logic for 1 button" [-Wcpp]
+include/precompiler_flags.h:50:4: warning: #warning "Remove HAS_3_BUTTONS after implement keyboard logic for 1 button" [-Wcpp]
+include/precompiler_flags.h:50:4: warning: #warning "Remove HAS_3_BUTTONS after implement keyboard logic for 1 button" [-Wcpp]
+include/precompiler_flags.h:50:4: warning: #warning "Remove HAS_3_BUTTONS after implement keyboard logic for 1 button" [-Wcpp]
+include/precompiler_flags.h:50:4: warning: #warning "Remove HAS_3_BUTTONS after implement keyboard logic for 1 button" [-Wcpp]
+include/precompiler_flags.h:50:4: warning: #warning "Remove HAS_3_BUTTONS after implement keyboard logic for 1 button" [-Wcpp]
+include/precompiler_flags.h:50:4: warning: #warning "Remove HAS_3_BUTTONS after implement keyboard logic for 1 button" [-Wcpp]
+include/precompiler_flags.h:50:4: warning: #warning "Remove HAS_3_BUTTONS after implement keyboard logic for 1 button" [-Wcpp]
+include/precompiler_flags.h:50:4: warning: #warning "Remove HAS_3_BUTTONS after implement keyboard logic for 1 button" [-Wcpp]
+include/precompiler_flags.h:50:4: warning: #warning "Remove HAS_3_BUTTONS after implement keyboard logic for 1 button" [-Wcpp]
+include/precompiler_flags.h:50:4: warning: #warning "Remove HAS_3_BUTTONS after implement keyboard logic for 1 button" [-Wcpp]
+include/precompiler_flags.h:50:4: warning: #warning "Remove HAS_3_BUTTONS after implement keyboard logic for 1 button" [-Wcpp]
+include/precompiler_flags.h:50:4: warning: #warning "Remove HAS_3_BUTTONS after implement keyboard logic for 1 button" [-Wcpp]
+include/precompiler_flags.h:50:4: warning: #warning "Remove HAS_3_BUTTONS after implement keyboard logic for 1 button" [-Wcpp]
+src/modules/rf/protocols/decoders/rf_decoder_psa.c:225:13: warning: variable 'original_buffer8' set but not used [-Wunused-but-set-variable]
+src/modules/rf/protocols/decoders/rf_decoder_secplus_v2.cpp:47:13: warning: 'void sp2_mix_order_encode(uint8_t, uint16_t*)' defined but not used [-Wunused-function]
+src/modules/rf/protocols/decoders/rf_decoder_somfy_keytis.cpp:47:16: warning: enumeration value 'ST_PREAMBLE_L' not handled in switch [-Wswitch]
+src/modules/rf/protocols/decoders/rf_decoder_somfy_telis.cpp:46:16: warning: enumeration value 'ST_PREAMBLE_L' not handled in switch [-Wswitch]
+src/modules/rf/protocols/decoders/rf_decoder_toyota_tpms.cpp:24:9: warning: variable 'sync_idx' set but not used [-Wunused-but-set-variable]
+include/precompiler_flags.h:50:4: warning: #warning "Remove HAS_3_BUTTONS after implement keyboard logic for 1 button" [-Wcpp]
+include/precompiler_flags.h:50:4: warning: #warning "Remove HAS_3_BUTTONS after implement keyboard logic for 1 button" [-Wcpp]
+include/precompiler_flags.h:50:4: warning: #warning "Remove HAS_3_BUTTONS after implement keyboard logic for 1 button" [-Wcpp]
+include/precompiler_flags.h:50:4: warning: #warning "Remove HAS_3_BUTTONS after implement keyboard logic for 1 button" [-Wcpp]
+include/precompiler_flags.h:50:4: warning: #warning "Remove HAS_3_BUTTONS after implement keyboard logic for 1 button" [-Wcpp]
+include/precompiler_flags.h:50:4: warning: #warning "Remove HAS_3_BUTTONS after implement keyboard logic for 1 button" [-Wcpp]
+include/precompiler_flags.h:50:4: warning: #warning "Remove HAS_3_BUTTONS after implement keyboard logic for 1 button" [-Wcpp]
+include/precompiler_flags.h:50:4: warning: #warning "Remove HAS_3_BUTTONS after implement keyboard logic for 1 button" [-Wcpp]
+include/precompiler_flags.h:50:4: warning: #warning "Remove HAS_3_BUTTONS after implement keyboard logic for 1 button" [-Wcpp]
+include/precompiler_flags.h:50:4: warning: #warning "Remove HAS_3_BUTTONS after implement keyboard logic for 1 button" [-Wcpp]
+include/precompiler_flags.h:50:4: warning: #warning "Remove HAS_3_BUTTONS after implement keyboard logic for 1 button" [-Wcpp]
+include/precompiler_flags.h:50:4: warning: #warning "Remove HAS_3_BUTTONS after implement keyboard logic for 1 button" [-Wcpp]
+include/precompiler_flags.h:50:4: warning: #warning "Remove HAS_3_BUTTONS after implement keyboard logic for 1 button" [-Wcpp]
+include/precompiler_flags.h:50:4: warning: #warning "Remove HAS_3_BUTTONS after implement keyboard logic for 1 button" [-Wcpp]
+include/precompiler_flags.h:50:4: warning: #warning "Remove HAS_3_BUTTONS after implement keyboard logic for 1 button" [-Wcpp]
+include/precompiler_flags.h:50:4: warning: #warning "Remove HAS_3_BUTTONS after implement keyboard logic for 1 button" [-Wcpp]
+include/precompiler_flags.h:50:4: warning: #warning "Remove HAS_3_BUTTONS after implement keyboard logic for 1 button" [-Wcpp]
+src/modules/rfid/PN532.cpp:688:18: warning: suggest braces around empty body in an 'if' statement [-Wempty-body]
+include/precompiler_flags.h:50:4: warning: #warning "Remove HAS_3_BUTTONS after implement keyboard logic for 1 button" [-Wcpp]
+include/precompiler_flags.h:50:4: warning: #warning "Remove HAS_3_BUTTONS after implement keyboard logic for 1 button" [-Wcpp]
+include/precompiler_flags.h:50:4: warning: #warning "Remove HAS_3_BUTTONS after implement keyboard logic for 1 button" [-Wcpp]
+include/precompiler_flags.h:50:4: warning: #warning "Remove HAS_3_BUTTONS after implement keyboard logic for 1 button" [-Wcpp]
+src/modules/rfid/RFIDInterface.cpp:89:11: warning: 'void* memset(void*, int, size_t)' clearing an object of non-trivial type 'struct RFIDInterface::NdefMessage'; use assignment or value-initialization instead [-Wclass-memaccess]
+src/modules/rfid/RFIDInterface.h:32:20: note: 'struct RFIDInterface::NdefMessage' declared here
+src/modules/rfid/PN532KillerTools.cpp:775:20: warning: 'bool NimBLEService::start()' is deprecated: NimBLEService::start() has no effect. Services are started when the server is started. [-Wdeprecated-declarations]
+.pio/libdeps/arduino-nesso-n1/NimBLE-Arduino/src/NimBLEService.h:51:10: note: declared here
+src/modules/rfid/ST25R3916.cpp:1257:30: warning: comparison is always true due to limited range of data type [-Wtype-limits]
+include/precompiler_flags.h:50:4: warning: #warning "Remove HAS_3_BUTTONS after implement keyboard logic for 1 button" [-Wcpp]
+src/modules/rfid/ST25R3916.cpp:27:20: warning: 'const char* _stateStr(rfalNfcState)' defined but not used [-Wunused-function]
+include/precompiler_flags.h:50:4: warning: #warning "Remove HAS_3_BUTTONS after implement keyboard logic for 1 button" [-Wcpp]
+include/precompiler_flags.h:50:4: warning: #warning "Remove HAS_3_BUTTONS after implement keyboard logic for 1 button" [-Wcpp]
+include/precompiler_flags.h:50:4: warning: #warning "Remove HAS_3_BUTTONS after implement keyboard logic for 1 button" [-Wcpp]
+include/precompiler_flags.h:50:4: warning: #warning "Remove HAS_3_BUTTONS after implement keyboard logic for 1 button" [-Wcpp]
+include/precompiler_flags.h:50:4: warning: #warning "Remove HAS_3_BUTTONS after implement keyboard logic for 1 button" [-Wcpp]
+include/precompiler_flags.h:50:4: warning: #warning "Remove HAS_3_BUTTONS after implement keyboard logic for 1 button" [-Wcpp]
+include/precompiler_flags.h:50:4: warning: #warning "Remove HAS_3_BUTTONS after implement keyboard logic for 1 button" [-Wcpp]
+include/precompiler_flags.h:50:4: warning: #warning "Remove HAS_3_BUTTONS after implement keyboard logic for 1 button" [-Wcpp]
+include/precompiler_flags.h:50:4: warning: #warning "Remove HAS_3_BUTTONS after implement keyboard logic for 1 button" [-Wcpp]
+include/precompiler_flags.h:50:4: warning: #warning "Remove HAS_3_BUTTONS after implement keyboard logic for 1 button" [-Wcpp]
+include/precompiler_flags.h:50:4: warning: #warning "Remove HAS_3_BUTTONS after implement keyboard logic for 1 button" [-Wcpp]
+src/modules/wifi/channel_analyzer.cpp:30:5: warning: '++' expression of 'volatile'-qualified type is deprecated [-Wvolatile]
+include/precompiler_flags.h:50:4: warning: #warning "Remove HAS_3_BUTTONS after implement keyboard logic for 1 button" [-Wcpp]
+src/modules/wifi/clients.cpp:443:6: warning: 'void {anonymous}::clearTerminalPendingState()' defined but not used [-Wunused-function]
+src/modules/wifi/clients.cpp:439:6: warning: 'void {anonymous}::setPendingEchoSuppression(const String&)' defined but not used [-Wunused-function]
+src/modules/wifi/clients.cpp:418:8: warning: 'String {anonymous}::getBufferedCommandInput()' defined but not used [-Wunused-function]
+include/precompiler_flags.h:50:4: warning: #warning "Remove HAS_3_BUTTONS after implement keyboard logic for 1 button" [-Wcpp]
+include/precompiler_flags.h:50:4: warning: #warning "Remove HAS_3_BUTTONS after implement keyboard logic for 1 button" [-Wcpp]
+src/modules/wifi/jam_detect.cpp:37:5: warning: '++' expression of 'volatile'-qualified type is deprecated [-Wvolatile]
+src/modules/wifi/jam_detect.cpp:43:58: warning: '++' expression of 'volatile'-qualified type is deprecated [-Wvolatile]
+include/precompiler_flags.h:50:4: warning: #warning "Remove HAS_3_BUTTONS after implement keyboard logic for 1 button" [-Wcpp]
+include/precompiler_flags.h:50:4: warning: #warning "Remove HAS_3_BUTTONS after implement keyboard logic for 1 button" [-Wcpp]
+include/precompiler_flags.h:50:4: warning: #warning "Remove HAS_3_BUTTONS after implement keyboard logic for 1 button" [-Wcpp]
+include/precompiler_flags.h:50:4: warning: #warning "Remove HAS_3_BUTTONS after implement keyboard logic for 1 button" [-Wcpp]
+include/precompiler_flags.h:50:4: warning: #warning "Remove HAS_3_BUTTONS after implement keyboard logic for 1 button" [-Wcpp]
+include/precompiler_flags.h:50:4: warning: #warning "Remove HAS_3_BUTTONS after implement keyboard logic for 1 button" [-Wcpp]
+include/precompiler_flags.h:50:4: warning: #warning "Remove HAS_3_BUTTONS after implement keyboard logic for 1 button" [-Wcpp]
+include/precompiler_flags.h:50:4: warning: #warning "Remove HAS_3_BUTTONS after implement keyboard logic for 1 button" [-Wcpp]
+include/precompiler_flags.h:50:4: warning: #warning "Remove HAS_3_BUTTONS after implement keyboard logic for 1 button" [-Wcpp]
+src/modules/wifi/wifi_recover.cpp:614:1: warning: 'always_inline' function might not be inlinable unless also declared 'inline' [-Wattributes]
+src/modules/wifi/wifi_recover.cpp:594:1: warning: 'always_inline' function might not be inlinable unless also declared 'inline' [-Wattributes]
+src/modules/wifi/wifi_recover.cpp:478:1: warning: 'always_inline' function might not be inlinable unless also declared 'inline' [-Wattributes]
+src/modules/wifi/wifi_recover.cpp:444:1: warning: 'always_inline' function might not be inlinable unless also declared 'inline' [-Wattributes]
+src/modules/wifi/wifi_recover.cpp:594:1: warning: 'void hmac_sha1_20(const HmacSha1Pre&, const uint8_t*, uint8_t*)' defined but not used [-Wunused-function]
+include/precompiler_flags.h:50:4: warning: #warning "Remove HAS_3_BUTTONS after implement keyboard logic for 1 button" [-Wcpp]
+include/precompiler_flags.h:50:4: warning: #warning "Remove HAS_3_BUTTONS after implement keyboard logic for 1 button" [-Wcpp]
+include/precompiler_flags.h:50:4: warning: #warning "Remove HAS_3_BUTTONS after implement keyboard logic for 1 button" [-Wcpp]
+include/precompiler_flags.h:50:4: warning: #warning "Remove HAS_3_BUTTONS after implement keyboard logic for 1 button" [-Wcpp]
+src/modules/wire/logic_analyzer.cpp:418:18: warning: variable 't' set but not used [-Wunused-but-set-variable]
+src/modules/wire/logic_analyzer.cpp:630:22: warning: comparison is always false due to limited range of data type [-Wtype-limits]
+include/precompiler_flags.h:50:4: warning: #warning "Remove HAS_3_BUTTONS after implement keyboard logic for 1 button" [-Wcpp]
+include/precompiler_flags.h:50:4: warning: #warning "Remove HAS_3_BUTTONS after implement keyboard logic for 1 button" [-Wcpp]
+.pio/libdeps/arduino-nesso-n1/NimBLE-Arduino/src/nimble/porting/npl/freertos/include/nimble/nimble_npl_os.h:95:8: warning: type 'struct npl_funcs_t' violates the C++ One Definition Rule [-Wodr]
+/home/runner/.platformio/packages/framework-arduinoespressif32-libs/esp32c6/include/bt/porting/npl/freertos/include/nimble/nimble_npl_os.h:80:8: note: a different type is defined in another translation unit
+/home/runner/.platformio/packages/framework-arduinoespressif32-libs/esp32c6/include/bt/porting/npl/freertos/include/nimble/nimble_npl_os.h:125:12: note: the first difference of corresponding definitions is field 'p_ble_npl_eventq_put_to_front'
+/home/runner/.platformio/packages/framework-arduinoespressif32-libs/esp32c6/include/bt/porting/npl/freertos/include/nimble/nimble_npl_os.h:80:8: note: a type with different number of fields is defined in another translation unit
+.pio/libdeps/arduino-nesso-n1/M5GFX/src/lgfx/v1/LGFXBase.hpp:1412:9: warning: type 'struct LovyanGFX' violates the C++ One Definition Rule [-Wodr]
+.pio/libdeps/arduino-nesso-n1/M5GFX/src/lgfx/v1/LGFXBase.hpp:1412:9: note: a type with the same name but different base type is defined in another translation unit
+.pio/libdeps/arduino-nesso-n1/M5GFX/src/lgfx/v1/LGFXBase.hpp:64:9: note: type name 'lgfx::v1::LGFXBase' should match type name 'lgfx::v1::LGFX_FILESYSTEM_Support<lgfx::v1::LGFXBase>'
+.pio/libdeps/arduino-nesso-n1/M5GFX/src/lgfx/v1/lgfx_filesystem_support.hpp:45:9: note: the incompatible type is defined here
+.pio/libdeps/arduino-nesso-n1/M5GFX/src/lgfx/v1/LGFXBase.hpp:1427:9: warning: type 'struct LGFX_Device' violates the C++ One Definition Rule [-Wodr]
+.pio/libdeps/arduino-nesso-n1/M5GFX/src/lgfx/v1/LGFXBase.hpp:1427:9: note: a type with different bases is defined in another translation unit
+.pio/libdeps/arduino-nesso-n1/M5GFX/src/lgfx/v1/LGFX_Sprite.hpp:104:9: warning: type 'struct LGFX_Sprite' violates the C++ One Definition Rule [-Wodr]
+.pio/libdeps/arduino-nesso-n1/M5GFX/src/lgfx/v1/LGFX_Sprite.hpp:104:9: note: a type with different bases is defined in another translation unit
+.pio/libdeps/arduino-nesso-n1/M5GFX/src/lgfx/v1/LGFX_Sprite.hpp:313:11: warning: type of 'setColorDepth' does not match original declaration [-Wlto-type-mismatch]
+.pio/libdeps/arduino-nesso-n1/M5GFX/src/lgfx/v1/LGFX_Sprite.hpp:313:11: note: 'setColorDepth' was previously declared here
+.pio/libdeps/arduino-nesso-n1/M5GFX/src/lgfx/v1/LGFX_Sprite.hpp:313:11: note: code may be misoptimized unless '-fno-strict-aliasing' is used
+.pio/libdeps/arduino-nesso-n1/M5GFX/src/lgfx/v1/LGFX_Sprite.hpp:172:11: warning: type of 'createSprite' does not match original declaration [-Wlto-type-mismatch]
+.pio/libdeps/arduino-nesso-n1/M5GFX/src/lgfx/v1/LGFX_Sprite.hpp:172:11: note: 'createSprite' was previously declared here
+.pio/libdeps/arduino-nesso-n1/M5GFX/src/lgfx/v1/LGFX_Sprite.hpp:172:11: note: code may be misoptimized unless '-fno-strict-aliasing' is used
+.pio/libdeps/arduino-nesso-n1/M5GFX/src/lgfx/v1/LGFX_Sprite.hpp:220:10: warning: type of 'createPalette' does not match original declaration [-Wlto-type-mismatch]
+.pio/libdeps/arduino-nesso-n1/M5GFX/src/lgfx/v1/LGFX_Sprite.hpp:220:10: note: 'createPalette' was previously declared here
+.pio/libdeps/arduino-nesso-n1/M5GFX/src/lgfx/v1/LGFX_Sprite.hpp:220:10: note: code may be misoptimized unless '-fno-strict-aliasing' is used
+.pio/libdeps/arduino-nesso-n1/M5GFX/src/lgfx/v1/LGFX_Sprite.hpp:408:10: warning: type of 'create_palette' does not match original declaration [-Wlto-type-mismatch]
+.pio/libdeps/arduino-nesso-n1/M5GFX/src/lgfx/v1/LGFX_Sprite.hpp:408:10: note: 'create_palette' was previously declared here
+.pio/libdeps/arduino-nesso-n1/M5GFX/src/lgfx/v1/LGFX_Sprite.hpp:408:10: note: code may be misoptimized unless '-fno-strict-aliasing' is used
+.pio/libdeps/arduino-nesso-n1/M5GFX/src/lgfx/v1/LGFX_Sprite.hpp:130:10: warning: type of 'deletePalette' does not match original declaration [-Wlto-type-mismatch]
+.pio/libdeps/arduino-nesso-n1/M5GFX/src/lgfx/v1/LGFX_Sprite.hpp:130:10: note: 'deletePalette' was previously declared here
+.pio/libdeps/arduino-nesso-n1/M5GFX/src/lgfx/v1/LGFX_Sprite.hpp:130:10: note: code may be misoptimized unless '-fno-strict-aliasing' is used
+.pio/libdeps/arduino-nesso-n1/M5GFX/src/lgfx/v1/LGFX_Sprite.hpp:136:10: warning: type of 'deleteSprite' does not match original declaration [-Wlto-type-mismatch]
+.pio/libdeps/arduino-nesso-n1/M5GFX/src/lgfx/v1/LGFX_Sprite.hpp:136:10: note: 'deleteSprite' was previously declared here
+.pio/libdeps/arduino-nesso-n1/M5GFX/src/lgfx/v1/LGFX_Sprite.hpp:136:10: note: code may be misoptimized unless '-fno-strict-aliasing' is used
+.pio/libdeps/arduino-nesso-n1/M5GFX/src/lgfx/v1/LGFX_Sprite.hpp:252:10: warning: type of 'setPaletteGrayscale' does not match original declaration [-Wlto-type-mismatch]
+.pio/libdeps/arduino-nesso-n1/M5GFX/src/lgfx/v1/LGFX_Sprite.hpp:252:10: note: 'setPaletteGrayscale' was previously declared here
+.pio/libdeps/arduino-nesso-n1/M5GFX/src/lgfx/v1/LGFX_Sprite.hpp:252:10: note: code may be misoptimized unless '-fno-strict-aliasing' is used
+.pio/libdeps/arduino-nesso-n1/M5GFX/src/lgfx/v1/LGFXBase.hpp:1473:25: warning: type of 'getTouchRaw' does not match original declaration [-Wlto-type-mismatch]
+.pio/libdeps/arduino-nesso-n1/M5GFX/src/lgfx/v1/LGFXBase.hpp:1473:25: note: 'getTouchRaw' was previously declared here
+.pio/libdeps/arduino-nesso-n1/M5GFX/src/lgfx/v1/LGFXBase.hpp:1473:25: note: code may be misoptimized unless '-fno-strict-aliasing' is used
+.pio/libdeps/arduino-nesso-n1/M5GFX/src/lgfx/v1/LGFXBase.hpp:1472:20: warning: type of 'touch' does not match original declaration [-Wlto-type-mismatch]
+.pio/libdeps/arduino-nesso-n1/M5GFX/src/lgfx/v1/LGFXBase.hpp:1472:20: note: 'touch' was previously declared here
+.pio/libdeps/arduino-nesso-n1/M5GFX/src/lgfx/v1/LGFXBase.hpp:1472:20: note: code may be misoptimized unless '-fno-strict-aliasing' is used
+.pio/libdeps/arduino-nesso-n1/M5GFX/src/lgfx/v1/LGFXBase.hpp:1469:17: warning: type of 'setBrightness' does not match original declaration [-Wlto-type-mismatch]
+.pio/libdeps/arduino-nesso-n1/M5GFX/src/lgfx/v1/LGFXBase.hpp:1469:17: note: 'setBrightness' was previously declared here
+.pio/libdeps/arduino-nesso-n1/M5GFX/src/lgfx/v1/LGFXBase.hpp:1469:17: note: code may be misoptimized unless '-fno-strict-aliasing' is used
+.pio/libdeps/arduino-nesso-n1/M5GFX/src/lgfx/v1/LGFXBase.hpp:1442:17: warning: type of 'invertDisplay' does not match original declaration [-Wlto-type-mismatch]
+.pio/libdeps/arduino-nesso-n1/M5GFX/src/lgfx/v1/LGFXBase.hpp:1442:17: note: 'invertDisplay' was previously declared here
+.pio/libdeps/arduino-nesso-n1/M5GFX/src/lgfx/v1/LGFXBase.hpp:1442:17: note: code may be misoptimized unless '-fno-strict-aliasing' is used
+.pio/libdeps/arduino-nesso-n1/M5GFX/src/lgfx/v1/LGFXBase.hpp:1438:10: warning: type of 'setPanel' does not match original declaration [-Wlto-type-mismatch]
+.pio/libdeps/arduino-nesso-n1/M5GFX/src/lgfx/v1/LGFXBase.cpp:3616:8: note: 'setPanel' was previously declared here
+.pio/libdeps/arduino-nesso-n1/M5GFX/src/lgfx/v1/LGFXBase.cpp:3616:8: note: code may be misoptimized unless '-fno-strict-aliasing' is used
+.pio/libdeps/arduino-nesso-n1/M5GFX/src/lgfx/v1/LGFXBase.hpp:1530:18: warning: type of 'init_impl' does not match original declaration [-Wlto-type-mismatch]
+.pio/libdeps/arduino-nesso-n1/M5GFX/src/lgfx/v1/LGFXBase.cpp:3624:8: note: 'init_impl' was previously declared here
+.pio/libdeps/arduino-nesso-n1/M5GFX/src/lgfx/v1/LGFXBase.cpp:3624:8: note: code may be misoptimized unless '-fno-strict-aliasing' is used
+.pio/libdeps/arduino-nesso-n1/M5GFX/src/lgfx/v1/LGFXBase.hpp:1430:5: warning: type of '__ct_base ' does not match original declaration [-Wlto-type-mismatch]
+.pio/libdeps/arduino-nesso-n1/M5GFX/src/lgfx/v1/LGFXBase.cpp:3601:3: note: '__ct_base ' was previously declared here
+.pio/libdeps/arduino-nesso-n1/M5GFX/src/lgfx/v1/LGFXBase.cpp:3601:3: note: code may be misoptimized unless '-fno-strict-aliasing' is used
+/home/runner/.platformio/packages/framework-arduinoespressif32-libs/esp32c6/include/bt/porting/npl/freertos/include/nimble/nimble_npl_os.h:128:28: warning: 'npl_funcs' violates the C++ One Definition Rule [-Wodr]
+.pio/libdeps/arduino-nesso-n1/NimBLE-Arduino/src/nimble/porting/npl/freertos/include/nimble/nimble_npl_os.h:95:8: note: type 'struct npl_funcs_t' itself violates the C++ One Definition Rule
+/home/runner/.platformio/packages/framework-arduinoespressif32-libs/esp32c6/include/bt/porting/npl/freertos/include/nimble/nimble_npl_os.h:80:8: note: the incompatible type is defined here
+.pio/libdeps/arduino-nesso-n1/NimBLE-Arduino/src/nimble/porting/npl/freertos/include/nimble/nimble_npl_os.h:146:28: note: 'npl_funcs' was previously declared here
+.pio/libdeps/arduino-nesso-n1/NimBLE-Arduino/src/nimble/porting/npl/freertos/include/nimble/nimble_npl_os.h:146:28: note: code may be misoptimized unless '-fno-strict-aliasing' is used
+.pio/libdeps/arduino-nesso-n1/NimBLE-Arduino/src/NimBLEScan.h:222:18: note: virtual method 'onResult'
+.pio/libdeps/arduino-nesso-n1/M5GFX/src/lgfx/v1/LGFXBase.hpp:1412:9: warning: type 'struct LovyanGFX' violates the C++ One Definition Rule [-Wodr]
+.pio/libdeps/arduino-nesso-n1/M5GFX/src/lgfx/v1/LGFXBase.hpp:1412:9: note: a type with the same name but different base type is defined in another translation unit
+.pio/libdeps/arduino-nesso-n1/M5GFX/src/lgfx/v1/LGFXBase.hpp:64:9: note: type name 'lgfx::v1::LGFXBase' should match type name 'lgfx::v1::LGFX_FILESYSTEM_Support<lgfx::v1::LGFXBase>'
+.pio/libdeps/arduino-nesso-n1/M5GFX/src/lgfx/v1/lgfx_filesystem_support.hpp:45:9: note: the incompatible type is defined here
+.pio/libdeps/arduino-nesso-n1/M5GFX/src/lgfx/v1/LGFXBase.hpp:1412:9: warning: type 'struct LovyanGFX' violates the C++ One Definition Rule [-Wodr]
+.pio/libdeps/arduino-nesso-n1/M5GFX/src/lgfx/v1/LGFXBase.hpp:1412:9: note: a type with the same name but different base type is defined in another translation unit
+.pio/libdeps/arduino-nesso-n1/M5GFX/src/lgfx/v1/LGFXBase.hpp:64:9: note: type name 'lgfx::v1::LGFXBase' should match type name 'lgfx::v1::LGFX_FILESYSTEM_Support<lgfx::v1::LGFXBase>'
+.pio/libdeps/arduino-nesso-n1/M5GFX/src/lgfx/v1/lgfx_filesystem_support.hpp:45:9: note: the incompatible type is defined here
+.pio/libdeps/arduino-nesso-n1/M5GFX/src/lgfx/v1/LGFXBase.hpp:1412:9: warning: type 'struct LovyanGFX' violates the C++ One Definition Rule [-Wodr]
+.pio/libdeps/arduino-nesso-n1/M5GFX/src/lgfx/v1/LGFXBase.hpp:1412:9: note: a type with the same name but different base type is defined in another translation unit
+.pio/libdeps/arduino-nesso-n1/M5GFX/src/lgfx/v1/LGFXBase.hpp:64:9: note: type name 'lgfx::v1::LGFXBase' should match type name 'lgfx::v1::LGFX_FILESYSTEM_Support<lgfx::v1::LGFXBase>'
+.pio/libdeps/arduino-nesso-n1/M5GFX/src/lgfx/v1/lgfx_filesystem_support.hpp:45:9: note: the incompatible type is defined here
+.pio/libdeps/arduino-nesso-n1/M5GFX/src/lgfx/v1/LGFXBase.hpp:1412:9: warning: type 'struct LovyanGFX' violates the C++ One Definition Rule [-Wodr]
+.pio/libdeps/arduino-nesso-n1/M5GFX/src/lgfx/v1/LGFXBase.hpp:1412:9: note: a type with the same name but different base type is defined in another translation unit
+.pio/libdeps/arduino-nesso-n1/M5GFX/src/lgfx/v1/LGFXBase.hpp:64:9: note: type name 'lgfx::v1::LGFXBase' should match type name 'lgfx::v1::LGFX_FILESYSTEM_Support<lgfx::v1::LGFXBase>'
+.pio/libdeps/arduino-nesso-n1/M5GFX/src/lgfx/v1/lgfx_filesystem_support.hpp:45:9: note: the incompatible type is defined here
+.pio/libdeps/arduino-nesso-n1/M5GFX/src/lgfx/v1/LGFXBase.hpp:1412:9: warning: type 'struct LovyanGFX' violates the C++ One Definition Rule [-Wodr]
+.pio/libdeps/arduino-nesso-n1/M5GFX/src/lgfx/v1/LGFXBase.hpp:1412:9: note: a type with the same name but different base type is defined in another translation unit
+.pio/libdeps/arduino-nesso-n1/M5GFX/src/lgfx/v1/LGFXBase.hpp:64:9: note: type name 'lgfx::v1::LGFXBase' should match type name 'lgfx::v1::LGFX_FILESYSTEM_Support<lgfx::v1::LGFXBase>'
+.pio/libdeps/arduino-nesso-n1/M5GFX/src/lgfx/v1/lgfx_filesystem_support.hpp:45:9: note: the incompatible type is defined here
+.pio/libdeps/arduino-nesso-n1/M5GFX/src/lgfx/v1/LGFXBase.hpp:1412:9: warning: type 'struct LovyanGFX' violates the C++ One Definition Rule [-Wodr]
+.pio/libdeps/arduino-nesso-n1/M5GFX/src/lgfx/v1/LGFXBase.hpp:1412:9: note: a type with the same name but different base type is defined in another translation unit
+.pio/libdeps/arduino-nesso-n1/M5GFX/src/lgfx/v1/LGFXBase.hpp:64:9: note: type name 'lgfx::v1::LGFXBase' should match type name 'lgfx::v1::LGFX_FILESYSTEM_Support<lgfx::v1::LGFXBase>'
+.pio/libdeps/arduino-nesso-n1/M5GFX/src/lgfx/v1/lgfx_filesystem_support.hpp:45:9: note: the incompatible type is defined here
+.pio/libdeps/arduino-nesso-n1/M5GFX/src/lgfx/v1/LGFXBase.hpp:1412:9: warning: type 'struct LovyanGFX' violates the C++ One Definition Rule [-Wodr]
+.pio/libdeps/arduino-nesso-n1/M5GFX/src/lgfx/v1/LGFXBase.hpp:1412:9: note: a type with the same name but different base type is defined in another translation unit
+.pio/libdeps/arduino-nesso-n1/M5GFX/src/lgfx/v1/LGFXBase.hpp:64:9: note: type name 'lgfx::v1::LGFXBase' should match type name 'lgfx::v1::LGFX_FILESYSTEM_Support<lgfx::v1::LGFXBase>'
+.pio/libdeps/arduino-nesso-n1/M5GFX/src/lgfx/v1/lgfx_filesystem_support.hpp:45:9: note: the incompatible type is defined here
+.pio/libdeps/arduino-nesso-n1/M5GFX/src/lgfx/v1/LGFXBase.hpp:1412:9: warning: type 'struct LovyanGFX' violates the C++ One Definition Rule [-Wodr]
+.pio/libdeps/arduino-nesso-n1/M5GFX/src/lgfx/v1/LGFXBase.hpp:1412:9: note: a type with the same name but different base type is defined in another translation unit
+.pio/libdeps/arduino-nesso-n1/M5GFX/src/lgfx/v1/LGFXBase.hpp:64:9: note: type name 'lgfx::v1::LGFXBase' should match type name 'lgfx::v1::LGFX_FILESYSTEM_Support<lgfx::v1::LGFXBase>'
+.pio/libdeps/arduino-nesso-n1/M5GFX/src/lgfx/v1/lgfx_filesystem_support.hpp:45:9: note: the incompatible type is defined here
+.pio/libdeps/arduino-nesso-n1/M5GFX/src/lgfx/v1/LGFXBase.hpp:1412:9: warning: type 'struct LovyanGFX' violates the C++ One Definition Rule [-Wodr]
+.pio/libdeps/arduino-nesso-n1/M5GFX/src/lgfx/v1/LGFXBase.hpp:1412:9: note: a type with the same name but different base type is defined in another translation unit
+.pio/libdeps/arduino-nesso-n1/M5GFX/src/lgfx/v1/LGFXBase.hpp:64:9: note: type name 'lgfx::v1::LGFXBase' should match type name 'lgfx::v1::LGFX_FILESYSTEM_Support<lgfx::v1::LGFXBase>'
+.pio/libdeps/arduino-nesso-n1/M5GFX/src/lgfx/v1/lgfx_filesystem_support.hpp:45:9: note: the incompatible type is defined here
+.pio/libdeps/arduino-nesso-n1/M5GFX/src/lgfx/v1/LGFXBase.hpp:1412:9: warning: type 'struct LovyanGFX' violates the C++ One Definition Rule [-Wodr]
+.pio/libdeps/arduino-nesso-n1/M5GFX/src/lgfx/v1/LGFXBase.hpp:1412:9: note: a type with the same name but different base type is defined in another translation unit
+.pio/libdeps/arduino-nesso-n1/M5GFX/src/lgfx/v1/LGFXBase.hpp:64:9: note: type name 'lgfx::v1::LGFXBase' should match type name 'lgfx::v1::LGFX_FILESYSTEM_Support<lgfx::v1::LGFXBase>'
+.pio/libdeps/arduino-nesso-n1/M5GFX/src/lgfx/v1/lgfx_filesystem_support.hpp:45:9: note: the incompatible type is defined here
+.pio/libdeps/arduino-nesso-n1/M5GFX/src/lgfx/v1/LGFXBase.hpp:1412:9: warning: type 'struct LovyanGFX' violates the C++ One Definition Rule [-Wodr]
+.pio/libdeps/arduino-nesso-n1/M5GFX/src/lgfx/v1/LGFXBase.hpp:1412:9: note: a type with the same name but different base type is defined in another translation unit
+.pio/libdeps/arduino-nesso-n1/M5GFX/src/lgfx/v1/LGFXBase.hpp:64:9: note: type name 'lgfx::v1::LGFXBase' should match type name 'lgfx::v1::LGFX_FILESYSTEM_Support<lgfx::v1::LGFXBase>'
+.pio/libdeps/arduino-nesso-n1/M5GFX/src/lgfx/v1/lgfx_filesystem_support.hpp:45:9: note: the incompatible type is defined here
+.pio/libdeps/arduino-nesso-n1/M5GFX/src/lgfx/v1/LGFXBase.hpp:1412:9: warning: type 'struct LovyanGFX' violates the C++ One Definition Rule [-Wodr]
+.pio/libdeps/arduino-nesso-n1/M5GFX/src/lgfx/v1/LGFXBase.hpp:1412:9: note: a type with the same name but different base type is defined in another translation unit
+.pio/libdeps/arduino-nesso-n1/M5GFX/src/lgfx/v1/LGFXBase.hpp:64:9: note: type name 'lgfx::v1::LGFXBase' should match type name 'lgfx::v1::LGFX_FILESYSTEM_Support<lgfx::v1::LGFXBase>'
+.pio/libdeps/arduino-nesso-n1/M5GFX/src/lgfx/v1/lgfx_filesystem_support.hpp:45:9: note: the incompatible type is defined here
+.pio/libdeps/arduino-nesso-n1/M5GFX/src/lgfx/v1/LGFXBase.hpp:1412:9: warning: type 'struct LovyanGFX' violates the C++ One Definition Rule [-Wodr]
+.pio/libdeps/arduino-nesso-n1/M5GFX/src/lgfx/v1/LGFXBase.hpp:1412:9: note: a type with the same name but different base type is defined in another translation unit
+.pio/libdeps/arduino-nesso-n1/M5GFX/src/lgfx/v1/LGFXBase.hpp:64:9: note: type name 'lgfx::v1::LGFXBase' should match type name 'lgfx::v1::LGFX_FILESYSTEM_Support<lgfx::v1::LGFXBase>'
+.pio/libdeps/arduino-nesso-n1/M5GFX/src/lgfx/v1/lgfx_filesystem_support.hpp:45:9: note: the incompatible type is defined here
+.pio/libdeps/arduino-nesso-n1/M5GFX/src/lgfx/v1/LGFXBase.hpp:1412:9: warning: type 'struct LovyanGFX' violates the C++ One Definition Rule [-Wodr]
+.pio/libdeps/arduino-nesso-n1/M5GFX/src/lgfx/v1/LGFXBase.hpp:1412:9: note: a type with the same name but different base type is defined in another translation unit
+.pio/libdeps/arduino-nesso-n1/M5GFX/src/lgfx/v1/LGFXBase.hpp:64:9: note: type name 'lgfx::v1::LGFXBase' should match type name 'lgfx::v1::LGFX_FILESYSTEM_Support<lgfx::v1::LGFXBase>'
+.pio/libdeps/arduino-nesso-n1/M5GFX/src/lgfx/v1/lgfx_filesystem_support.hpp:45:9: note: the incompatible type is defined here
+.pio/libdeps/arduino-nesso-n1/M5GFX/src/lgfx/v1/LGFXBase.hpp:1412:9: warning: type 'struct LovyanGFX' violates the C++ One Definition Rule [-Wodr]
+.pio/libdeps/arduino-nesso-n1/M5GFX/src/lgfx/v1/LGFXBase.hpp:1412:9: note: a type with the same name but different base type is defined in another translation unit
+.pio/libdeps/arduino-nesso-n1/M5GFX/src/lgfx/v1/LGFXBase.hpp:64:9: note: type name 'lgfx::v1::LGFXBase' should match type name 'lgfx::v1::LGFX_FILESYSTEM_Support<lgfx::v1::LGFXBase>'
+.pio/libdeps/arduino-nesso-n1/M5GFX/src/lgfx/v1/lgfx_filesystem_support.hpp:45:9: note: the incompatible type is defined here
+.pio/libdeps/arduino-nesso-n1/M5GFX/src/lgfx/v1/LGFXBase.hpp:1412:9: warning: type 'struct LovyanGFX' violates the C++ One Definition Rule [-Wodr]
+.pio/libdeps/arduino-nesso-n1/M5GFX/src/lgfx/v1/LGFXBase.hpp:1412:9: note: a type with the same name but different base type is defined in another translation unit
+.pio/libdeps/arduino-nesso-n1/M5GFX/src/lgfx/v1/LGFXBase.hpp:64:9: note: type name 'lgfx::v1::LGFXBase' should match type name 'lgfx::v1::LGFX_FILESYSTEM_Support<lgfx::v1::LGFXBase>'
+.pio/libdeps/arduino-nesso-n1/M5GFX/src/lgfx/v1/lgfx_filesystem_support.hpp:45:9: note: the incompatible type is defined here
+.pio/libdeps/arduino-nesso-n1/M5GFX/src/lgfx/v1/LGFXBase.hpp:1412:9: warning: type 'struct LovyanGFX' violates the C++ One Definition Rule [-Wodr]
+.pio/libdeps/arduino-nesso-n1/M5GFX/src/lgfx/v1/LGFXBase.hpp:1412:9: note: a type with the same name but different base type is defined in another translation unit
+.pio/libdeps/arduino-nesso-n1/M5GFX/src/lgfx/v1/LGFXBase.hpp:64:9: note: type name 'lgfx::v1::LGFXBase' should match type name 'lgfx::v1::LGFX_FILESYSTEM_Support<lgfx::v1::LGFXBase>'
+.pio/libdeps/arduino-nesso-n1/M5GFX/src/lgfx/v1/lgfx_filesystem_support.hpp:45:9: note: the incompatible type is defined here
+.pio/libdeps/arduino-nesso-n1/M5GFX/src/lgfx/v1/LGFXBase.hpp:1412:9: warning: type 'struct LovyanGFX' violates the C++ One Definition Rule [-Wodr]
+.pio/libdeps/arduino-nesso-n1/M5GFX/src/lgfx/v1/LGFXBase.hpp:1412:9: note: a type with the same name but different base type is defined in another translation unit
+.pio/libdeps/arduino-nesso-n1/M5GFX/src/lgfx/v1/LGFXBase.hpp:64:9: note: type name 'lgfx::v1::LGFXBase' should match type name 'lgfx::v1::LGFX_FILESYSTEM_Support<lgfx::v1::LGFXBase>'
+.pio/libdeps/arduino-nesso-n1/M5GFX/src/lgfx/v1/lgfx_filesystem_support.hpp:45:9: note: the incompatible type is defined here
+.pio/libdeps/arduino-nesso-n1/M5GFX/src/lgfx/v1/LGFXBase.hpp:1412:9: warning: type 'struct LovyanGFX' violates the C++ One Definition Rule [-Wodr]
+.pio/libdeps/arduino-nesso-n1/M5GFX/src/lgfx/v1/LGFXBase.hpp:1412:9: note: a type with the same name but different base type is defined in another translation unit
+.pio/libdeps/arduino-nesso-n1/M5GFX/src/lgfx/v1/LGFXBase.hpp:64:9: note: type name 'lgfx::v1::LGFXBase' should match type name 'lgfx::v1::LGFX_FILESYSTEM_Support<lgfx::v1::LGFXBase>'
+.pio/libdeps/arduino-nesso-n1/M5GFX/src/lgfx/v1/lgfx_filesystem_support.hpp:45:9: note: the incompatible type is defined here
+.pio/libdeps/arduino-nesso-n1/M5GFX/src/lgfx/v1/LGFXBase.hpp:1412:9: warning: type 'struct LovyanGFX' violates the C++ One Definition Rule [-Wodr]
+.pio/libdeps/arduino-nesso-n1/M5GFX/src/lgfx/v1/LGFXBase.hpp:1412:9: note: a type with the same name but different base type is defined in another translation unit
+.pio/libdeps/arduino-nesso-n1/M5GFX/src/lgfx/v1/LGFXBase.hpp:64:9: note: type name 'lgfx::v1::LGFXBase' should match type name 'lgfx::v1::LGFX_FILESYSTEM_Support<lgfx::v1::LGFXBase>'
+.pio/libdeps/arduino-nesso-n1/M5GFX/src/lgfx/v1/lgfx_filesystem_support.hpp:45:9: note: the incompatible type is defined here
+.pio/libdeps/arduino-nesso-n1/M5GFX/src/lgfx/v1/LGFXBase.hpp:1412:9: warning: type 'struct LovyanGFX' violates the C++ One Definition Rule [-Wodr]
+.pio/libdeps/arduino-nesso-n1/M5GFX/src/lgfx/v1/LGFXBase.hpp:1412:9: note: a type with the same name but different base type is defined in another translation unit
+.pio/libdeps/arduino-nesso-n1/M5GFX/src/lgfx/v1/LGFXBase.hpp:64:9: note: type name 'lgfx::v1::LGFXBase' should match type name 'lgfx::v1::LGFX_FILESYSTEM_Support<lgfx::v1::LGFXBase>'
+.pio/libdeps/arduino-nesso-n1/M5GFX/src/lgfx/v1/lgfx_filesystem_support.hpp:45:9: note: the incompatible type is defined here
+.pio/libdeps/arduino-nesso-n1/M5GFX/src/lgfx/v1/LGFXBase.hpp:1412:9: warning: type 'struct LovyanGFX' violates the C++ One Definition Rule [-Wodr]
+.pio/libdeps/arduino-nesso-n1/M5GFX/src/lgfx/v1/LGFXBase.hpp:1412:9: note: a type with the same name but different base type is defined in another translation unit
+.pio/libdeps/arduino-nesso-n1/M5GFX/src/lgfx/v1/LGFXBase.hpp:64:9: note: type name 'lgfx::v1::LGFXBase' should match type name 'lgfx::v1::LGFX_FILESYSTEM_Support<lgfx::v1::LGFXBase>'
+.pio/libdeps/arduino-nesso-n1/M5GFX/src/lgfx/v1/lgfx_filesystem_support.hpp:45:9: note: the incompatible type is defined here
+.pio/libdeps/arduino-nesso-n1/M5GFX/src/lgfx/v1/LGFXBase.hpp:1412:9: warning: type 'struct LovyanGFX' violates the C++ One Definition Rule [-Wodr]
+.pio/libdeps/arduino-nesso-n1/M5GFX/src/lgfx/v1/LGFXBase.hpp:1412:9: note: a type with the same name but different base type is defined in another translation unit
+.pio/libdeps/arduino-nesso-n1/M5GFX/src/lgfx/v1/LGFXBase.hpp:64:9: note: type name 'lgfx::v1::LGFXBase' should match type name 'lgfx::v1::LGFX_FILESYSTEM_Support<lgfx::v1::LGFXBase>'
+.pio/libdeps/arduino-nesso-n1/M5GFX/src/lgfx/v1/lgfx_filesystem_support.hpp:45:9: note: the incompatible type is defined here
+.pio/libdeps/arduino-nesso-n1/M5GFX/src/lgfx/v1/LGFXBase.hpp:1412:9: warning: type 'struct LovyanGFX' violates the C++ One Definition Rule [-Wodr]
+.pio/libdeps/arduino-nesso-n1/M5GFX/src/lgfx/v1/LGFXBase.hpp:1412:9: note: a type with the same name but different base type is defined in another translation unit
+.pio/libdeps/arduino-nesso-n1/M5GFX/src/lgfx/v1/LGFXBase.hpp:64:9: note: type name 'lgfx::v1::LGFXBase' should match type name 'lgfx::v1::LGFX_FILESYSTEM_Support<lgfx::v1::LGFXBase>'
+.pio/libdeps/arduino-nesso-n1/M5GFX/src/lgfx/v1/lgfx_filesystem_support.hpp:45:9: note: the incompatible type is defined here
+.pio/libdeps/arduino-nesso-n1/M5GFX/src/lgfx/v1/LGFXBase.hpp:1412:9: warning: type 'struct LovyanGFX' violates the C++ One Definition Rule [-Wodr]
+.pio/libdeps/arduino-nesso-n1/M5GFX/src/lgfx/v1/LGFXBase.hpp:1412:9: note: a type with the same name but different base type is defined in another translation unit
+.pio/libdeps/arduino-nesso-n1/M5GFX/src/lgfx/v1/LGFXBase.hpp:64:9: note: type name 'lgfx::v1::LGFXBase' should match type name 'lgfx::v1::LGFX_FILESYSTEM_Support<lgfx::v1::LGFXBase>'
+.pio/libdeps/arduino-nesso-n1/M5GFX/src/lgfx/v1/lgfx_filesystem_support.hpp:45:9: note: the incompatible type is defined here
+.pio/libdeps/arduino-nesso-n1/M5GFX/src/lgfx/v1/LGFXBase.hpp:1412:9: warning: type 'struct LovyanGFX' violates the C++ One Definition Rule [-Wodr]
+.pio/libdeps/arduino-nesso-n1/M5GFX/src/lgfx/v1/LGFXBase.hpp:1412:9: note: a type with the same name but different base type is defined in another translation unit
+.pio/libdeps/arduino-nesso-n1/M5GFX/src/lgfx/v1/LGFXBase.hpp:64:9: note: type name 'lgfx::v1::LGFXBase' should match type name 'lgfx::v1::LGFX_FILESYSTEM_Support<lgfx::v1::LGFXBase>'
+.pio/libdeps/arduino-nesso-n1/M5GFX/src/lgfx/v1/lgfx_filesystem_support.hpp:45:9: note: the incompatible type is defined here
+.pio/libdeps/arduino-nesso-n1/M5GFX/src/lgfx/v1/LGFXBase.hpp:1412:9: warning: type 'struct LovyanGFX' violates the C++ One Definition Rule [-Wodr]
+.pio/libdeps/arduino-nesso-n1/M5GFX/src/lgfx/v1/LGFXBase.hpp:1412:9: note: a type with the same name but different base type is defined in another translation unit
+.pio/libdeps/arduino-nesso-n1/M5GFX/src/lgfx/v1/LGFXBase.hpp:64:9: note: type name 'lgfx::v1::LGFXBase' should match type name 'lgfx::v1::LGFX_FILESYSTEM_Support<lgfx::v1::LGFXBase>'
+.pio/libdeps/arduino-nesso-n1/M5GFX/src/lgfx/v1/lgfx_filesystem_support.hpp:45:9: note: the incompatible type is defined here
+.pio/libdeps/arduino-nesso-n1/M5GFX/src/lgfx/v1/LGFXBase.hpp:1412:9: warning: type 'struct LovyanGFX' violates the C++ One Definition Rule [-Wodr]
+.pio/libdeps/arduino-nesso-n1/M5GFX/src/lgfx/v1/LGFXBase.hpp:1412:9: note: a type with the same name but different base type is defined in another translation unit
+.pio/libdeps/arduino-nesso-n1/M5GFX/src/lgfx/v1/LGFXBase.hpp:64:9: note: type name 'lgfx::v1::LGFXBase' should match type name 'lgfx::v1::LGFX_FILESYSTEM_Support<lgfx::v1::LGFXBase>'
+.pio/libdeps/arduino-nesso-n1/M5GFX/src/lgfx/v1/lgfx_filesystem_support.hpp:45:9: note: the incompatible type is defined here
+.pio/libdeps/arduino-nesso-n1/M5GFX/src/lgfx/v1/LGFXBase.hpp:1412:9: warning: type 'struct LovyanGFX' violates the C++ One Definition Rule [-Wodr]
+.pio/libdeps/arduino-nesso-n1/M5GFX/src/lgfx/v1/LGFXBase.hpp:1412:9: note: a type with the same name but different base type is defined in another translation unit
+.pio/libdeps/arduino-nesso-n1/M5GFX/src/lgfx/v1/LGFXBase.hpp:64:9: note: type name 'lgfx::v1::LGFXBase' should match type name 'lgfx::v1::LGFX_FILESYSTEM_Support<lgfx::v1::LGFXBase>'
+.pio/libdeps/arduino-nesso-n1/M5GFX/src/lgfx/v1/lgfx_filesystem_support.hpp:45:9: note: the incompatible type is defined here
+.pio/libdeps/arduino-nesso-n1/M5GFX/src/lgfx/v1/LGFXBase.hpp:1412:9: warning: type 'struct LovyanGFX' violates the C++ One Definition Rule [-Wodr]
+.pio/libdeps/arduino-nesso-n1/M5GFX/src/lgfx/v1/LGFXBase.hpp:1412:9: note: a type with the same name but different base type is defined in another translation unit
+.pio/libdeps/arduino-nesso-n1/M5GFX/src/lgfx/v1/LGFXBase.hpp:64:9: note: type name 'lgfx::v1::LGFXBase' should match type name 'lgfx::v1::LGFX_FILESYSTEM_Support<lgfx::v1::LGFXBase>'
+.pio/libdeps/arduino-nesso-n1/M5GFX/src/lgfx/v1/lgfx_filesystem_support.hpp:45:9: note: the incompatible type is defined here
+.pio/libdeps/arduino-nesso-n1/M5GFX/src/lgfx/v1/LGFXBase.hpp:1412:9: warning: type 'struct LovyanGFX' violates the C++ One Definition Rule [-Wodr]
+.pio/libdeps/arduino-nesso-n1/M5GFX/src/lgfx/v1/LGFXBase.hpp:1412:9: note: a type with the same name but different base type is defined in another translation unit
+.pio/libdeps/arduino-nesso-n1/M5GFX/src/lgfx/v1/LGFXBase.hpp:64:9: note: type name 'lgfx::v1::LGFXBase' should match type name 'lgfx::v1::LGFX_FILESYSTEM_Support<lgfx::v1::LGFXBase>'
+.pio/libdeps/arduino-nesso-n1/M5GFX/src/lgfx/v1/lgfx_filesystem_support.hpp:45:9: note: the incompatible type is defined here
+.pio/libdeps/arduino-nesso-n1/M5GFX/src/lgfx/v1/LGFXBase.hpp:1412:9: warning: type 'struct LovyanGFX' violates the C++ One Definition Rule [-Wodr]
+.pio/libdeps/arduino-nesso-n1/M5GFX/src/lgfx/v1/LGFXBase.hpp:1412:9: note: a type with the same name but different base type is defined in another translation unit
+.pio/libdeps/arduino-nesso-n1/M5GFX/src/lgfx/v1/LGFXBase.hpp:64:9: note: type name 'lgfx::v1::LGFXBase' should match type name 'lgfx::v1::LGFX_FILESYSTEM_Support<lgfx::v1::LGFXBase>'
+.pio/libdeps/arduino-nesso-n1/M5GFX/src/lgfx/v1/lgfx_filesystem_support.hpp:45:9: note: the incompatible type is defined here
+.pio/libdeps/arduino-nesso-n1/M5GFX/src/lgfx/v1/LGFXBase.hpp:1412:9: warning: type 'struct LovyanGFX' violates the C++ One Definition Rule [-Wodr]
+.pio/libdeps/arduino-nesso-n1/M5GFX/src/lgfx/v1/LGFXBase.hpp:1412:9: note: a type with the same name but different base type is defined in another translation unit
+.pio/libdeps/arduino-nesso-n1/M5GFX/src/lgfx/v1/LGFXBase.hpp:64:9: note: type name 'lgfx::v1::LGFXBase' should match type name 'lgfx::v1::LGFX_FILESYSTEM_Support<lgfx::v1::LGFXBase>'
+.pio/libdeps/arduino-nesso-n1/M5GFX/src/lgfx/v1/lgfx_filesystem_support.hpp:45:9: note: the incompatible type is defined here
+src/modules/wifi/wifi_recover.cpp:508:15: warning: writing 4 bytes into a region of size 0 [-Wstringop-overflow=]
+src/modules/wifi/wifi_recover.cpp:818:13: note: at offset 32 into destination object 'pmk' of size 32
+src/modules/wifi/wifi_recover.cpp:508:15: warning: writing 4 bytes into a region of size 0 [-Wstringop-overflow=]
+src/modules/wifi/wifi_recover.cpp:818:13: note: at offset 36 into destination object 'pmk' of size 32
+.pio/libdeps/arduino-nesso-n1/M5GFX/src/lgfx/v1/LGFXBase.hpp:1412:9: warning: type 'struct LovyanGFX' violates the C++ One Definition Rule [-Wodr]
+.pio/libdeps/arduino-nesso-n1/M5GFX/src/lgfx/v1/LGFXBase.hpp:1412:9: note: a type with the same name but different base type is defined in another translation unit
+.pio/libdeps/arduino-nesso-n1/M5GFX/src/lgfx/v1/LGFXBase.hpp:64:9: note: type name 'lgfx::v1::LGFXBase' should match type name 'lgfx::v1::LGFX_FILESYSTEM_Support<lgfx::v1::LGFXBase>'
+.pio/libdeps/arduino-nesso-n1/M5GFX/src/lgfx/v1/lgfx_filesystem_support.hpp:45:9: note: the incompatible type is defined here
+.pio/libdeps/arduino-nesso-n1/M5GFX/src/lgfx/v1/LGFXBase.hpp:1412:9: warning: type 'struct LovyanGFX' violates the C++ One Definition Rule [-Wodr]
+.pio/libdeps/arduino-nesso-n1/M5GFX/src/lgfx/v1/LGFXBase.hpp:1412:9: note: a type with the same name but different base type is defined in another translation unit
+.pio/libdeps/arduino-nesso-n1/M5GFX/src/lgfx/v1/LGFXBase.hpp:64:9: note: type name 'lgfx::v1::LGFXBase' should match type name 'lgfx::v1::LGFX_FILESYSTEM_Support<lgfx::v1::LGFXBase>'
+.pio/libdeps/arduino-nesso-n1/M5GFX/src/lgfx/v1/lgfx_filesystem_support.hpp:45:9: note: the incompatible type is defined here
+.pio/libdeps/arduino-nesso-n1/M5GFX/src/lgfx/v1/LGFXBase.hpp:1412:9: warning: type 'struct LovyanGFX' violates the C++ One Definition Rule [-Wodr]
+.pio/libdeps/arduino-nesso-n1/M5GFX/src/lgfx/v1/LGFXBase.hpp:1412:9: note: a type with the same name but different base type is defined in another translation unit
+.pio/libdeps/arduino-nesso-n1/M5GFX/src/lgfx/v1/LGFXBase.hpp:64:9: note: type name 'lgfx::v1::LGFXBase' should match type name 'lgfx::v1::LGFX_FILESYSTEM_Support<lgfx::v1::LGFXBase>'
+.pio/libdeps/arduino-nesso-n1/M5GFX/src/lgfx/v1/lgfx_filesystem_support.hpp:45:9: note: the incompatible type is defined here
+.pio/libdeps/arduino-nesso-n1/M5GFX/src/lgfx/v1/LGFXBase.hpp:1412:9: warning: type 'struct LovyanGFX' violates the C++ One Definition Rule [-Wodr]
+.pio/libdeps/arduino-nesso-n1/M5GFX/src/lgfx/v1/LGFXBase.hpp:1412:9: note: a type with the same name but different base type is defined in another translation unit
+.pio/libdeps/arduino-nesso-n1/M5GFX/src/lgfx/v1/LGFXBase.hpp:64:9: note: type name 'lgfx::v1::LGFXBase' should match type name 'lgfx::v1::LGFX_FILESYSTEM_Support<lgfx::v1::LGFXBase>'
+.pio/libdeps/arduino-nesso-n1/M5GFX/src/lgfx/v1/lgfx_filesystem_support.hpp:45:9: note: the incompatible type is defined here
+.pio/libdeps/arduino-nesso-n1/M5GFX/src/lgfx/v1/LGFXBase.hpp:1412:9: warning: type 'struct LovyanGFX' violates the C++ One Definition Rule [-Wodr]
+.pio/libdeps/arduino-nesso-n1/M5GFX/src/lgfx/v1/LGFXBase.hpp:1412:9: note: a type with the same name but different base type is defined in another translation unit
+.pio/libdeps/arduino-nesso-n1/M5GFX/src/lgfx/v1/LGFXBase.hpp:64:9: note: type name 'lgfx::v1::LGFXBase' should match type name 'lgfx::v1::LGFX_FILESYSTEM_Support<lgfx::v1::LGFXBase>'
+.pio/libdeps/arduino-nesso-n1/M5GFX/src/lgfx/v1/lgfx_filesystem_support.hpp:45:9: note: the incompatible type is defined here
+.pio/libdeps/arduino-nesso-n1/M5GFX/src/lgfx/v1/LGFXBase.hpp:1412:9: warning: type 'struct LovyanGFX' violates the C++ One Definition Rule [-Wodr]
+.pio/libdeps/arduino-nesso-n1/M5GFX/src/lgfx/v1/LGFXBase.hpp:1412:9: note: a type with the same name but different base type is defined in another translation unit
+.pio/libdeps/arduino-nesso-n1/M5GFX/src/lgfx/v1/LGFXBase.hpp:64:9: note: type name 'lgfx::v1::LGFXBase' should match type name 'lgfx::v1::LGFX_FILESYSTEM_Support<lgfx::v1::LGFXBase>'
+.pio/libdeps/arduino-nesso-n1/M5GFX/src/lgfx/v1/lgfx_filesystem_support.hpp:45:9: note: the incompatible type is defined here
+.pio/libdeps/arduino-nesso-n1/M5GFX/src/lgfx/v1/LGFXBase.hpp:1412:9: warning: type 'struct LovyanGFX' violates the C++ One Definition Rule [-Wodr]
+.pio/libdeps/arduino-nesso-n1/M5GFX/src/lgfx/v1/LGFXBase.hpp:1412:9: note: a type with the same name but different base type is defined in another translation unit
+.pio/libdeps/arduino-nesso-n1/M5GFX/src/lgfx/v1/LGFXBase.hpp:64:9: note: type name 'lgfx::v1::LGFXBase' should match type name 'lgfx::v1::LGFX_FILESYSTEM_Support<lgfx::v1::LGFXBase>'
+.pio/libdeps/arduino-nesso-n1/M5GFX/src/lgfx/v1/lgfx_filesystem_support.hpp:45:9: note: the incompatible type is defined here
+.pio/libdeps/arduino-nesso-n1/M5GFX/src/lgfx/v1/LGFXBase.hpp:1412:9: warning: type 'struct LovyanGFX' violates the C++ One Definition Rule [-Wodr]
+.pio/libdeps/arduino-nesso-n1/M5GFX/src/lgfx/v1/LGFXBase.hpp:1412:9: note: a type with the same name but different base type is defined in another translation unit
+.pio/libdeps/arduino-nesso-n1/M5GFX/src/lgfx/v1/LGFXBase.hpp:64:9: note: type name 'lgfx::v1::LGFXBase' should match type name 'lgfx::v1::LGFX_FILESYSTEM_Support<lgfx::v1::LGFXBase>'
+.pio/libdeps/arduino-nesso-n1/M5GFX/src/lgfx/v1/lgfx_filesystem_support.hpp:45:9: note: the incompatible type is defined here
+.pio/libdeps/arduino-nesso-n1/M5GFX/src/lgfx/v1/LGFXBase.hpp:1412:9: warning: type 'struct LovyanGFX' violates the C++ One Definition Rule [-Wodr]
+.pio/libdeps/arduino-nesso-n1/M5GFX/src/lgfx/v1/LGFXBase.hpp:1412:9: note: a type with the same name but different base type is defined in another translation unit
+.pio/libdeps/arduino-nesso-n1/M5GFX/src/lgfx/v1/LGFXBase.hpp:64:9: note: type name 'lgfx::v1::LGFXBase' should match type name 'lgfx::v1::LGFX_FILESYSTEM_Support<lgfx::v1::LGFXBase>'
+.pio/libdeps/arduino-nesso-n1/M5GFX/src/lgfx/v1/lgfx_filesystem_support.hpp:45:9: note: the incompatible type is defined here
+.pio/libdeps/arduino-nesso-n1/M5GFX/src/lgfx/v1/LGFXBase.hpp:1412:9: warning: type 'struct LovyanGFX' violates the C++ One Definition Rule [-Wodr]
+.pio/libdeps/arduino-nesso-n1/M5GFX/src/lgfx/v1/LGFXBase.hpp:1412:9: note: a type with the same name but different base type is defined in another translation unit
+.pio/libdeps/arduino-nesso-n1/M5GFX/src/lgfx/v1/LGFXBase.hpp:64:9: note: type name 'lgfx::v1::LGFXBase' should match type name 'lgfx::v1::LGFX_FILESYSTEM_Support<lgfx::v1::LGFXBase>'
+.pio/libdeps/arduino-nesso-n1/M5GFX/src/lgfx/v1/lgfx_filesystem_support.hpp:45:9: note: the incompatible type is defined here
+.pio/libdeps/arduino-nesso-n1/M5GFX/src/lgfx/v1/LGFXBase.hpp:1412:9: warning: type 'struct LovyanGFX' violates the C++ One Definition Rule [-Wodr]
+.pio/libdeps/arduino-nesso-n1/M5GFX/src/lgfx/v1/LGFXBase.hpp:1412:9: note: a type with the same name but different base type is defined in another translation unit
+.pio/libdeps/arduino-nesso-n1/M5GFX/src/lgfx/v1/LGFXBase.hpp:64:9: note: type name 'lgfx::v1::LGFXBase' should match type name 'lgfx::v1::LGFX_FILESYSTEM_Support<lgfx::v1::LGFXBase>'
+.pio/libdeps/arduino-nesso-n1/M5GFX/src/lgfx/v1/lgfx_filesystem_support.hpp:45:9: note: the incompatible type is defined here
