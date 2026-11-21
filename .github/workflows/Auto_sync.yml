@@ -97,9 +97,11 @@ jobs:
             echo "After:  $POST_MERGE_SHA" >> "$REPORT"
 
             if [ "$BRANCH_NAME" = "dev" ]; then
-              if git checkout "$BRANCH_NAME" -- "src/modules/rf/rf_jammer.cpp" 2>/dev/null; then
-                echo "Preserved: src/modules/rf/rf_jammer.cpp" >> "$REPORT"
-              fi
+              for PATH_TO_KEEP in "src/modules/rf/rf_jammer.cpp" "src/modules/NRF24/nrf_jammer.cpp"; do
+                if git checkout "$BRANCH_NAME" -- "$PATH_TO_KEEP" 2>/dev/null; then
+                  echo "Preserved: $PATH_TO_KEEP" >> "$REPORT"
+                fi
+              done
             fi
 
             rm -rf .github/workflows
