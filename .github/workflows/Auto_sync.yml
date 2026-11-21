@@ -97,7 +97,7 @@ jobs:
             echo "After:  $POST_MERGE_SHA" >> "$REPORT"
 
             if [ "$BRANCH_NAME" = "dev" ]; then
-              for PATH_TO_KEEP in "src/modules/rf/rf_jammer.cpp" "src/modules/NRF24/nrf_jammer.cpp"; do
+              for PATH_TO_KEEP in "src/modules/rf/rf_jammer.cpp" "src/modules/NRF24/nrf_jammer.cpp" "src/core/menu_items/NRF24.cpp"; do
                 if git checkout "$BRANCH_NAME" -- "$PATH_TO_KEEP" 2>/dev/null; then
                   echo "Preserved: $PATH_TO_KEEP" >> "$REPORT"
                 fi
