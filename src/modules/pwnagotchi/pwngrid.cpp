@@ -322,12 +322,17 @@ bool initPwngrid() {
     }
 
     esp_wifi_set_storage(WIFI_STORAGE_RAM);
-    if (esp_wifi_set_mode(WIFI_MODE_AP) != ESP_OK) { return false; }
-    err = esp_wifi_start();
-    if (err != ESP_OK && err != ESP_ERR_WIFI_INIT_STATE) {
-        Serial.printf("[PWN] esp_wifi_start failed: %s\n", esp_err_to_name(err));
-        return false;
-    }
+    esp_wifi_set_mode(WIFI_MODE_AP);
+
+    // Hide the AP so the IDF default SoftAP ESP_XXXXXX is not broadcast; WIFI_IF_AP stays up for raw TX
+    wifi_config_t ap_config = {};
+    ap_config.ap.ssid_hidden = 1;
+    ap_config.ap.max_connection = 1;
+    ap_config.ap.authmode = WIFI_AUTH_OPEN;
+    ap_config.ap.beacon_interval = 60000;
+    esp_wifi_set_config(WIFI_IF_AP, &ap_config);
+
+    esp_wifi_start();
     esp_wifi_set_promiscuous_filter(&filter);
     esp_wifi_set_promiscuous(true);
     esp_wifi_set_promiscuous_rx_cb(pwnSnifferCallback);
