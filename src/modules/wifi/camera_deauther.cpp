@@ -592,9 +592,28 @@ static void injectDeauths() {
 // ============================================================
 // Channel hopping
 // - SCAN mode: hop through all channels unless paused when 0 targets
-// - DEAUTH all: hop through all channels (following targets)
+// - DEAUTH all: hop across distinct active target channels (fallback to all)
 // - DEAUTH single-target: locked to target's AP channel
 // ============================================================
+
+static int collectActiveTargetChannels(int *outChannels, int maxOut) {
+    int count = 0;
+    for (int i = 0; i < g_targetCount; i++) {
+        if (!g_targets[i].active) continue;
+        int ch = g_targets[i].channel;
+        bool exists = false;
+        for (int j = 0; j < count; j++) {
+            if (outChannels[j] == ch) {
+                exists = true;
+                break;
+            }
+        }
+        if (!exists && count < maxOut) {
+            outChannels[count++] = ch;
+        }
+    }
+    return count;
+}
 
 static void hopChannel() {
     if (g_channels.empty()) return;
@@ -605,6 +624,27 @@ static void hopChannel() {
     uint32_t now = millis();
     if (now - g_lastHopMs < DWELL_MS) return;
     g_lastHopMs = now;
+
+    if (g_deauthActive && g_deauthAll && g_targetCount > 0) {
+        int activeCh[MAX_TARGETS];
+        int activeChCount = collectActiveTargetChannels(activeCh, MAX_TARGETS);
+        if (activeChCount > 0) {
+            if (activeChCount == 1) {
+                g_channel = activeCh[0];
+            } else {
+                int pos = -1;
+                for (int i = 0; i < activeChCount; i++) {
+                    if (activeCh[i] == g_channel) {
+                        pos = i;
+                        break;
+                    }
+                }
+                g_channel = activeCh[(pos + 1) % activeChCount];
+            }
+            esp_wifi_set_channel(g_channel, WIFI_SECOND_CHAN_NONE);
+            return;
+        }
+    }
 
     g_channelIndex = (g_channelIndex + 1) % g_channels.size();
     g_channel = g_channels[g_channelIndex];
