@@ -7,6 +7,7 @@
 
 #include "camera_deauther.h"
 #include "band_types.h"
+#include "deauther.h"
 #include "core/display.h"
 #include "core/mykeyboard.h"
 #include "core/wifi/wifi_common.h"
