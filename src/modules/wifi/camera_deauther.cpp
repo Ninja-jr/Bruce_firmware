@@ -117,7 +117,7 @@ static std::vector<int> g_channels;
 static int g_channelIndex = 0;
 static int g_channel = 1;
 static bool g_channelLocked = false;
-static bool g_deauthActive = true;
+static bool g_deauthActive = false;
 static bool g_deauthAll = true;
 static int g_menuCursor = 0; // Index in targets list (or offset when "Deauth All" item is present)
 static uint32_t g_lastHopMs = 0;
@@ -508,9 +508,14 @@ static void recordScanUiCache(int uiState) {
     }
 }
 
-static void drawFooterLine(int x, int clearW, int lineH, const String &wideText, const String &compactText) {
-    int footerY = tftHeight - lineH - 4;
+static int getFooterY(int lineH) {
+    int footerY = tftHeight - lineH - 7;
     if (footerY < 0) footerY = 0;
+    return footerY;
+}
+
+static void drawFooterLine(int x, int clearW, int lineH, const String &wideText, const String &compactText) {
+    int footerY = getFooterY(lineH);
     tft.fillRect(x, footerY, clearW, lineH, bruceConfig.bgColor);
     tft.setTextColor(bruceConfig.priColor, bruceConfig.bgColor);
     tft.drawString(fitSingleLine(wideText, compactText), x, footerY, 1);
@@ -530,7 +535,7 @@ static void drawScanScreen() {
     int y = max(14, (int)BORDER_PAD_Y + FM * LH + 4);
     int lineH = max(10, FP * LH + 2);
     int clearW = max(20, tftWidth - x * 2);
-    int footerY = tftHeight - lineH - 4;
+    int footerY = getFooterY(lineH);
 
     // Line 1: Channel, lock indicator & explicit deauth ON/OFF status
     if (y + lineH <= footerY) {
@@ -549,13 +554,17 @@ static void drawScanScreen() {
         y += lineH;
     }
 
-    // Line 2: APs, CAMs count & targeting scope (ALL vs 1-TGT)
+    // Line 2: APs, CAMs count & targeting scope (shown only when cameras are found)
     if (y + lineH <= footerY) {
         tft.setTextColor(bruceConfig.priColor, bruceConfig.bgColor);
         tft.fillRect(x, y, clearW, lineH, bruceConfig.bgColor);
-        const char *scope = (g_deauthAll || !g_channelLocked) ? "ALL" : "1-TGT";
-        String cntWide = "AP:" + String(g_apCount) + " CAM:" + String(g_targetCount) + " [" + String(scope) + "]";
-        String cntCompact = "A:" + String(g_apCount) + " C:" + String(g_targetCount) + " [" + String(scope) + "]";
+        String cntWide = "AP:" + String(g_apCount) + " CAM:" + String(g_targetCount);
+        String cntCompact = "A:" + String(g_apCount) + " C:" + String(g_targetCount);
+        if (g_targetCount > 0) {
+            const char *scope = (g_deauthAll || !g_channelLocked) ? "ALL" : "1-TGT";
+            cntWide += " [" + String(scope) + "]";
+            cntCompact += " [" + String(scope) + "]";
+        }
         tft.drawString(fitSingleLine(cntWide, cntCompact), x, y, 1);
         y += lineH;
     }
@@ -618,7 +627,7 @@ static void drawTargetsScreen() {
     int y = max(14, (int)BORDER_PAD_Y + FM * LH + 4);
     int lineH = max(10, FP * LH + 2);
     int clearW = max(20, tftWidth - x * 2);
-    int footerY = tftHeight - lineH - 4;
+    int footerY = getFooterY(lineH);
     int maxRows = max(1, (footerY - y - 2) / lineH);
 
     tft.fillRect(x, y, clearW, maxRows * lineH, bruceConfig.bgColor);
@@ -679,12 +688,17 @@ static void drawActiveScreen() {
     int y = max(14, (int)BORDER_PAD_Y + FM * LH + 4);
     int lineH = max(10, FP * LH + 2);
     int clearW = max(20, tftWidth - x * 2);
-    int footerY = tftHeight - lineH - 4;
+    int footerY = getFooterY(lineH);
 
     // Line 1: Channel & active status
     if (y + lineH <= footerY) {
         tft.fillRect(x, y, clearW, lineH, bruceConfig.bgColor);
-        tft.drawString(fitSingleLine("CH: " + String(g_channel) + "  DEAUTH: ON", "CH:" + String(g_channel) + " DEAUTH:ON"), x, y, 1);
+        String chPart = "CH:" + String(g_channel) + " ";
+        tft.drawString(chPart, x, y, 1);
+        int badgeX = x + tft.textWidth(chPart);
+        tft.setTextColor(TFT_RED, bruceConfig.bgColor);
+        tft.drawString("DEAUTH:ON", badgeX, y, 1);
+        tft.setTextColor(bruceConfig.priColor, bruceConfig.bgColor);
         y += lineH;
     }
 
@@ -756,7 +770,7 @@ void cameraDeautherMenu() {
     g_targetCount = 0;
     g_apCount = 0;
     g_channelLocked = false;
-    g_deauthActive = true;
+    g_deauthActive = false;
     g_deauthAll = true;
     g_menuCursor = 0;
     g_totalDeauths = 0;
@@ -767,7 +781,7 @@ void cameraDeautherMenu() {
     memset(g_aps, 0, sizeof(g_aps));
     resetUiCache();
 
-    int uiState = 2;
+    int uiState = 0;
     uint32_t lastRedraw = 0;
 
     while (!check(EscPress)) {
