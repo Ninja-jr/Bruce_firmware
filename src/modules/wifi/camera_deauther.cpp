@@ -288,6 +288,21 @@ static void resetUiCache() {
     memset(g_uiCache.topTargetMac, 0, sizeof(g_uiCache.topTargetMac));
 }
 
+static void resetSessionState() {
+    g_targetCount = 0;
+    g_apCount = 0;
+    g_channelLocked = false;
+    g_deauthActive = false;
+    g_scanPaused = false;
+    g_deauthAll = true;
+    g_menuCursor = 0;
+    g_totalDeauths = 0;
+    g_skippedPmf = 0;
+    memset(g_targets, 0, sizeof(g_targets));
+    memset(g_aps, 0, sizeof(g_aps));
+    resetUiCache();
+}
+
 // ============================================================
 // Target list & mode helpers
 // ============================================================
@@ -920,25 +935,14 @@ void cameraDeautherMenu() {
     g_channel = g_channels[0];
     esp_wifi_set_channel(g_channel, WIFI_SECOND_CHAN_NONE);
 
+    resetSessionState();
+    g_lastHopMs = millis();
+    g_lastDeauthMs = millis();
+
     esp_wifi_set_promiscuous_rx_cb(&cameraSnifferCallback);
     wifi_promiscuous_filter_t filter = {.filter_mask = WIFI_PROMIS_FILTER_MASK_ALL};
     esp_wifi_set_promiscuous_filter(&filter);
     esp_wifi_set_promiscuous(true);
-
-    g_targetCount = 0;
-    g_apCount = 0;
-    g_channelLocked = false;
-    g_deauthActive = false;
-    g_scanPaused = false;
-    g_deauthAll = true;
-    g_menuCursor = 0;
-    g_totalDeauths = 0;
-    g_skippedPmf = 0;
-    g_lastHopMs = millis();
-    g_lastDeauthMs = millis();
-    memset(g_targets, 0, sizeof(g_targets));
-    memset(g_aps, 0, sizeof(g_aps));
-    resetUiCache();
 
     int uiState = 0;
     uint32_t lastRedraw = 0;
@@ -1030,4 +1034,5 @@ void cameraDeautherMenu() {
     esp_wifi_set_promiscuous(false);
     esp_wifi_set_promiscuous_rx_cb(nullptr);
     restoreWiFiState(savedState);
+    resetSessionState();
 }
