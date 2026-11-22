@@ -7,7 +7,6 @@
 #include "core/wifi/webInterface.h"
 #include "core/wifi/wifi_common.h"
 #include "modules/wifi/sniffer.h"
-#include "camera_deauther.h"
 #include "scan_hosts.h"
 #include "wifi_atks.h"
 #include <esp_wifi.h>
