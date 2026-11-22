@@ -428,7 +428,7 @@ static void injectDeauths() {
 }
 
 // ============================================================
-// Channel hopping (only while deauther is active and unlocked)
+// Channel hopping (only while active and unlocked)
 // ============================================================
 
 static void hopChannel() {
@@ -585,7 +585,9 @@ static void drawScanScreen() {
         tft.fillRect(x, y, clearW, lineH * listLines, bruceConfig.bgColor);
         tft.setTextColor(bruceConfig.priColor, bruceConfig.bgColor);
         if (g_targetCount == 0) {
-            tft.drawString(fitSingleLine("Scanning for cameras...", "Scanning..."), x, y, 1);
+            if (g_deauthActive) {
+                tft.drawString(fitSingleLine("Scanning for cameras...", "Scanning..."), x, y, 1);
+            }
         } else {
             for (int i = 0; i < g_targetCount && i < listLines; i++) {
                 const char *brand = (g_targets[i].ouiIndex != 0xFF) ? cameraOUIs[g_targets[i].ouiIndex].brand : "Cam";
