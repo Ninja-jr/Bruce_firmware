@@ -656,11 +656,14 @@ static void drawFooterLine(int x, int clearW, int lineH, const String &wideText,
     tft.drawString(fitSingleLine(wideText, compactText), x, footerY, 1);
 }
 
-// Badge: SCAN (green) vs DEAUTH (cyan)
-static void drawModeBadge(int x, int y, bool deauthActive) {
+// Badge: SCAN (green) / PAUSED (yellow) / DEAUTH (cyan)
+static void drawModeBadge(int x, int y, bool deauthActive, bool scanPaused = false) {
     if (deauthActive) {
         tft.setTextColor(TFT_CYAN, bruceConfig.bgColor);
         tft.drawString("DEAUTH", x, y, 1);
+    } else if (scanPaused) {
+        tft.setTextColor(TFT_YELLOW, bruceConfig.bgColor);
+        tft.drawString("PAUSED", x, y, 1);
     } else {
         tft.setTextColor(TFT_GREEN, bruceConfig.bgColor);
         tft.drawString("SCAN", x, y, 1);
@@ -683,13 +686,14 @@ static void drawScanScreen() {
     int clearW = max(20, tftWidth - x * 2);
     int footerY = getFooterY(lineH);
 
-    // Line 1: Channel + mode badge (SCAN green / DEAUTH cyan)
+    // Line 1: Channel + mode badge (SCAN green / PAUSED yellow / DEAUTH cyan)
     if (y + lineH <= footerY) {
         tft.fillRect(x, y, clearW, lineH, bruceConfig.bgColor);
         tft.setTextColor(bruceConfig.priColor, bruceConfig.bgColor);
         String chPart = "CH:" + String(g_channel) + (g_channelLocked ? "*" : "") + " ";
         tft.drawString(chPart, x, y, 1);
-        drawModeBadge(x + tft.textWidth(chPart), y, g_deauthActive);
+        bool pausedBadge = (!g_deauthActive && g_targetCount == 0 && g_scanPaused);
+        drawModeBadge(x + tft.textWidth(chPart), y, g_deauthActive, pausedBadge);
         tft.setTextColor(bruceConfig.priColor, bruceConfig.bgColor);
         y += lineH;
     }
@@ -851,7 +855,7 @@ static void drawActiveScreen() {
         tft.fillRect(x, y, clearW, lineH, bruceConfig.bgColor);
         String chPart = "CH:" + String(g_channel) + " ";
         tft.drawString(chPart, x, y, 1);
-        drawModeBadge(x + tft.textWidth(chPart), y, true);
+        drawModeBadge(x + tft.textWidth(chPart), y, true, false);
         tft.setTextColor(bruceConfig.priColor, bruceConfig.bgColor);
         y += lineH;
     }
