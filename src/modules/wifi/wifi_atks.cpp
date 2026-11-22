@@ -11,6 +11,7 @@
 #include "core/utils.h"
 #include "core/wifi/webInterface.h"
 #include "core/wifi/wifi_common.h"
+#include "camera_deauther.h"
 #include "deauther.h"
 #include "esp_system.h"
 #include "esp_wifi.h"
@@ -946,6 +947,7 @@ void enhancedDeauthMenu() {
         {"Station Deauth (Single)", [=]() { showTargetSelection(); } },
         {"Deauth All Clients",      [=]() { deauthAllMenu(); }       },
         {"Deauth Target List",      [=]() { deauthTargetListMenu(); }},
+        {"Camera Deauther",         [=]() { cameraDeautherMenu(); }  },
         {"Back",                    [&]() { goBack = true; }         },
     };
     loopOptions(options);
