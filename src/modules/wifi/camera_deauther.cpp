@@ -27,54 +27,174 @@ struct CameraOUI {
 };
 
 static const CameraOUI cameraOUIs[] = {
+    // Hikvision
     {{0x44, 0xE9, 0x68}, "Hikvision"},
     {{0xAC, 0xCD, 0x68}, "Hikvision"},
     {{0x7C, 0x38, 0x66}, "Hikvision"},
     {{0x44, 0x47, 0xCC}, "Hikvision"},
     {{0xBC, 0xAD, 0x28}, "Hikvision"},
-    {{0xC0, 0x56, 0xE3}, "Dahua"},
+    {{0xC0, 0x56, 0xE3}, "Hikvision"},
+    {{0x18, 0x68, 0xCB}, "Hikvision"},
+    {{0x28, 0x57, 0xBE}, "Hikvision"},
+    {{0x44, 0x19, 0xB6}, "Hikvision"},
+    {{0x4C, 0xBD, 0x8F}, "Hikvision"},
+    {{0x54, 0xC4, 0x15}, "Hikvision"},
+    {{0x64, 0xDB, 0x8B}, "Hikvision"},
+    {{0x94, 0xE1, 0xAC}, "Hikvision"},
+    {{0xA4, 0x14, 0x37}, "Hikvision"},
+    {{0xB4, 0xA3, 0x82}, "Hikvision"},
+    {{0xC4, 0x2F, 0x90}, "Hikvision"},
+
+    // Dahua
     {{0xE0, 0x41, 0x36}, "Dahua"},
     {{0x3C, 0xEF, 0x8C}, "Dahua"},
     {{0xA0, 0xBD, 0x1D}, "Dahua"},
+    {{0x4C, 0x11, 0xBF}, "Dahua"},
+    {{0x90, 0x02, 0xA9}, "Dahua"},
+    {{0x14, 0xA7, 0x8B}, "Dahua"},
+    {{0x38, 0xAF, 0x29}, "Dahua"},
+    {{0xBC, 0x32, 0x5F}, "Dahua"},
+    {{0xE0, 0x50, 0x8B}, "Dahua"},
+    {{0x08, 0xED, 0xED}, "Dahua"},
+
+    // Axis (enterprise/commercial)
+    {{0x00, 0x40, 0x8C}, "Axis"},
+    {{0xAC, 0xCC, 0x8E}, "Axis"},
+    {{0xB8, 0xA4, 0x4F}, "Axis"},
+
+    // Wyze
     {{0x30, 0xA2, 0x20}, "Wyze"},
     {{0xF0, 0x9B, 0xB8}, "Wyze"},
     {{0x94, 0x19, 0x30}, "Wyze"},
     {{0x2C, 0xAA, 0x8E}, "Wyze"},
     {{0xD0, 0x3F, 0x27}, "Wyze"},
+
+    // Ring
     {{0xD4, 0x91, 0xAF}, "Ring"},
     {{0x34, 0xD7, 0x37}, "Ring"},
     {{0x1C, 0x96, 0x5D}, "Ring"},
     {{0x34, 0x3E, 0xA4}, "Ring"},
     {{0xAC, 0x9F, 0xC3}, "Ring"},
+
+    // TP-Link
     {{0xB0, 0x95, 0x75}, "TP-Link"},
     {{0x50, 0xC7, 0xBF}, "TP-Link"},
     {{0xC0, 0x06, 0xC3}, "TP-Link"},
     {{0x5C, 0xA6, 0xE6}, "TP-Link"},
     {{0x60, 0xA4, 0xB7}, "TP-Link"},
+
+    // Arlo
     {{0x20, 0x62, 0x9C}, "Arlo"},
     {{0x84, 0x24, 0x8D}, "Arlo"},
     {{0x9C, 0x3D, 0xCF}, "Arlo"},
     {{0x84, 0x25, 0x3F}, "Arlo"},
+
+    // Amcrest
     {{0x00, 0x24, 0xE4}, "Amcrest"},
     {{0x40, 0x9F, 0x38}, "Amcrest"},
+
+    // Lorex
     {{0x60, 0x76, 0x88}, "Lorex"},
     {{0x5C, 0x6B, 0x32}, "Lorex"},
+
+    // Reolink
     {{0x78, 0x1F, 0x12}, "Reolink"},
     {{0xEC, 0x71, 0xFB}, "Reolink"},
+    {{0xEC, 0x71, 0xDB}, "Reolink"},
     {{0xB4, 0x6D, 0x83}, "Reolink"},
+
+    // Uniview
     {{0x88, 0x09, 0xAF}, "Uniview"},
+    {{0x6C, 0xF1, 0x7E}, "Uniview"},
+    {{0x48, 0xEA, 0x63}, "Uniview"},
+    {{0xC4, 0x79, 0x05}, "Uniview"},
+    {{0x88, 0x26, 0x3F}, "Uniview"},
+
+    // Blink
     {{0x48, 0x2A, 0xE3}, "Blink"},
     {{0xB4, 0x69, 0x21}, "Blink"},
+
+    // Eufy
     {{0x74, 0xCA, 0x2C}, "Eufy"},
     {{0xF4, 0x7B, 0x09}, "Eufy"},
     {{0x8C, 0x85, 0x80}, "Eufy"},
     {{0x98, 0xF1, 0x99}, "Eufy"},
+
+    // Swann
     {{0x98, 0xE7, 0xF5}, "Swann"},
+
+    // iSmartAlarm
     {{0xBC, 0x34, 0x00}, "iSmartAlarm"},
+
+    // Nest
     {{0x18, 0xB4, 0x30}, "Nest"},
     {{0x64, 0x16, 0x68}, "Nest"},
+
+    // Xiaomi (cameras share OUIs with phones/TVs; kept to the two most reliable)
     {{0x64, 0x09, 0x80}, "Xiaomi"},
     {{0x78, 0x11, 0xDC}, "Xiaomi"},
+
+    // Tuya
+    {{0x18, 0xDE, 0x50}, "Tuya"},
+    {{0x10, 0x5A, 0x17}, "Tuya"},
+    {{0x18, 0x69, 0xD8}, "Tuya"},
+    {{0x1C, 0x90, 0xFF}, "Tuya"},
+    {{0x4C, 0xA9, 0x19}, "Tuya"},
+    {{0x50, 0x8A, 0x06}, "Tuya"},
+    {{0x68, 0x57, 0x2D}, "Tuya"},
+    {{0x70, 0x89, 0x76}, "Tuya"},
+    {{0x7C, 0xF6, 0x66}, "Tuya"},
+    {{0x84, 0xE3, 0x42}, "Tuya"},
+    {{0xFC, 0x67, 0x1F}, "Tuya"},
+    {{0xA0, 0x92, 0x08}, "Tuya"},
+    {{0xA8, 0x80, 0x55}, "Tuya"},
+    {{0xB8, 0x06, 0x0D}, "Tuya"},
+    {{0xC4, 0x82, 0xE1}, "Tuya"},
+    {{0xCC, 0x8C, 0xBF}, "Tuya"},
+    {{0xD4, 0xA6, 0x51}, "Tuya"},
+    {{0xD8, 0x1F, 0x12}, "Tuya"},
+    {{0xD8, 0xD6, 0x68}, "Tuya"},
+    {{0x38, 0x2C, 0xE5}, "Tuya"},
+    {{0x38, 0xA5, 0xC9}, "Tuya"},
+    {{0xF8, 0x17, 0x2D}, "Tuya"},
+    {{0xFC, 0x3C, 0xD7}, "Tuya"},
+    {{0xC0, 0xF8, 0x53}, "Tuya"},
+    {{0xD8, 0xC8, 0x0C}, "Tuya"},
+    {{0x3C, 0x0B, 0x59}, "Tuya"},
+    {{0x80, 0x64, 0x7C}, "Tuya"},
+    {{0x00, 0x33, 0x7A}, "Tuya"},
+    {{0xBC, 0x35, 0x1E}, "Tuya"},
+    {{0x20, 0xF1, 0xB2}, "Tuya"},
+    {{0xE4, 0xAE, 0xE4}, "Tuya"},
+    {{0x30, 0x48, 0x7D}, "Tuya"},
+    {{0xD8, 0xFC, 0x92}, "Tuya"},
+
+    // Commercial/enterprise
+    {{0x00, 0x18, 0x85}, "Avigilon"},
+    {{0x00, 0x1F, 0x92}, "Avigilon"},
+    {{0x00, 0x1A, 0x07}, "Arecont"},
+    {{0x00, 0x01, 0x31}, "Bosch"},
+    {{0x00, 0x04, 0x63}, "Bosch"},
+    {{0x00, 0x10, 0x17}, "Bosch"},
+    {{0x00, 0x1B, 0x86}, "Bosch"},
+    {{0x00, 0x1C, 0x44}, "Bosch"},
+    {{0x00, 0x07, 0x5F}, "Bosch"},
+    {{0x00, 0x1B, 0xD8}, "FLIR"},
+    {{0x00, 0x40, 0x7F}, "FLIR"},
+    {{0x00, 0x13, 0xE2}, "Geovision"},
+    {{0xE4, 0x30, 0x22}, "Hanwha"},
+    {{0x00, 0x09, 0x18}, "Hanwha"},
+    {{0x00, 0x0A, 0x13}, "Honeywell"},
+    {{0x14, 0x2F, 0xFD}, "LTS"},
+    {{0x00, 0x10, 0xBE}, "March Networks"},
+    {{0x00, 0x12, 0x81}, "March Networks"},
+    {{0x00, 0x03, 0xC5}, "Mobotix"},
+    {{0x00, 0x04, 0x7D}, "Pelco"},
+    {{0x00, 0x01, 0x4A}, "Sony"},
+    {{0x00, 0x13, 0xA9}, "Sony"},
+    {{0x00, 0x1A, 0x80}, "Sony"},
+    {{0x00, 0x1D, 0xBA}, "Sony"},
+    {{0x00, 0x24, 0xBE}, "Sony"},
 };
 
 static const int CAMERA_OUI_COUNT = sizeof(cameraOUIs) / sizeof(cameraOUIs[0]);
@@ -119,7 +239,7 @@ static int g_channel = 1;
 static bool g_channelLocked = false;
 static bool g_deauthActive = false;
 static bool g_deauthAll = true;
-static int g_menuCursor = 0; // Index in targets list (or offset when "Deauth All" item is present)
+static int g_menuCursor = 0;
 static uint32_t g_lastHopMs = 0;
 static uint32_t g_lastDeauthMs = 0;
 static uint32_t g_totalDeauths = 0;
@@ -537,7 +657,6 @@ static void drawScanScreen() {
     int clearW = max(20, tftWidth - x * 2);
     int footerY = getFooterY(lineH);
 
-    // Line 1: Channel, lock indicator & explicit deauth ON/OFF status
     if (y + lineH <= footerY) {
         tft.fillRect(x, y, clearW, lineH, bruceConfig.bgColor);
         tft.setTextColor(bruceConfig.priColor, bruceConfig.bgColor);
@@ -554,7 +673,6 @@ static void drawScanScreen() {
         y += lineH;
     }
 
-    // Line 2: APs, CAMs count & targeting scope (shown only when cameras are found)
     if (y + lineH <= footerY) {
         tft.setTextColor(bruceConfig.priColor, bruceConfig.bgColor);
         tft.fillRect(x, y, clearW, lineH, bruceConfig.bgColor);
@@ -569,7 +687,6 @@ static void drawScanScreen() {
         y += lineH;
     }
 
-    // Line 3: Frames TX & PMF skipped
     if (y + lineH <= footerY) {
         tft.fillRect(x, y, clearW, lineH, bruceConfig.bgColor);
         String txWide = "TX: " + String(g_totalDeauths) + "  PMF skip: " + String(g_skippedPmf);
@@ -578,7 +695,6 @@ static void drawScanScreen() {
         y += lineH + 2;
     }
 
-    // Target summary lines fitted above footer
     int availListH = max(0, footerY - y - 2);
     int listLines = min(3, availListH / lineH);
     if (listLines > 0) {
@@ -692,7 +808,6 @@ static void drawActiveScreen() {
     int clearW = max(20, tftWidth - x * 2);
     int footerY = getFooterY(lineH);
 
-    // Line 1: Channel & active status
     if (y + lineH <= footerY) {
         tft.fillRect(x, y, clearW, lineH, bruceConfig.bgColor);
         String chPart = "CH:" + String(g_channel) + " ";
@@ -704,7 +819,6 @@ static void drawActiveScreen() {
         y += lineH;
     }
 
-    // Line 2: Active targets count & scope
     if (y + lineH <= footerY) {
         int activeCount = 0;
         for (int i = 0; i < g_targetCount; i++) {
@@ -724,7 +838,6 @@ static void drawActiveScreen() {
         y += lineH;
     }
 
-    // Line 3: Frames TX & PMF skipped
     if (y + lineH <= footerY) {
         tft.fillRect(x, y, clearW, lineH, bruceConfig.bgColor);
         tft.drawString(
