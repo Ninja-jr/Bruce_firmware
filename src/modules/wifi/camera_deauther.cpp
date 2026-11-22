@@ -459,20 +459,29 @@ static void drawScanScreen() {
     }
 
     tft.setTextSize(FP);
-    tft.setTextColor(bruceConfig.priColor, bruceConfig.bgColor);
 
     int x = BORDER_PAD_X + 4;
     int y = BORDER_PAD_Y + FM * LH + 6;
     int lineH = max(12, FP * LH + 2);
     int clearW = max(20, tftWidth - (BORDER_PAD_X + 4) * 2);
 
-    // Line 1: Channel & lock indicator
+    // Line 1: Channel, lock indicator & explicit deauth ON/OFF status
     tft.fillRect(x, y, clearW, lineH, bruceConfig.bgColor);
-    String chLine = "CH: " + String(g_channel) + (g_channelLocked ? " [LOCK]" : "");
-    tft.drawString(chLine, x, y, 1);
+    tft.setTextColor(bruceConfig.priColor, bruceConfig.bgColor);
+    String chPart = "CH:" + String(g_channel) + (g_channelLocked ? "*" : "") + " ";
+    tft.drawString(chPart, x, y, 1);
+    int badgeX = x + tft.textWidth(chPart);
+    if (g_deauthActive) {
+        tft.setTextColor(TFT_RED, bruceConfig.bgColor);
+        tft.drawString("DEAUTH:ON", badgeX, y, 1);
+    } else {
+        tft.setTextColor(bruceConfig.priColor, bruceConfig.bgColor);
+        tft.drawString("DEAUTH:OFF", badgeX, y, 1);
+    }
     y += lineH;
 
     // Line 2: APs & CAMs count
+    tft.setTextColor(bruceConfig.priColor, bruceConfig.bgColor);
     tft.fillRect(x, y, clearW, lineH, bruceConfig.bgColor);
     String cntWide = "APs: " + String(g_apCount) + "  CAMs: " + String(g_targetCount);
     String cntCompact = "AP:" + String(g_apCount) + " CAM:" + String(g_targetCount);
@@ -504,16 +513,17 @@ static void drawScanScreen() {
         }
     }
 
-    // Bottom single-line controls
+    // Bottom single-line controls (show target hint only when targets exist)
     int footerY = tftHeight - BORDER_PAD_Y - lineH - 2;
     if (footerY > y + listLines * lineH) {
         tft.fillRect(x, footerY, clearW, lineH, bruceConfig.bgColor);
-        tft.drawString(
-            fitSingleLine("SEL: Toggle  NEXT: Targets  ESC: Exit", "SEL:Tgl NXT:Tgt ESC:Exit"),
-            x,
-            footerY,
-            1
-        );
+        String wideFooter = (g_targetCount > 0)
+            ? (g_deauthActive ? "SEL: Stop  NXT: Targets  ESC: Exit" : "SEL: Deauth  NXT: Targets  ESC: Exit")
+            : (g_deauthActive ? "SEL: Stop  ESC: Exit" : "SEL: Deauth  ESC: Exit");
+        String compactFooter = (g_targetCount > 0)
+            ? (g_deauthActive ? "SEL:Stp NXT:Tgt ESC:Ext" : "SEL:Dth NXT:Tgt ESC:Ext")
+            : (g_deauthActive ? "SEL:Stp ESC:Ext" : "SEL:Dth ESC:Ext");
+        tft.drawString(fitSingleLine(wideFooter, compactFooter), x, footerY, 1);
     }
 
     recordScanUiCache(0);
@@ -561,12 +571,13 @@ static void drawTargetsScreen() {
 
     if (footerY > y) {
         tft.fillRect(x, footerY, clearW, lineH, bruceConfig.bgColor);
-        tft.drawString(
-            fitSingleLine("SEL: Lock  PREV/NEXT: Nav  ESC: Back", "SEL:Lock P/N:Nav ESC:Back"),
-            x,
-            footerY,
-            1
-        );
+        String wideNav = (g_targetCount > 1)
+            ? "SEL: Lock  PRV/NXT: Nav  ESC: Back"
+            : "SEL: Lock  ESC: Back";
+        String compactNav = (g_targetCount > 1)
+            ? "SEL:Lock P/N:Nav ESC:Bk"
+            : "SEL:Lock ESC:Bk";
+        tft.drawString(fitSingleLine(wideNav, compactNav), x, footerY, 1);
     }
 
     recordScanUiCache(1);
@@ -590,7 +601,7 @@ static void drawActiveScreen() {
 
     // Line 1: Channel & active status
     tft.fillRect(x, y, clearW, lineH, bruceConfig.bgColor);
-    tft.drawString(fitSingleLine("CH: " + String(g_channel) + "  DEAUTH: ON", "CH:" + String(g_channel) + " ON"), x, y, 1);
+    tft.drawString(fitSingleLine("CH: " + String(g_channel) + "  DEAUTH: ON", "CH:" + String(g_channel) + " DEAUTH:ON"), x, y, 1);
     y += lineH;
 
     // Line 2: Active targets count
