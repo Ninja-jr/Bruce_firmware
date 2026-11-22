@@ -117,8 +117,9 @@ static std::vector<int> g_channels;
 static int g_channelIndex = 0;
 static int g_channel = 1;
 static bool g_channelLocked = false;
-static bool g_deauthActive = false;
-static int g_selectedTarget = 0;
+static bool g_deauthActive = true;
+static bool g_deauthAll = true;
+static int g_menuCursor = 0; // Index in targets list (or offset when "Deauth All" item is present)
 static uint32_t g_lastHopMs = 0;
 static uint32_t g_lastDeauthMs = 0;
 static uint32_t g_totalDeauths = 0;
@@ -133,11 +134,12 @@ struct UiCache {
     int uiState = -1;
     int channel = -1;
     bool locked = false;
+    bool deauthAll = true;
     int apCount = -1;
     int targetCount = -1;
     uint32_t totalDeauths = UINT32_MAX;
     uint32_t skippedPmf = UINT32_MAX;
-    int selectedTarget = -1;
+    int menuCursor = -1;
     bool deauthActive = false;
     uint8_t topTargetMac[6] = {0};
 };
@@ -149,13 +151,57 @@ static void resetUiCache() {
     g_uiCache.uiState = -1;
     g_uiCache.channel = -1;
     g_uiCache.locked = false;
+    g_uiCache.deauthAll = true;
     g_uiCache.apCount = -1;
     g_uiCache.targetCount = -1;
     g_uiCache.totalDeauths = UINT32_MAX;
     g_uiCache.skippedPmf = UINT32_MAX;
-    g_uiCache.selectedTarget = -1;
+    g_uiCache.menuCursor = -1;
     g_uiCache.deauthActive = false;
     memset(g_uiCache.topTargetMac, 0, sizeof(g_uiCache.topTargetMac));
+}
+
+// ============================================================
+// Target list & mode helpers
+// ============================================================
+
+static bool hasDeauthAllItem() {
+    return g_targetCount > 1;
+}
+
+static int getTargetsListItemCount() {
+    if (g_targetCount == 0) return 0;
+    return g_targetCount + (hasDeauthAllItem() ? 1 : 0);
+}
+
+static void clampMenuCursor() {
+    int itemCount = getTargetsListItemCount();
+    if (itemCount <= 0) {
+        g_menuCursor = 0;
+    } else if (g_menuCursor < 0) {
+        g_menuCursor = 0;
+    } else if (g_menuCursor >= itemCount) {
+        g_menuCursor = itemCount - 1;
+    }
+}
+
+static void enableAllTargets() {
+    g_deauthAll = true;
+    g_channelLocked = false;
+    for (int i = 0; i < g_targetCount; i++) {
+        g_targets[i].active = true;
+    }
+}
+
+static void lockSingleTarget(int index) {
+    if (index < 0 || index >= g_targetCount) return;
+    g_deauthAll = false;
+    g_channelLocked = true;
+    g_channel = g_targets[index].channel;
+    esp_wifi_set_channel(g_channel, WIFI_SECOND_CHAN_NONE);
+    for (int i = 0; i < g_targetCount; i++) {
+        g_targets[i].active = (i == index);
+    }
 }
 
 // ============================================================
@@ -287,14 +333,20 @@ static int findOrCreateTarget(const uint8_t *clientMAC, const uint8_t *apMAC, ui
         }
     }
     if (g_targetCount < MAX_TARGETS) {
+        bool hadAllItemBefore = hasDeauthAllItem();
         memcpy(g_targets[g_targetCount].clientMAC, clientMAC, 6);
         memcpy(g_targets[g_targetCount].apMAC, apMAC, 6);
         g_targets[g_targetCount].channel = channel;
         g_targets[g_targetCount].ouiIndex = (ouiIdx >= 0) ? ouiIdx : 0xFF;
         g_targets[g_targetCount].lastSeenMs = millis();
         g_targets[g_targetCount].deauthCount = 0;
-        g_targets[g_targetCount].active = true;
-        return g_targetCount++;
+        g_targets[g_targetCount].active = g_deauthAll ? true : false;
+        g_targetCount++;
+        if (!hadAllItemBefore && hasDeauthAllItem()) {
+            g_menuCursor++;
+        }
+        clampMenuCursor();
+        return g_targetCount - 1;
     }
     return -1;
 }
@@ -376,11 +428,11 @@ static void injectDeauths() {
 }
 
 // ============================================================
-// Channel hopping
+// Channel hopping (only while deauther is active and unlocked)
 // ============================================================
 
 static void hopChannel() {
-    if (g_channelLocked || g_channels.empty()) return;
+    if (!g_deauthActive || g_channelLocked || g_channels.empty()) return;
     uint32_t now = millis();
     if (now - g_lastHopMs < DWELL_MS) return;
     g_lastHopMs = now;
@@ -398,11 +450,15 @@ static void pruneStaleTargets() {
     uint32_t now = millis();
     for (int i = g_targetCount - 1; i >= 0; i--) {
         if (now - g_targets[i].lastSeenMs > TARGET_STALE_MS) {
+            bool hadAllItemBefore = hasDeauthAllItem();
             for (int j = i; j < g_targetCount - 1; j++) {
                 g_targets[j] = g_targets[j + 1];
             }
             g_targetCount--;
-            if (g_selectedTarget >= g_targetCount && g_selectedTarget > 0) g_selectedTarget--;
+            if (hadAllItemBefore && !hasDeauthAllItem() && g_menuCursor > 0) {
+                g_menuCursor--;
+            }
+            clampMenuCursor();
         }
     }
 }
@@ -412,7 +468,7 @@ static void pruneStaleTargets() {
 // ============================================================
 
 static String fitSingleLine(const String &wideText, const String &compactText) {
-    int maxW = tftWidth - 20;
+    int maxW = tftWidth - 16;
     if (maxW > 0 && tft.textWidth(wideText) <= maxW) {
         return wideText;
     }
@@ -422,9 +478,10 @@ static String fitSingleLine(const String &wideText, const String &compactText) {
 static bool hasScanUiChanged(int uiState) {
     if (!g_uiCache.initialized || g_uiCache.uiState != uiState) return true;
     if (g_uiCache.channel != g_channel || g_uiCache.locked != g_channelLocked) return true;
+    if (g_uiCache.deauthAll != g_deauthAll) return true;
     if (g_uiCache.apCount != g_apCount || g_uiCache.targetCount != g_targetCount) return true;
     if (g_uiCache.totalDeauths != g_totalDeauths || g_uiCache.skippedPmf != g_skippedPmf) return true;
-    if (g_uiCache.selectedTarget != g_selectedTarget || g_uiCache.deauthActive != g_deauthActive) return true;
+    if (g_uiCache.menuCursor != g_menuCursor || g_uiCache.deauthActive != g_deauthActive) return true;
 
     if (g_targetCount > 0) {
         if (memcmp(g_uiCache.topTargetMac, g_targets[0].clientMAC, 6) != 0) return true;
@@ -437,17 +494,26 @@ static void recordScanUiCache(int uiState) {
     g_uiCache.uiState = uiState;
     g_uiCache.channel = g_channel;
     g_uiCache.locked = g_channelLocked;
+    g_uiCache.deauthAll = g_deauthAll;
     g_uiCache.apCount = g_apCount;
     g_uiCache.targetCount = g_targetCount;
     g_uiCache.totalDeauths = g_totalDeauths;
     g_uiCache.skippedPmf = g_skippedPmf;
-    g_uiCache.selectedTarget = g_selectedTarget;
+    g_uiCache.menuCursor = g_menuCursor;
     g_uiCache.deauthActive = g_deauthActive;
     if (g_targetCount > 0) {
         memcpy(g_uiCache.topTargetMac, g_targets[0].clientMAC, 6);
     } else {
         memset(g_uiCache.topTargetMac, 0, sizeof(g_uiCache.topTargetMac));
     }
+}
+
+static void drawFooterLine(int x, int clearW, int lineH, const String &wideText, const String &compactText) {
+    int footerY = tftHeight - lineH - 4;
+    if (footerY < 0) footerY = 0;
+    tft.fillRect(x, footerY, clearW, lineH, bruceConfig.bgColor);
+    tft.setTextColor(bruceConfig.priColor, bruceConfig.bgColor);
+    tft.drawString(fitSingleLine(wideText, compactText), x, footerY, 1);
 }
 
 static void drawScanScreen() {
@@ -460,71 +526,78 @@ static void drawScanScreen() {
 
     tft.setTextSize(FP);
 
-    int x = BORDER_PAD_X + 4;
-    int y = BORDER_PAD_Y + FM * LH + 6;
-    int lineH = max(12, FP * LH + 2);
-    int clearW = max(20, tftWidth - (BORDER_PAD_X + 4) * 2);
+    int x = max(4, (int)BORDER_PAD_X + 2);
+    int y = max(14, (int)BORDER_PAD_Y + FM * LH + 4);
+    int lineH = max(10, FP * LH + 2);
+    int clearW = max(20, tftWidth - x * 2);
+    int footerY = tftHeight - lineH - 4;
 
     // Line 1: Channel, lock indicator & explicit deauth ON/OFF status
-    tft.fillRect(x, y, clearW, lineH, bruceConfig.bgColor);
-    tft.setTextColor(bruceConfig.priColor, bruceConfig.bgColor);
-    String chPart = "CH:" + String(g_channel) + (g_channelLocked ? "*" : "") + " ";
-    tft.drawString(chPart, x, y, 1);
-    int badgeX = x + tft.textWidth(chPart);
-    if (g_deauthActive) {
-        tft.setTextColor(TFT_RED, bruceConfig.bgColor);
-        tft.drawString("DEAUTH:ON", badgeX, y, 1);
-    } else {
+    if (y + lineH <= footerY) {
+        tft.fillRect(x, y, clearW, lineH, bruceConfig.bgColor);
         tft.setTextColor(bruceConfig.priColor, bruceConfig.bgColor);
-        tft.drawString("DEAUTH:OFF", badgeX, y, 1);
+        String chPart = "CH:" + String(g_channel) + (g_channelLocked ? "*" : "") + " ";
+        tft.drawString(chPart, x, y, 1);
+        int badgeX = x + tft.textWidth(chPart);
+        if (g_deauthActive) {
+            tft.setTextColor(TFT_RED, bruceConfig.bgColor);
+            tft.drawString("DEAUTH:ON", badgeX, y, 1);
+        } else {
+            tft.setTextColor(bruceConfig.priColor, bruceConfig.bgColor);
+            tft.drawString("DEAUTH:OFF", badgeX, y, 1);
+        }
+        y += lineH;
     }
-    y += lineH;
 
-    // Line 2: APs & CAMs count
-    tft.setTextColor(bruceConfig.priColor, bruceConfig.bgColor);
-    tft.fillRect(x, y, clearW, lineH, bruceConfig.bgColor);
-    String cntWide = "APs: " + String(g_apCount) + "  CAMs: " + String(g_targetCount);
-    String cntCompact = "AP:" + String(g_apCount) + " CAM:" + String(g_targetCount);
-    tft.drawString(fitSingleLine(cntWide, cntCompact), x, y, 1);
-    y += lineH;
+    // Line 2: APs, CAMs count & targeting scope (ALL vs 1-TGT)
+    if (y + lineH <= footerY) {
+        tft.setTextColor(bruceConfig.priColor, bruceConfig.bgColor);
+        tft.fillRect(x, y, clearW, lineH, bruceConfig.bgColor);
+        const char *scope = (g_deauthAll || !g_channelLocked) ? "ALL" : "1-TGT";
+        String cntWide = "AP:" + String(g_apCount) + " CAM:" + String(g_targetCount) + " [" + String(scope) + "]";
+        String cntCompact = "A:" + String(g_apCount) + " C:" + String(g_targetCount) + " [" + String(scope) + "]";
+        tft.drawString(fitSingleLine(cntWide, cntCompact), x, y, 1);
+        y += lineH;
+    }
 
     // Line 3: Frames TX & PMF skipped
-    tft.fillRect(x, y, clearW, lineH, bruceConfig.bgColor);
-    String txWide = "TX: " + String(g_totalDeauths) + "  PMF skip: " + String(g_skippedPmf);
-    String txCompact = "TX:" + String(g_totalDeauths) + " PMF:" + String(g_skippedPmf);
-    tft.drawString(fitSingleLine(txWide, txCompact), x, y, 1);
-    y += lineH + 2;
+    if (y + lineH <= footerY) {
+        tft.fillRect(x, y, clearW, lineH, bruceConfig.bgColor);
+        String txWide = "TX: " + String(g_totalDeauths) + "  PMF skip: " + String(g_skippedPmf);
+        String txCompact = "TX:" + String(g_totalDeauths) + " PMF:" + String(g_skippedPmf);
+        tft.drawString(fitSingleLine(txWide, txCompact), x, y, 1);
+        y += lineH + 2;
+    }
 
-    // Target summary lines (up to 3)
-    int listLines = 3;
-    tft.fillRect(x, y, clearW, lineH * listLines, bruceConfig.bgColor);
-    if (g_targetCount == 0) {
-        tft.drawString(fitSingleLine("Scanning for cameras...", "Scanning..."), x, y, 1);
-    } else {
-        for (int i = 0; i < g_targetCount && i < listLines; i++) {
-            const char *brand = (g_targets[i].ouiIndex != 0xFF) ? cameraOUIs[g_targets[i].ouiIndex].brand : "Cam";
-            char macShort[10];
-            snprintf(macShort, sizeof(macShort), "%02X:%02X:%02X",
-                     g_targets[i].clientMAC[0], g_targets[i].clientMAC[1], g_targets[i].clientMAC[2]);
-            bool pmf = isPmfProtected(g_targets[i].apMAC);
-            String wideEntry = String(brand) + " " + String(macShort) + " c" + String(g_targets[i].channel) + (pmf ? " [PMF]" : "");
-            String compactEntry = String(brand) + " c" + String(g_targets[i].channel) + (pmf ? "*" : "");
-            tft.drawString(fitSingleLine(wideEntry, compactEntry), x, y + i * lineH, 1);
+    // Target summary lines fitted above footer
+    int availListH = max(0, footerY - y - 2);
+    int listLines = min(3, availListH / lineH);
+    if (listLines > 0) {
+        tft.fillRect(x, y, clearW, lineH * listLines, bruceConfig.bgColor);
+        tft.setTextColor(bruceConfig.priColor, bruceConfig.bgColor);
+        if (g_targetCount == 0) {
+            tft.drawString(fitSingleLine("Scanning for cameras...", "Scanning..."), x, y, 1);
+        } else {
+            for (int i = 0; i < g_targetCount && i < listLines; i++) {
+                const char *brand = (g_targets[i].ouiIndex != 0xFF) ? cameraOUIs[g_targets[i].ouiIndex].brand : "Cam";
+                char macShort[10];
+                snprintf(macShort, sizeof(macShort), "%02X:%02X:%02X",
+                         g_targets[i].clientMAC[0], g_targets[i].clientMAC[1], g_targets[i].clientMAC[2]);
+                bool pmf = isPmfProtected(g_targets[i].apMAC);
+                String wideEntry = String(brand) + " " + String(macShort) + " c" + String(g_targets[i].channel) + (pmf ? " [PMF]" : "");
+                String compactEntry = String(brand) + " c" + String(g_targets[i].channel) + (pmf ? "*" : "");
+                tft.drawString(fitSingleLine(wideEntry, compactEntry), x, y + i * lineH, 1);
+            }
         }
     }
 
-    // Bottom single-line controls (show target hint only when targets exist)
-    int footerY = tftHeight - BORDER_PAD_Y - lineH - 2;
-    if (footerY > y + listLines * lineH) {
-        tft.fillRect(x, footerY, clearW, lineH, bruceConfig.bgColor);
-        String wideFooter = (g_targetCount > 0)
-            ? (g_deauthActive ? "SEL: Stop  NXT: Targets  ESC: Exit" : "SEL: Deauth  NXT: Targets  ESC: Exit")
-            : (g_deauthActive ? "SEL: Stop  ESC: Exit" : "SEL: Deauth  ESC: Exit");
-        String compactFooter = (g_targetCount > 0)
-            ? (g_deauthActive ? "SEL:Stp NXT:Tgt ESC:Ext" : "SEL:Dth NXT:Tgt ESC:Ext")
-            : (g_deauthActive ? "SEL:Stp ESC:Ext" : "SEL:Dth ESC:Ext");
-        tft.drawString(fitSingleLine(wideFooter, compactFooter), x, footerY, 1);
-    }
+    String wideFooter = (g_targetCount > 0)
+        ? (g_deauthActive ? "SEL: Stop  NXT: Targets  ESC: Exit" : "SEL: Start  NXT: Targets  ESC: Exit")
+        : (g_deauthActive ? "SEL: Stop  ESC: Exit" : "SEL: Start  ESC: Exit");
+    String compactFooter = (g_targetCount > 0)
+        ? (g_deauthActive ? "SEL:Stp NXT:Tgt ESC:Ext" : "SEL:Str NXT:Tgt ESC:Ext")
+        : (g_deauthActive ? "SEL:Stp ESC:Ext" : "SEL:Str ESC:Ext");
+    drawFooterLine(x, clearW, lineH, wideFooter, compactFooter);
 
     recordScanUiCache(0);
 }
@@ -537,48 +610,56 @@ static void drawTargetsScreen() {
         drawMainBorderWithTitle("TARGETS");
     }
 
+    clampMenuCursor();
     tft.setTextSize(FP);
     tft.setTextColor(bruceConfig.priColor, bruceConfig.bgColor);
 
-    int x = BORDER_PAD_X + 4;
-    int y = BORDER_PAD_Y + FM * LH + 6;
-    int lineH = max(12, FP * LH + 2);
-    int clearW = max(20, tftWidth - (BORDER_PAD_X + 4) * 2);
-    int footerY = tftHeight - BORDER_PAD_Y - lineH - 2;
-    int maxRows = max(1, (footerY - y - 4) / lineH);
+    int x = max(4, (int)BORDER_PAD_X + 2);
+    int y = max(14, (int)BORDER_PAD_Y + FM * LH + 4);
+    int lineH = max(10, FP * LH + 2);
+    int clearW = max(20, tftWidth - x * 2);
+    int footerY = tftHeight - lineH - 4;
+    int maxRows = max(1, (footerY - y - 2) / lineH);
 
     tft.fillRect(x, y, clearW, maxRows * lineH, bruceConfig.bgColor);
     if (g_targetCount == 0) {
         tft.drawString("No cameras found", x, y, 1);
     } else {
+        int totalItems = getTargetsListItemCount();
         int startIdx = 0;
-        if (g_selectedTarget >= maxRows) {
-            startIdx = g_selectedTarget - maxRows + 1;
+        if (g_menuCursor >= maxRows) {
+            startIdx = g_menuCursor - maxRows + 1;
         }
+
         int row = 0;
-        for (int i = startIdx; i < g_targetCount && row < maxRows; i++, row++) {
-            const char *brand = (g_targets[i].ouiIndex != 0xFF) ? cameraOUIs[g_targets[i].ouiIndex].brand : "???";
-            const char *sel = (i == g_selectedTarget) ? ">" : " ";
-            char macShort[10];
-            snprintf(macShort, sizeof(macShort), "%02X:%02X:%02X",
-                     g_targets[i].clientMAC[0], g_targets[i].clientMAC[1], g_targets[i].clientMAC[2]);
-            bool pmf = isPmfProtected(g_targets[i].apMAC);
-            String wideRow = String(sel) + String(brand) + " " + String(macShort) + " c" + String(g_targets[i].channel) + (pmf ? " [PMF]" : "");
-            String compactRow = String(sel) + String(brand) + " c" + String(g_targets[i].channel) + (pmf ? "*" : "");
-            tft.drawString(fitSingleLine(wideRow, compactRow), x, y + row * lineH, 1);
+        for (int itemIdx = startIdx; itemIdx < totalItems && row < maxRows; itemIdx++, row++) {
+            const char *cursor = (itemIdx == g_menuCursor) ? ">" : " ";
+            if (hasDeauthAllItem() && itemIdx == 0) {
+                String wideAll = String(cursor) + "[Deauth All] (" + String(g_targetCount) + ")";
+                String compactAll = String(cursor) + "[Deauth All]";
+                tft.drawString(fitSingleLine(wideAll, compactAll), x, y + row * lineH, 1);
+            } else {
+                int targetIdx = hasDeauthAllItem() ? (itemIdx - 1) : itemIdx;
+                const char *brand = (g_targets[targetIdx].ouiIndex != 0xFF) ? cameraOUIs[g_targets[targetIdx].ouiIndex].brand : "???";
+                char macShort[10];
+                snprintf(macShort, sizeof(macShort), "%02X:%02X:%02X",
+                         g_targets[targetIdx].clientMAC[0], g_targets[targetIdx].clientMAC[1], g_targets[targetIdx].clientMAC[2]);
+                bool pmf = isPmfProtected(g_targets[targetIdx].apMAC);
+                String wideRow = String(cursor) + String(brand) + " " + String(macShort) + " c" + String(g_targets[targetIdx].channel) + (pmf ? " [PMF]" : "");
+                String compactRow = String(cursor) + String(brand) + " c" + String(g_targets[targetIdx].channel) + (pmf ? "*" : "");
+                tft.drawString(fitSingleLine(wideRow, compactRow), x, y + row * lineH, 1);
+            }
         }
     }
 
-    if (footerY > y) {
-        tft.fillRect(x, footerY, clearW, lineH, bruceConfig.bgColor);
-        String wideNav = (g_targetCount > 1)
-            ? "SEL: Lock  PRV/NXT: Nav  ESC: Back"
-            : "SEL: Lock  ESC: Back";
-        String compactNav = (g_targetCount > 1)
-            ? "SEL:Lock P/N:Nav ESC:Bk"
-            : "SEL:Lock ESC:Bk";
-        tft.drawString(fitSingleLine(wideNav, compactNav), x, footerY, 1);
-    }
+    int totalItems = getTargetsListItemCount();
+    String wideNav = (totalItems > 1)
+        ? "SEL: Confirm  PRV/NXT: Nav  ESC: Back"
+        : "SEL: Confirm  ESC: Back";
+    String compactNav = (totalItems > 1)
+        ? "SEL:OK P/N:Nav ESC:Bk"
+        : "SEL:OK ESC:Bk";
+    drawFooterLine(x, clearW, lineH, wideNav, compactNav);
 
     recordScanUiCache(1);
 }
@@ -594,45 +675,51 @@ static void drawActiveScreen() {
     tft.setTextSize(FP);
     tft.setTextColor(bruceConfig.priColor, bruceConfig.bgColor);
 
-    int x = BORDER_PAD_X + 4;
-    int y = BORDER_PAD_Y + FM * LH + 6;
-    int lineH = max(12, FP * LH + 2);
-    int clearW = max(20, tftWidth - (BORDER_PAD_X + 4) * 2);
+    int x = max(4, (int)BORDER_PAD_X + 2);
+    int y = max(14, (int)BORDER_PAD_Y + FM * LH + 4);
+    int lineH = max(10, FP * LH + 2);
+    int clearW = max(20, tftWidth - x * 2);
+    int footerY = tftHeight - lineH - 4;
 
     // Line 1: Channel & active status
-    tft.fillRect(x, y, clearW, lineH, bruceConfig.bgColor);
-    tft.drawString(fitSingleLine("CH: " + String(g_channel) + "  DEAUTH: ON", "CH:" + String(g_channel) + " DEAUTH:ON"), x, y, 1);
-    y += lineH;
-
-    // Line 2: Active targets count
-    int activeCount = 0;
-    for (int i = 0; i < g_targetCount; i++) {
-        if (g_targets[i].active) activeCount++;
+    if (y + lineH <= footerY) {
+        tft.fillRect(x, y, clearW, lineH, bruceConfig.bgColor);
+        tft.drawString(fitSingleLine("CH: " + String(g_channel) + "  DEAUTH: ON", "CH:" + String(g_channel) + " DEAUTH:ON"), x, y, 1);
+        y += lineH;
     }
-    tft.fillRect(x, y, clearW, lineH, bruceConfig.bgColor);
-    tft.drawString(
-        fitSingleLine("Targets: " + String(activeCount) + "/" + String(g_targetCount), "Tgt: " + String(activeCount) + "/" + String(g_targetCount)),
-        x,
-        y,
-        1
-    );
-    y += lineH;
+
+    // Line 2: Active targets count & scope
+    if (y + lineH <= footerY) {
+        int activeCount = 0;
+        for (int i = 0; i < g_targetCount; i++) {
+            if (g_targets[i].active) activeCount++;
+        }
+        const char *scope = g_deauthAll ? "ALL" : "1-TGT";
+        tft.fillRect(x, y, clearW, lineH, bruceConfig.bgColor);
+        tft.drawString(
+            fitSingleLine(
+                "Targets: " + String(activeCount) + "/" + String(g_targetCount) + " [" + String(scope) + "]",
+                "Tgt:" + String(activeCount) + "/" + String(g_targetCount) + " [" + String(scope) + "]"
+            ),
+            x,
+            y,
+            1
+        );
+        y += lineH;
+    }
 
     // Line 3: Frames TX & PMF skipped
-    tft.fillRect(x, y, clearW, lineH, bruceConfig.bgColor);
-    tft.drawString(
-        fitSingleLine("TX: " + String(g_totalDeauths) + "  PMF skip: " + String(g_skippedPmf), "TX:" + String(g_totalDeauths) + " PMF:" + String(g_skippedPmf)),
-        x,
-        y,
-        1
-    );
-
-    // Bottom single-line control
-    int footerY = tftHeight - BORDER_PAD_Y - lineH - 2;
-    if (footerY > y + lineH) {
-        tft.fillRect(x, footerY, clearW, lineH, bruceConfig.bgColor);
-        tft.drawString(fitSingleLine("SEL: Stop  ESC: Back", "SEL:Stop ESC:Back"), x, footerY, 1);
+    if (y + lineH <= footerY) {
+        tft.fillRect(x, y, clearW, lineH, bruceConfig.bgColor);
+        tft.drawString(
+            fitSingleLine("TX: " + String(g_totalDeauths) + "  PMF skip: " + String(g_skippedPmf), "TX:" + String(g_totalDeauths) + " PMF:" + String(g_skippedPmf)),
+            x,
+            y,
+            1
+        );
     }
+
+    drawFooterLine(x, clearW, lineH, "SEL: Stop  ESC: Back", "SEL:Stop ESC:Back");
 
     recordScanUiCache(2);
 }
@@ -669,8 +756,9 @@ void cameraDeautherMenu() {
     g_targetCount = 0;
     g_apCount = 0;
     g_channelLocked = false;
-    g_deauthActive = false;
-    g_selectedTarget = 0;
+    g_deauthActive = true;
+    g_deauthAll = true;
+    g_menuCursor = 0;
     g_totalDeauths = 0;
     g_skippedPmf = 0;
     g_lastHopMs = millis();
@@ -679,7 +767,7 @@ void cameraDeautherMenu() {
     memset(g_aps, 0, sizeof(g_aps));
     resetUiCache();
 
-    int uiState = 0;
+    int uiState = 2;
     uint32_t lastRedraw = 0;
 
     while (!check(EscPress)) {
@@ -696,28 +784,38 @@ void cameraDeautherMenu() {
 
         if (check(NextPress) && uiState == 0 && g_targetCount > 0) {
             uiState = 1;
-            g_selectedTarget = 0;
+            g_menuCursor = 0;
             resetUiCache();
             lastRedraw = 0;
         } else if (check(PrevPress) && uiState == 1) {
-            if (g_selectedTarget > 0) g_selectedTarget--;
+            if (g_menuCursor > 0) g_menuCursor--;
             lastRedraw = 0;
         } else if (check(NextPress) && uiState == 1) {
-            if (g_selectedTarget < g_targetCount - 1) g_selectedTarget++;
+            int maxIdx = getTargetsListItemCount() - 1;
+            if (g_menuCursor < maxIdx) g_menuCursor++;
             lastRedraw = 0;
         } else if (check(SelPress)) {
             if (uiState == 0) {
                 g_deauthActive = !g_deauthActive;
-                if (g_deauthActive && g_targetCount > 0) {
-                    uiState = 2;
-                    resetUiCache();
+                if (g_deauthActive) {
+                    if (g_deauthAll) enableAllTargets();
+                    g_lastHopMs = millis();
+                    if (g_targetCount > 0) {
+                        uiState = 2;
+                        resetUiCache();
+                    }
                 }
                 lastRedraw = 0;
             } else if (uiState == 1 && g_targetCount > 0) {
-                g_channelLocked = true;
-                g_channel = g_targets[g_selectedTarget].channel;
-                esp_wifi_set_channel(g_channel, WIFI_SECOND_CHAN_NONE);
+                clampMenuCursor();
+                if (hasDeauthAllItem() && g_menuCursor == 0) {
+                    enableAllTargets();
+                } else {
+                    int targetIdx = hasDeauthAllItem() ? (g_menuCursor - 1) : g_menuCursor;
+                    lockSingleTarget(targetIdx);
+                }
                 g_deauthActive = true;
+                g_lastHopMs = millis();
                 uiState = 2;
                 resetUiCache();
                 lastRedraw = 0;
