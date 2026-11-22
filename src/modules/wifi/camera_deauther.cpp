@@ -134,6 +134,9 @@ static const CameraOUI cameraOUIs[] = {
     {{0x64, 0x09, 0x80}, "Xiaomi"},
     {{0x78, 0x11, 0xDC}, "Xiaomi"},
 
+    // LSC Smart Connect (Shenzhen Phaten Tech)
+    {{0x34, 0xA6, 0xEF}, "LSC"},
+
     // Tuya (subset: most-reported camera prefixes; Tuya is the white-label OEM
     // for many cheap cameras, but also for smart plugs/bulbs — full allocation
     // would cause false positives on non-camera devices)
