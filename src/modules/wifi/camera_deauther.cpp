@@ -134,7 +134,9 @@ static const CameraOUI cameraOUIs[] = {
     {{0x64, 0x09, 0x80}, "Xiaomi"},
     {{0x78, 0x11, 0xDC}, "Xiaomi"},
 
-    // Tuya
+    // Tuya (subset: most-reported camera prefixes; Tuya is the white-label OEM
+    // for many cheap cameras, but also for smart plugs/bulbs — full allocation
+    // would cause false positives on non-camera devices)
     {{0x18, 0xDE, 0x50}, "Tuya"},
     {{0x10, 0x5A, 0x17}, "Tuya"},
     {{0x18, 0x69, 0xD8}, "Tuya"},
@@ -169,7 +171,7 @@ static const CameraOUI cameraOUIs[] = {
     {{0x30, 0x48, 0x7D}, "Tuya"},
     {{0xD8, 0xFC, 0x92}, "Tuya"},
 
-    // Commercial/enterprise
+    // Commercial/enterprise (lower false-positive risk, less common at home)
     {{0x00, 0x18, 0x85}, "Avigilon"},
     {{0x00, 0x1F, 0x92}, "Avigilon"},
     {{0x00, 0x1A, 0x07}, "Arecont"},
@@ -238,6 +240,7 @@ static int g_channelIndex = 0;
 static int g_channel = 1;
 static bool g_channelLocked = false;
 static bool g_deauthActive = false;
+static bool g_scanPaused = false;
 static bool g_deauthAll = true;
 static int g_menuCursor = 0;
 static uint32_t g_lastHopMs = 0;
@@ -261,6 +264,7 @@ struct UiCache {
     uint32_t skippedPmf = UINT32_MAX;
     int menuCursor = -1;
     bool deauthActive = false;
+    bool scanPaused = false;
     uint8_t topTargetMac[6] = {0};
 };
 
@@ -278,6 +282,7 @@ static void resetUiCache() {
     g_uiCache.skippedPmf = UINT32_MAX;
     g_uiCache.menuCursor = -1;
     g_uiCache.deauthActive = false;
+    g_uiCache.scanPaused = false;
     memset(g_uiCache.topTargetMac, 0, sizeof(g_uiCache.topTargetMac));
 }
 
@@ -462,6 +467,7 @@ static int findOrCreateTarget(const uint8_t *clientMAC, const uint8_t *apMAC, ui
         g_targets[g_targetCount].deauthCount = 0;
         g_targets[g_targetCount].active = g_deauthAll ? true : false;
         g_targetCount++;
+        g_scanPaused = false;
         if (!hadAllItemBefore && hasDeauthAllItem()) {
             g_menuCursor++;
         }
@@ -548,11 +554,18 @@ static void injectDeauths() {
 }
 
 // ============================================================
-// Channel hopping (only while active and unlocked)
+// Channel hopping
+// - SCAN mode: hop through all channels unless paused when 0 targets
+// - DEAUTH all: hop through all channels (following targets)
+// - DEAUTH single-target: locked to target's AP channel
 // ============================================================
 
 static void hopChannel() {
-    if (!g_deauthActive || g_channelLocked || g_channels.empty()) return;
+    if (g_channels.empty()) return;
+    if (!g_deauthActive && g_targetCount == 0 && g_scanPaused) return;
+    if (g_deauthActive && g_channelLocked) return;
+    if (g_deauthActive && !g_deauthAll) return;
+
     uint32_t now = millis();
     if (now - g_lastHopMs < DWELL_MS) return;
     g_lastHopMs = now;
@@ -602,6 +615,7 @@ static bool hasScanUiChanged(int uiState) {
     if (g_uiCache.apCount != g_apCount || g_uiCache.targetCount != g_targetCount) return true;
     if (g_uiCache.totalDeauths != g_totalDeauths || g_uiCache.skippedPmf != g_skippedPmf) return true;
     if (g_uiCache.menuCursor != g_menuCursor || g_uiCache.deauthActive != g_deauthActive) return true;
+    if (g_uiCache.scanPaused != g_scanPaused) return true;
 
     if (g_targetCount > 0) {
         if (memcmp(g_uiCache.topTargetMac, g_targets[0].clientMAC, 6) != 0) return true;
@@ -621,6 +635,7 @@ static void recordScanUiCache(int uiState) {
     g_uiCache.skippedPmf = g_skippedPmf;
     g_uiCache.menuCursor = g_menuCursor;
     g_uiCache.deauthActive = g_deauthActive;
+    g_uiCache.scanPaused = g_scanPaused;
     if (g_targetCount > 0) {
         memcpy(g_uiCache.topTargetMac, g_targets[0].clientMAC, 6);
     } else {
@@ -641,6 +656,17 @@ static void drawFooterLine(int x, int clearW, int lineH, const String &wideText,
     tft.drawString(fitSingleLine(wideText, compactText), x, footerY, 1);
 }
 
+// Badge: SCAN (green) vs DEAUTH (cyan)
+static void drawModeBadge(int x, int y, bool deauthActive) {
+    if (deauthActive) {
+        tft.setTextColor(TFT_CYAN, bruceConfig.bgColor);
+        tft.drawString("DEAUTH", x, y, 1);
+    } else {
+        tft.setTextColor(TFT_GREEN, bruceConfig.bgColor);
+        tft.drawString("SCAN", x, y, 1);
+    }
+}
+
 static void drawScanScreen() {
     if (!hasScanUiChanged(0)) return;
 
@@ -657,29 +683,24 @@ static void drawScanScreen() {
     int clearW = max(20, tftWidth - x * 2);
     int footerY = getFooterY(lineH);
 
+    // Line 1: Channel + mode badge (SCAN green / DEAUTH cyan)
     if (y + lineH <= footerY) {
         tft.fillRect(x, y, clearW, lineH, bruceConfig.bgColor);
         tft.setTextColor(bruceConfig.priColor, bruceConfig.bgColor);
         String chPart = "CH:" + String(g_channel) + (g_channelLocked ? "*" : "") + " ";
         tft.drawString(chPart, x, y, 1);
-        int badgeX = x + tft.textWidth(chPart);
-        if (g_deauthActive) {
-            tft.setTextColor(TFT_RED, bruceConfig.bgColor);
-            tft.drawString("DEAUTH:ON", badgeX, y, 1);
-        } else {
-            tft.setTextColor(bruceConfig.priColor, bruceConfig.bgColor);
-            tft.drawString("DEAUTH:OFF", badgeX, y, 1);
-        }
+        drawModeBadge(x + tft.textWidth(chPart), y, g_deauthActive);
+        tft.setTextColor(bruceConfig.priColor, bruceConfig.bgColor);
         y += lineH;
     }
 
+    // Line 2: APs, CAMs count + targeting scope
     if (y + lineH <= footerY) {
-        tft.setTextColor(bruceConfig.priColor, bruceConfig.bgColor);
         tft.fillRect(x, y, clearW, lineH, bruceConfig.bgColor);
         String cntWide = "AP:" + String(g_apCount) + " CAM:" + String(g_targetCount);
         String cntCompact = "A:" + String(g_apCount) + " C:" + String(g_targetCount);
         if (g_targetCount > 0) {
-            const char *scope = (g_deauthAll || !g_channelLocked) ? "ALL" : "1-TGT";
+            const char *scope = g_deauthAll ? "ALL" : "1-TGT";
             cntWide += " [" + String(scope) + "]";
             cntCompact += " [" + String(scope) + "]";
         }
@@ -687,6 +708,7 @@ static void drawScanScreen() {
         y += lineH;
     }
 
+    // Line 3: Frames TX + PMF skipped
     if (y + lineH <= footerY) {
         tft.fillRect(x, y, clearW, lineH, bruceConfig.bgColor);
         String txWide = "TX: " + String(g_totalDeauths) + "  PMF skip: " + String(g_skippedPmf);
@@ -695,6 +717,7 @@ static void drawScanScreen() {
         y += lineH + 2;
     }
 
+    // Target summary
     int availListH = max(0, footerY - y - 2);
     int listLines = min(3, availListH / lineH);
     if (listLines > 0) {
@@ -702,6 +725,10 @@ static void drawScanScreen() {
         tft.setTextColor(bruceConfig.priColor, bruceConfig.bgColor);
         if (g_targetCount == 0) {
             if (g_deauthActive) {
+                tft.drawString(fitSingleLine("Waiting for targets...", "Waiting..."), x, y, 1);
+            } else if (g_scanPaused) {
+                tft.drawString(fitSingleLine("Scanner paused", "Paused"), x, y, 1);
+            } else {
                 tft.drawString(fitSingleLine("Scanning for cameras...", "Scanning..."), x, y, 1);
             }
         } else {
@@ -718,12 +745,23 @@ static void drawScanScreen() {
         }
     }
 
-    String wideFooter = (g_targetCount > 0)
-        ? (g_deauthActive ? "SEL: Stop  NXT: Targets  ESC: Exit" : "SEL: Start  NXT: Targets  ESC: Exit")
-        : (g_deauthActive ? "SEL: Stop  ESC: Exit" : "SEL: Start  ESC: Exit");
-    String compactFooter = (g_targetCount > 0)
-        ? (g_deauthActive ? "SEL:Stp NXT:Tgt ESC:Ext" : "SEL:Str NXT:Tgt ESC:Ext")
-        : (g_deauthActive ? "SEL:Stp ESC:Ext" : "SEL:Str ESC:Ext");
+    // Footer: mode-aware and target-gated
+    String wideFooter, compactFooter;
+    if (!g_deauthActive) {
+        if (g_targetCount > 0) {
+            wideFooter = "SEL: Deauth  NXT: Targets  ESC: Exit";
+            compactFooter = "SEL:Dth NXT:Tgt ESC:Ext";
+        } else if (g_scanPaused) {
+            wideFooter = "SEL: Resume  ESC: Exit";
+            compactFooter = "SEL:Rsm ESC:Ext";
+        } else {
+            wideFooter = "SEL: Pause  ESC: Exit";
+            compactFooter = "SEL:Pau ESC:Ext";
+        }
+    } else {
+        wideFooter = "SEL: Scan  ESC: Back";
+        compactFooter = "SEL:Scn ESC:Bck";
+    }
     drawFooterLine(x, clearW, lineH, wideFooter, compactFooter);
 
     recordScanUiCache(0);
@@ -808,17 +846,17 @@ static void drawActiveScreen() {
     int clearW = max(20, tftWidth - x * 2);
     int footerY = getFooterY(lineH);
 
+    // Line 1: Channel + DEAUTH badge (cyan)
     if (y + lineH <= footerY) {
         tft.fillRect(x, y, clearW, lineH, bruceConfig.bgColor);
         String chPart = "CH:" + String(g_channel) + " ";
         tft.drawString(chPart, x, y, 1);
-        int badgeX = x + tft.textWidth(chPart);
-        tft.setTextColor(TFT_RED, bruceConfig.bgColor);
-        tft.drawString("DEAUTH:ON", badgeX, y, 1);
+        drawModeBadge(x + tft.textWidth(chPart), y, true);
         tft.setTextColor(bruceConfig.priColor, bruceConfig.bgColor);
         y += lineH;
     }
 
+    // Line 2: Active targets + scope
     if (y + lineH <= footerY) {
         int activeCount = 0;
         for (int i = 0; i < g_targetCount; i++) {
@@ -838,6 +876,7 @@ static void drawActiveScreen() {
         y += lineH;
     }
 
+    // Line 3: Frames TX + PMF skipped
     if (y + lineH <= footerY) {
         tft.fillRect(x, y, clearW, lineH, bruceConfig.bgColor);
         tft.drawString(
@@ -886,6 +925,7 @@ void cameraDeautherMenu() {
     g_apCount = 0;
     g_channelLocked = false;
     g_deauthActive = false;
+    g_scanPaused = false;
     g_deauthAll = true;
     g_menuCursor = 0;
     g_totalDeauths = 0;
@@ -925,17 +965,27 @@ void cameraDeautherMenu() {
             lastRedraw = 0;
         } else if (check(SelPress)) {
             if (uiState == 0) {
-                g_deauthActive = !g_deauthActive;
-                if (g_deauthActive) {
-                    if (g_deauthAll) enableAllTargets();
-                    g_lastHopMs = millis();
+                if (!g_deauthActive) {
                     if (g_targetCount > 0) {
+                        g_scanPaused = false;
+                        esp_wifi_set_promiscuous(true);
+                        g_deauthActive = true;
+                        if (g_deauthAll) enableAllTargets();
+                        g_lastHopMs = millis();
                         uiState = 2;
                         resetUiCache();
+                    } else {
+                        g_scanPaused = !g_scanPaused;
+                        esp_wifi_set_promiscuous(!g_scanPaused);
+                        if (!g_scanPaused) g_lastHopMs = millis();
                     }
+                } else {
+                    g_deauthActive = false;
                 }
                 lastRedraw = 0;
             } else if (uiState == 1 && g_targetCount > 0) {
+                g_scanPaused = false;
+                esp_wifi_set_promiscuous(true);
                 clampMenuCursor();
                 if (hasDeauthAllItem() && g_menuCursor == 0) {
                     enableAllTargets();
