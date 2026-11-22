@@ -328,7 +328,6 @@ void wifi_atk_menu() {
         {"Karma Attack",    [=]() { karma_setup(); }       },
 #endif
         {"Deauther",        [=]() { enhancedDeauthMenu(); }},
-        {"Camera Deauther",         [=]() { cameraDeautherMenu(); }  },
         {"Deauth Flood",    [=]() { deauthFloodAttack(); } },
         {"Beacon SPAM",     [=]() { beaconAttack(); }      },
         {"Back",            [&]() { goBack = true; }       },
