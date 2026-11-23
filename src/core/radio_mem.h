@@ -45,7 +45,7 @@ constexpr size_t RADIO_WIFI_MIN_DMA_BLOCK = 15 * 1024;
 // pre-1.17 gate (same as Wi-Fi), otherwise BLE fails right after boot on
 // T-Embed/T-Deck/etc. even with WiFi off.
 #if !defined(BRUCE_IQ_RECORD_UNAVAILABLE)
-constexpr size_t RADIO_BLE_MIN_DMA_BLOCK = 48 * 1024;
+constexpr size_t RADIO_BLE_MIN_DMA_BLOCK = 8 * 1024;
 #else
 constexpr size_t RADIO_BLE_MIN_DMA_BLOCK = RADIO_WIFI_MIN_DMA_BLOCK;
 #endif
