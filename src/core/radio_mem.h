@@ -35,7 +35,7 @@ static inline size_t radioLargestDmaBlock() { return heap_caps_get_largest_free_
 
 // Minimum contiguous DMA block required BEFORE bringing Wi-Fi up (checked at the
 // scan/menu entry, i.e. before esp_wifi is touched at all).
-constexpr size_t RADIO_WIFI_MIN_DMA_BLOCK = 8 * 1024;
+constexpr size_t RADIO_WIFI_MIN_DMA_BLOCK = 15 * 1024;
 
 // Minimum contiguous DMA block required before bringing the BLE stack up.
 // Lowered to 8 KB: the BLE suite only need a small NimBLE
