@@ -1,0 +1,953 @@
+Processing lilygo-t-embed-cc1101 (board: esp32s3; platform: https://github.com/pioarduino/platform-espressif32/releases/download/55.03.39/platform-espressif32.zip; framework: arduino)
+--------------------------------------------------------------------------------
+Library Manager: Installing git+https://github.com/sayacom/WireGuard-ESP32-Arduino#feature/esp-netif
+git version 2.56.1
+Cloning into '/home/runner/work/Bruce_firmware/Bruce_firmware/.pio/cache/tmp/pkg-installing-b6gw0wf5'...
+Library Manager: WireGuard-ESP32@0.1.5+sha.90aa6b4 has been installed!
+Library Manager: Installing git+https://github.com/bmorcelli/IRremoteESP8266
+git version 2.56.1
+Cloning into '/home/runner/work/Bruce_firmware/Bruce_firmware/.pio/cache/tmp/pkg-installing-51p52ta2'...
+Library Manager: IRremoteESP8266@2.8.6+sha.22cd38c has been installed!
+Library Manager: Installing paulstoffregen/Time @ 1.6.1
+Unpacking 0% 10% 20% 30% 40% 50% 60% 70% 80% 90% 100%
+Library Manager: Time@1.6.1 has been installed!
+Library Manager: Installing symlink://lib/Adafruit-BusIO
+Library Manager: Adafruit BusIO@1.17.2-bruce.1 has been installed!
+Library Manager: Installing symlink://lib/Adafruit-PN532
+Library Manager: Adafruit PN532@1.3.3-bruce.1 has been installed!
+Library Manager: Resolving dependencies...
+Library Manager: Installing git+https://github.com/huckor/BER-TLV.git
+git version 2.56.1
+Cloning into '/home/runner/work/Bruce_firmware/Bruce_firmware/.pio/cache/tmp/pkg-installing-jysewdf1'...
+Library Manager: BER-TLV@0.0.0+20261124232539.sha.bd61b70 has been installed!
+Library Manager: Installing git+https://github.com/rennancockles/Arduino_MFRC522v2.git
+git version 2.56.1
+Cloning into '/home/runner/work/Bruce_firmware/Bruce_firmware/.pio/cache/tmp/pkg-installing-jjw90glf'...
+Library Manager: RFID_MFRC522v2@2.0.6+sha.a6977df has been installed!
+Library Manager: Installing git+https://github.com/bmorcelli/ESP-ChameleonUltra
+git version 2.56.1
+Cloning into '/home/runner/work/Bruce_firmware/Bruce_firmware/.pio/cache/tmp/pkg-installing-7_vc_s0s'...
+Library Manager: ESP Chameleon Ultra@0.0.2+sha.f66f354 has been installed!
+Library Manager: Resolving dependencies...
+Library Manager: Installing h2zero/NimBLE-Arduino
+Library Manager: Installing git+https://github.com/bmorcelli/ESP-Amiibolink
+git version 2.56.1
+Cloning into '/home/runner/work/Bruce_firmware/Bruce_firmware/.pio/cache/tmp/pkg-installing-agp4cnfg'...
+Library Manager: ESP Amiibolink@0.0.2+sha.fc26412 has been installed!
+Library Manager: Resolving dependencies...
+Library Manager: Installing h2zero/NimBLE-Arduino
+Library Manager: Installing git+https://github.com/rennancockles/SimpleCLI
+git version 2.56.1
+Cloning into '/home/runner/work/Bruce_firmware/Bruce_firmware/.pio/cache/tmp/pkg-installing-9czhstbu'...
+Library Manager: SimpleCLI@1.1.4+sha.b23d377 has been installed!
+Library Manager: Installing git+https://github.com/whywilson/ESP-PN532BLE
+git version 2.56.1
+Cloning into '/home/runner/work/Bruce_firmware/Bruce_firmware/.pio/cache/tmp/pkg-installing-iq5ctpmw'...
+Library Manager: ESP PN32BLE@0.0.2+sha.542f121 has been installed!
+Library Manager: Resolving dependencies...
+Library Manager: Installing h2zero/NimBLE-Arduino
+Library Manager: Installing git+https://github.com/whywilson/ESP-PN532-UART
+git version 2.56.1
+Cloning into '/home/runner/work/Bruce_firmware/Bruce_firmware/.pio/cache/tmp/pkg-installing-_hfzhw3u'...
+Library Manager: ESP PN532 UART@0.0.2+sha.879e586 has been installed!
+Library Manager: Installing git+https://github.com/whywilson/ESP-PN532Killer
+git version 2.56.1
+Cloning into '/home/runner/work/Bruce_firmware/Bruce_firmware/.pio/cache/tmp/pkg-installing-ztzx81ay'...
+Library Manager: ESP PN532Killer@0.0.7+sha.71bf110 has been installed!
+Library Manager: Resolving dependencies...
+Library Manager: Installing whywilson/ESP-PN532-UART
+Library Manager: Installing bblanchon/ArduinoJson
+Unpacking 0% 10% 20% 30% 40% 50% 60% 70% 80% 90% 100%
+Library Manager: ArduinoJson@7.4.3 has been installed!
+Library Manager: Installing earlephilhower/ESP8266SAM @ ^1.1.0
+Unpacking 0% 10% 20% 30% 40% 50% 60% 70% 80% 90% 100%
+Library Manager: ESP8266SAM@1.1.0 has been installed!
+Library Manager: Installing mikalhart/TinyGPSPlus
+Unpacking 0% 10% 20% 30% 40% 50% 60% 70% 80% 90% 100%
+Library Manager: TinyGPSPlus@1.1.0 has been installed!
+Library Manager: Installing tinyu-zhao/FFT @ ^0.0.1
+Unpacking 0% 10% 20% 30% 40% 50% 60% 70%
+Library Manager: FFT@0.0.1 has been installed!
+Library Manager: Installing h2zero/NimBLE-Arduino @ 2.5.1
+Unpacking 0% 10% 20% 30% 40% 50% 60% 70% 80% 90% 100%
+Library Manager: NimBLE-Arduino@2.5.1 has been installed!
+Library Manager: Installing nrf24/RF24 @ 1.4.11
+Unpacking 0% 10% 20% 30% 40% 50% 60% 70% 80% 90% 100%
+Library Manager: RF24@1.4.11 has been installed!
+Library Manager: Installing Bodmer/JPEGDecoder
+Unpacking 0% 10% 20% 30% 40% 50% 60% 70% 80% 90% 100%
+Library Manager: JPEGDecoder@2.0.0 has been installed!
+Library Manager: Installing git+https://github.com/bmorcelli/SmartRC-CC1101-Driver-Lib/
+git version 2.56.1
+Cloning into '/home/runner/work/Bruce_firmware/Bruce_firmware/.pio/cache/tmp/pkg-installing-64i097pz'...
+Library Manager: SmartRC-CC1101-Driver-Lib@2.5.7+sha.7bba521 has been installed!
+Library Manager: Installing git+https://github.com/BruceDevices/mquickjs#0.0.6
+git version 2.56.1
+Cloning into '/home/runner/work/Bruce_firmware/Bruce_firmware/.pio/cache/tmp/pkg-installing-f4xbagcz'...
+Note: switching to '169b5ea7723bf43d7be9631a14f9c2a1ed8c69e1'.
+
+You are in 'detached HEAD' state. You can look around, make experimental
+changes and commit them, and you can discard any commits you make in this
+state without impacting any branches by switching back to a branch.
+
+If you want to create a new branch to retain commits you create, you may
+do so (now or later) by using -c with the switch command. Example:
+
+  git switch -c <new-branch-name>
+
+Or undo this operation with:
+
+  git switch -
+
+Turn off this advice by setting config variable advice.detachedHead to false
+
+Library Manager: mquickjs@0.0.6+sha.169b5ea has been installed!
+Library Manager: Installing git+https://github.com/bmorcelli/OneWire#patch-1
+git version 2.56.1
+Cloning into '/home/runner/work/Bruce_firmware/Bruce_firmware/.pio/cache/tmp/pkg-installing-bve9xnti'...
+Library Manager: OneWire@2.3.8+sha.42e045e has been installed!
+Library Manager: Installing git+https://github.com/bmorcelli/ESP32-PsRamFS#patch-1
+git version 2.56.1
+Cloning into '/home/runner/work/Bruce_firmware/Bruce_firmware/.pio/cache/tmp/pkg-installing-wmyddvco'...
+Library Manager: ESP32-PSRamFS@1.0.6+sha.5ace2e6 has been installed!
+Library Manager: Installing bitbank2/AnimatedGIF
+Unpacking 0% 10% 20% 30% 40% 50% 60% 70% 80% 90% 100%
+Library Manager: AnimatedGIF@2.2.3 has been installed!
+Library Manager: Installing bitbank2/PNGdec @ ^1.1.2
+Unpacking 0% 10% 20% 30% 40% 50% 60% 70% 80% 90% 100%
+Library Manager: PNGdec@1.1.6 has been installed!
+Library Manager: Installing ESP32Async/ESPAsyncWebServer
+Unpacking 0% 10% 20% 30% 40% 50% 60% 70% 80% 90% 100%
+Library Manager: ESPAsyncWebServer@3.12.1 has been installed!
+Library Manager: Resolving dependencies...
+Library Manager: Installing ESP32Async/AsyncTCP @ ^3.5.0
+Unpacking 0% 10% 20% 30% 40% 50% 60% 70% 80% 90% 100%
+Library Manager: AsyncTCP@3.6.1 has been installed!
+Library Manager: Installing fastled/FastLED @ 3.10.3
+Unpacking 0% 10% 20% 30% 40% 50% 60% 70% 80% 90% 100%
+Library Manager: FastLED@3.10.3 has been installed!
+Library Manager: Installing jgromes/RadioLib @ ^7.4.0
+Unpacking 0% 10% 20% 30% 40% 50% 60% 70% 80% 90% 100%
+Library Manager: RadioLib@7.8.1 has been installed!
+Library Manager: Installing git+https://github.com/lewisxhe/ST25R3916-fork#0c8e00f49d12881d1cff6d6f0879b90ce7ed4033
+git version 2.56.1
+Cloning into '/home/runner/work/Bruce_firmware/Bruce_firmware/.pio/cache/tmp/pkg-installing-iij5poj8'...
+HEAD is now at 0c8e00f Rename the property name
+Library Manager: ST25R3916-fork@1.1.0+sha.0c8e00f has been installed!
+Library Manager: Installing git+https://github.com/lewisxhe/NFC-RFAL-fork#7bde4587ea44c36c178a43d083d7a7345c1e4cfe
+git version 2.56.1
+Cloning into '/home/runner/work/Bruce_firmware/Bruce_firmware/.pio/cache/tmp/pkg-installing-_rvd0n11'...
+HEAD is now at 7bde458 Rename the property name
+Library Manager: NFC-RFAL-fork@1.0.1+sha.7bde458 has been installed!
+Verbose mode can be enabled via `-v, --verbose` option
+[GZIP & EMBED INTO HEADER] - Processing 4 files.
+[DONE] Gzipped files embedded into /home/runner/work/Bruce_firmware/Bruce_firmware/include/webFiles.h
+a31c20af84d4aa73d94ac2ea57bcf6ac743bff534435e256d2acb5068abd1d53 a31c20af84d4aa73d94ac2ea57bcf6ac743bff534435e256d2acb5068abd1d53
+Patching library conflicts with ESP32 core...
+Patched: .pio/libdeps/lilygo-t-embed-cc1101/ESP8266SAM/src/render.c
+Patched: .pio/libdeps/lilygo-t-embed-cc1101/ESP8266SAM/src/render.c
+Patched: .pio/libdeps/lilygo-t-embed-cc1101/JPEGDecoder/src/picojpeg.c
+Patched: .pio/libdeps/lilygo-t-embed-cc1101/JPEGDecoder/src/picojpeg.c
+Patched: .pio/libdeps/lilygo-t-embed-cc1101/ESP Amiibolink/src/amiibolink.h
+Patched: .pio/libdeps/lilygo-t-embed-cc1101/ESP Chameleon Ultra/src/chameleonUltra.h
+Patched: .pio/libdeps/lilygo-t-embed-cc1101/ESP PN32BLE/src/pn532_ble.h
+Patched: .pio/libdeps/lilygo-t-embed-cc1101/ST25R3916-fork/src/rfal_rfst25r3916.cpp
+Patched: .pio/libdeps/lilygo-t-embed-cc1101/ST25R3916-fork/src/rfal_rfst25r3916.cpp
+Patched: .pio/libdeps/lilygo-t-embed-cc1101/ST25R3916-fork/src/rfal_rfst25r3916.cpp
+Patched: .pio/libdeps/lilygo-t-embed-cc1101/ST25R3916-fork/src/rfal_rfst25r3916.h
+Patched: .pio/libdeps/lilygo-t-embed-cc1101/ST25R3916-fork/src/rfal_rfst25r3916.cpp
+Patched: .pio/libdeps/lilygo-t-embed-cc1101/ST25R3916-fork/src/st25r3916_interrupt.cpp
+Patched: .pio/libdeps/lilygo-t-embed-cc1101/ST25R3916-fork/src/st25r3916_interrupt.cpp
+Patched: .pio/libdeps/lilygo-t-embed-cc1101/ST25R3916-fork/src/rfal_rfst25r3916.cpp
+Patched: .pio/libdeps/lilygo-t-embed-cc1101/NFC-RFAL-fork/src/rfal_nfca.h
+Patched: .pio/libdeps/lilygo-t-embed-cc1101/NFC-RFAL-fork/src/rfal_nfca.cpp
+Patched: .pio/libdeps/lilygo-t-embed-cc1101/NFC-RFAL-fork/src/rfal_nfca.cpp
+Patched: .pio/libdeps/lilygo-t-embed-cc1101/NFC-RFAL-fork/src/rfal_nfca.cpp
+CONFIGURATION: https://docs.platformio.org/page/boards/espressif32/esp32s3.html
+PLATFORM: Espressif 32 (55.3.39) > Espressif ESP32-S3 (generic, 16M Flash 8M OPI PSRAM)
+HARDWARE: ESP32S3 240MHz, 320KB RAM, 16MB Flash
+DEBUG: Current (esp-builtin) On-board (esp-builtin) External (cmsis-dap, esp-bridge, esp-prog, esp-prog-2, iot-bus-jtag, jlink, minimodule, olimex-arm-usb-ocd, olimex-arm-usb-ocd-h, olimex-arm-usb-tiny-h, olimex-jtag-tiny, tumpa)
+PACKAGES: 
+ - contrib-piohome @ 3.4.4 
+ - framework-arduinoespressif32 @ 3.3.9 
+ - framework-arduinoespressif32-libs @ 5.5.4+sha.735507283d 
+ - tool-esp-rom-elfs @ 2024.10.11 
+ - tool-esptoolpy @ 5.3.0 
+ - tool-xtensa-esp-elf-gdb @ 17.1.0+20260402 
+ - toolchain-xtensa-esp-elf @ 14.2.0+20260121
+LDF: Library Dependency Finder -> https://bit.ly/configure-pio-ldf
+LDF Modes: Finder ~ chain, Compatibility ~ soft
+Library Manager: Installing LibSSH-ESP32
+Unpacking 0% 10% 20% 30% 40% 50% 60% 70% 80% 90% 100%
+Library Manager: LibSSH-ESP32@5.10.0 has been installed!
+Library Manager: Installing NTPClient @ 3.2.1
+Unpacking 0% 10% 20% 30% 40% 50% 60% 70% 80% 90% 100%
+Library Manager: NTPClient@3.2.1 has been installed!
+Library Manager: Installing ESP32Time @ 2.0.6
+Unpacking 0% 10% 20% 30% 40% 50% 60% 70% 80% 90% 100%
+Library Manager: ESP32Time@2.0.6 has been installed!
+Library Manager: Installing ESP8266Audio @ ^2.4.1
+Unpacking 0% 10% 20% 30% 40% 50% 60% 70% 80% 90% 100%
+Library Manager: ESP8266Audio@2.4.3 has been installed!
+Library Manager: Installing Adafruit Si4713 Library @ 1.2.3
+Unpacking 0% 10% 20% 30% 40% 50% 60% 70% 80% 90% 100%
+Library Manager: Adafruit Si4713 Library@1.2.3 has been installed!
+Library Manager: Resolving dependencies...
+Found 97 compatible libraries
+Scanning dependencies...
+Dependency Graph
+|-- WireGuard-ESP32 @ 0.1.5+sha.90aa6b4
+|-- IRremoteESP8266 @ 2.8.6+sha.22cd38c
+|-- Time @ 1.6.1
+|-- LibSSH-ESP32 @ 5.10.0
+|-- Adafruit BusIO @ 1.17.2-bruce.1
+|-- Adafruit PN532 @ 1.3.3-bruce.1
+|-- BER-TLV @ 0.0.0+20261124232539.sha.bd61b70
+|-- RFID_MFRC522v2 @ 2.0.6+sha.a6977df
+|-- ESP Chameleon Ultra @ 0.0.2+sha.f66f354
+|-- ESP Amiibolink @ 0.0.2+sha.fc26412
+|-- SimpleCLI @ 1.1.4+sha.b23d377
+|-- ESP PN32BLE @ 0.0.2+sha.542f121
+|-- ESP PN532 UART @ 0.0.2+sha.879e586
+|-- ESP PN532Killer @ 0.0.7+sha.71bf110
+|-- NTPClient @ 3.2.1
+|-- ESP32Time @ 2.0.6
+|-- FFat @ 3.3.9
+|-- ArduinoJson @ 7.4.3
+|-- ESP8266Audio @ 2.4.3
+|-- ESP8266SAM @ 1.1.0
+|-- TinyGPSPlus @ 1.1.0
+|-- FFT @ 0.0.1
+|-- NimBLE-Arduino @ 2.5.1
+|-- RF24 @ 1.4.11
+|-- Adafruit Si4713 Library @ 1.2.3
+|-- JPEGDecoder @ 2.0.0
+|-- SmartRC-CC1101-Driver-Lib @ 2.5.7+sha.7bba521
+|-- mquickjs @ 0.0.6+sha.169b5ea
+|-- OneWire @ 2.3.8+sha.42e045e
+|-- ESP32-PSRamFS @ 1.0.6+sha.5ace2e6
+|-- AnimatedGIF @ 2.2.3
+|-- PNGdec @ 1.1.6
+|-- ESPAsyncWebServer @ 3.12.1
+|-- FastLED @ 3.10.3
+|-- RadioLib @ 7.8.1
+|-- ST25R3916-fork @ 1.1.0+sha.0c8e00f
+|-- NFC-RFAL-fork @ 1.0.1+sha.7bde458
+|-- Wire @ 3.3.9
+|-- utility
+|-- WiFi @ 3.3.9
+|-- BruceHAL @ 7.3.1
+|-- HTTPClient @ 3.3.9
+|-- LittleFS @ 3.3.9
+|-- CYD-touch
+|-- Preferences @ 3.3.9
+|-- ESP32_Button @ 0.0.1
+|-- RotaryEncoder @ 1.5.3
+|-- DisplayDrivers @ 0.0.2
+|-- SPI @ 3.3.9
+|-- SensorLib @ 0.4.1
+|-- XPowersLib @ 0.3.3
+|-- FS @ 3.3.9
+|-- Ethernet @ 3.3.9
+|-- Networking @ 3.3.9
+|-- Bad_Usb_Lib
+|-- TFT_eSPI QRcode @ 1.0.0
+|-- AsyncTCP @ 3.6.1
+|-- DNSServer @ 3.3.9
+|-- BruceWifite @ 0.8.1-bruce
+|-- RTC
+|-- ESPmDNS @ 3.3.9
+|-- PN532_SRIX
+|-- NetworkClientSecure @ 3.3.9
+|-- SPIFFS @ 3.3.9
+Building in release mode
+Compiling .pio/build/lilygo-t-embed-cc1101/src/core/wifi/webInterface.cpp.o
+Linking .pio/build/lilygo-t-embed-cc1101/firmware.elf
+lib/TFT_eSPI/TFT_eSPI.h:430:7: warning: type 'struct TFT_eSPI' violates the C++ One Definition Rule [-Wodr]
+  430 | class TFT_eSPI : public Print {
+      |       ^
+lib/TFT_eSPI/TFT_eSPI.h:430:7: note: a different type is defined in another translation unit
+  430 | class TFT_eSPI : public Print {
+      |       ^
+lib/TFT_eSPI/Extensions/Smooth_font.h:32:13: note: the first difference of corresponding definitions is field 'gFont'
+   32 | fontMetrics gFont = { nullptr, 0, 0, 0, 0, 0, 0, 0 };
+      |             ^
+lib/TFT_eSPI/Extensions/Touch.h:38:12: note: a field with different name is defined in another translation unit
+   38 |   uint16_t touchCalibration_x0 = 300, touchCalibration_x1 = 3600, touchCalibration_y0 = 300, touchCalibration_y1 = 3600;
+      |            ^
+lib/TFT_eSPI/Extensions/Sprite.h:8:7: warning: type 'struct TFT_eSprite' violates the C++ One Definition Rule [-Wodr]
+    8 | class TFT_eSprite : public TFT_eSPI {
+      |       ^
+lib/TFT_eSPI/Extensions/Sprite.h:8:7: note: a type with different bases is defined in another translation unit
+    8 | class TFT_eSprite : public TFT_eSPI {
+      |       ^
+lib/TFT_eSPI/Extensions/Sprite.h:12:12: warning: type of '__ct_base ' does not match original declaration [-Wlto-type-mismatch]
+   12 |   explicit TFT_eSprite(TFT_eSPI *tft);
+      |            ^
+lib/TFT_eSPI/Extensions/Sprite.cpp:17:1: note: '__ct_base ' was previously declared here
+   17 | TFT_eSprite::TFT_eSprite(TFT_eSPI *tft)
+      | ^
+lib/TFT_eSPI/Extensions/Sprite.cpp:17:1: note: code may be misoptimized unless '-fno-strict-aliasing' is used
+lib/TFT_eSPI/TFT_eSPI.h:435:5: warning: type of '__ct_base ' does not match original declaration [-Wlto-type-mismatch]
+  435 |     TFT_eSPI(int16_t _W = TFT_WIDTH, int16_t _H = TFT_HEIGHT);
+      |     ^
+lib/TFT_eSPI/TFT_eSPI.cpp:445:1: note: '__ct_base ' was previously declared here
+  445 | TFT_eSPI::TFT_eSPI(int16_t w, int16_t h)
+      | ^
+lib/TFT_eSPI/TFT_eSPI.cpp:445:1: note: code may be misoptimized unless '-fno-strict-aliasing' is used
+lib/TFT_eSPI/Extensions/Sprite.h:13:3: warning: type of '__dt_base ' does not match original declaration [-Wlto-type-mismatch]
+   13 |   ~TFT_eSprite(void);
+      |   ^
+lib/TFT_eSPI/Extensions/Sprite.cpp:139:1: note: '__dt_base ' was previously declared here
+  139 | TFT_eSprite::~TFT_eSprite(void)
+      | ^
+lib/TFT_eSPI/Extensions/Sprite.cpp:139:1: note: code may be misoptimized unless '-fno-strict-aliasing' is used
+lib/TFT_eSPI/Extensions/Smooth_font.h:15:16: warning: type of 'drawGlyph' does not match original declaration [-Wlto-type-mismatch]
+   15 |   virtual void drawGlyph(uint16_t code);
+      |                ^
+lib/TFT_eSPI/Extensions/Smooth_font.cpp:360:6: note: 'drawGlyph' was previously declared here
+  360 | void TFT_eSPI::drawGlyph(uint16_t code)
+      |      ^
+lib/TFT_eSPI/Extensions/Smooth_font.cpp:360:6: note: code may be misoptimized unless '-fno-strict-aliasing' is used
+lib/TFT_eSPI/Extensions/Sprite.h:143:12: warning: type of 'drawGlyph' does not match original declaration [-Wlto-type-mismatch]
+  143 |   void     drawGlyph(uint16_t code);
+      |            ^
+lib/TFT_eSPI/Extensions/Sprite.cpp:2414:6: note: 'drawGlyph' was previously declared here
+ 2414 | void TFT_eSprite::drawGlyph(uint16_t code)
+      |      ^
+lib/TFT_eSPI/Extensions/Sprite.cpp:2414:6: note: code may be misoptimized unless '-fno-strict-aliasing' is used
+lib/TFT_eSPI/TFT_eSPI.h:701:9: warning: type of 'drawRightString' does not match original declaration [-Wlto-type-mismatch]
+  701 |         drawRightString(
+      |         ^
+lib/TFT_eSPI/TFT_eSPI.cpp:5804:9: note: 'drawRightString' was previously declared here
+ 5804 | int16_t TFT_eSPI::drawRightString(const String& string, int32_t dX, int32_t poY, uint8_t font)
+      |         ^
+lib/TFT_eSPI/TFT_eSPI.cpp:5804:9: note: code may be misoptimized unless '-fno-strict-aliasing' is used
+lib/TFT_eSPI/TFT_eSPI.h:698:9: warning: type of 'drawCentreString' does not match original declaration [-Wlto-type-mismatch]
+  698 |         drawCentreString(
+      |         ^
+lib/TFT_eSPI/TFT_eSPI.cpp:5781:9: note: 'drawCentreString' was previously declared here
+ 5781 | int16_t TFT_eSPI::drawCentreString(const String& string, int32_t dX, int32_t poY, uint8_t font)
+      |         ^
+lib/TFT_eSPI/TFT_eSPI.cpp:5781:9: note: code may be misoptimized unless '-fno-strict-aliasing' is used
+lib/TFT_eSPI/TFT_eSPI.h:686:9: warning: type of 'drawString' does not match original declaration [-Wlto-type-mismatch]
+  686 |         drawString(const char *string, int32_t x, int32_t y), // Draw string using current font
+      |         ^
+lib/TFT_eSPI/TFT_eSPI.cpp:5551:9: note: 'drawString' was previously declared here
+ 5551 | int16_t TFT_eSPI::drawString(const char *string, int32_t poX, int32_t poY)
+      |         ^
+lib/TFT_eSPI/TFT_eSPI.cpp:5551:9: note: code may be misoptimized unless '-fno-strict-aliasing' is used
+lib/TFT_eSPI/TFT_eSPI.h:687:9: warning: type of 'drawString' does not match original declaration [-Wlto-type-mismatch]
+  687 |         drawString(
+      |         ^
+lib/TFT_eSPI/TFT_eSPI.cpp:5542:9: note: 'drawString' was previously declared here
+ 5542 | int16_t TFT_eSPI::drawString(const String& string, int32_t poX, int32_t poY, uint8_t font)
+      |         ^
+lib/TFT_eSPI/TFT_eSPI.cpp:5542:9: note: code may be misoptimized unless '-fno-strict-aliasing' is used
+lib/TFT_eSPI/TFT_eSPI.h:738:9: warning: type of 'textWidth' does not match original declaration [-Wlto-type-mismatch]
+  738 |         textWidth(const char *string),                   // Returns pixel width of string in current font
+      |         ^
+lib/TFT_eSPI/TFT_eSPI.cpp:3092:9: note: 'textWidth' was previously declared here
+ 3092 | int16_t TFT_eSPI::textWidth(const char *string)
+      |         ^
+lib/TFT_eSPI/TFT_eSPI.cpp:3092:9: note: code may be misoptimized unless '-fno-strict-aliasing' is used
+lib/TFT_eSPI/TFT_eSPI.h:740:9: warning: type of 'textWidth' does not match original declaration [-Wlto-type-mismatch]
+  740 |         textWidth(const String &string),
+      |         ^
+lib/TFT_eSPI/TFT_eSPI.cpp:3076:9: note: 'textWidth' was previously declared here
+ 3076 | int16_t TFT_eSPI::textWidth(const String& string)
+      |         ^
+lib/TFT_eSPI/TFT_eSPI.cpp:3076:9: note: code may be misoptimized unless '-fno-strict-aliasing' is used
+lib/TFT_eSPI/TFT_eSPI.h:737:13: warning: type of 'textWidth' does not match original declaration [-Wlto-type-mismatch]
+  737 |     int16_t textWidth(const char *string, uint8_t font), // Returns pixel width of string in specified font
+      |             ^
+lib/TFT_eSPI/TFT_eSPI.cpp:3097:9: note: 'textWidth' was previously declared here
+ 3097 | int16_t TFT_eSPI::textWidth(const char *string, uint8_t font)
+      |         ^
+lib/TFT_eSPI/TFT_eSPI.cpp:3097:9: note: code may be misoptimized unless '-fno-strict-aliasing' is used
+lib/TFT_eSPI/Extensions/Sprite.h:62:12: warning: type of 'fillSprite' does not match original declaration [-Wlto-type-mismatch]
+   62 |            fillSprite(uint32_t color),
+      |            ^
+lib/TFT_eSPI/Extensions/Sprite.cpp:1516:6: note: 'fillSprite' was previously declared here
+ 1516 | void TFT_eSprite::fillSprite(uint32_t color)
+      |      ^
+lib/TFT_eSPI/Extensions/Sprite.cpp:1516:6: note: code may be misoptimized unless '-fno-strict-aliasing' is used
+lib/TFT_eSPI/Extensions/Sprite.h:131:12: warning: type of 'pushToSprite' does not match original declaration [-Wlto-type-mismatch]
+  131 |   bool     pushToSprite(TFT_eSprite *dspr, int32_t x, int32_t y, uint16_t transparent);
+      |            ^
+lib/TFT_eSPI/Extensions/Sprite.cpp:750:6: note: 'pushToSprite' was previously declared here
+  750 | bool TFT_eSprite::pushToSprite(TFT_eSprite *dspr, int32_t x, int32_t y, uint16_t transp)
+      |      ^
+lib/TFT_eSPI/Extensions/Sprite.cpp:750:6: note: code may be misoptimized unless '-fno-strict-aliasing' is used
+lib/TFT_eSPI/Extensions/Sprite.h:124:12: warning: type of 'pushSprite' does not match original declaration [-Wlto-type-mismatch]
+  124 |   void     pushSprite(int32_t x, int32_t y, uint16_t transparent);
+      |            ^
+lib/TFT_eSPI/Extensions/Sprite.cpp:682:6: note: 'pushSprite' was previously declared here
+  682 | void TFT_eSprite::pushSprite(int32_t x, int32_t y, uint16_t transp)
+      |      ^
+lib/TFT_eSPI/Extensions/Sprite.cpp:682:6: note: code may be misoptimized unless '-fno-strict-aliasing' is used
+lib/TFT_eSPI/Extensions/Sprite.h:39:12: warning: type of 'setColorDepth' does not match original declaration [-Wlto-type-mismatch]
+   39 |   void*    setColorDepth(int8_t b);
+      |            ^
+lib/TFT_eSPI/Extensions/Sprite.cpp:301:7: note: 'setColorDepth' was previously declared here
+  301 | void* TFT_eSprite::setColorDepth(int8_t b)
+      |       ^
+lib/TFT_eSPI/Extensions/Sprite.cpp:301:7: note: code may be misoptimized unless '-fno-strict-aliasing' is used
+lib/TFT_eSPI/Extensions/Sprite.h:31:12: warning: type of 'deleteSprite' does not match original declaration [-Wlto-type-mismatch]
+   31 |   void     deleteSprite(void);
+      |            ^
+lib/TFT_eSPI/Extensions/Sprite.cpp:373:6: note: 'deleteSprite' was previously declared here
+  373 | void TFT_eSprite::deleteSprite(void)
+      |      ^
+lib/TFT_eSPI/Extensions/Sprite.cpp:373:6: note: code may be misoptimized unless '-fno-strict-aliasing' is used
+lib/TFT_eSPI/Extensions/Sprite.h:22:12: warning: type of 'createSprite' does not match original declaration [-Wlto-type-mismatch]
+   22 |   void*    createSprite(int16_t width, int16_t height, uint8_t frames = 1);
+      |            ^
+lib/TFT_eSPI/Extensions/Sprite.cpp:51:7: note: 'createSprite' was previously declared here
+   51 | void* TFT_eSprite::createSprite(int16_t w, int16_t h, uint8_t frames)
+      |       ^
+lib/TFT_eSPI/Extensions/Sprite.cpp:51:7: note: code may be misoptimized unless '-fno-strict-aliasing' is used
+lib/TFT_eSPI/TFT_eSPI.h:734:9: warning: type of 'setTextFont' does not match original declaration [-Wlto-type-mismatch]
+  734 |         setTextFont(uint8_t font);  // Set the font number to use in future
+      |         ^
+lib/TFT_eSPI/TFT_eSPI.cpp:5986:6: note: 'setTextFont' was previously declared here
+ 5986 | void TFT_eSPI::setTextFont(uint8_t f)
+      |      ^
+lib/TFT_eSPI/TFT_eSPI.cpp:5986:6: note: code may be misoptimized unless '-fno-strict-aliasing' is used
+lib/TFT_eSPI/TFT_eSPI.h:748:12: warning: type of 'write' does not match original declaration [-Wlto-type-mismatch]
+  748 |     size_t write(uint8_t);
+      |            ^
+lib/TFT_eSPI/TFT_eSPI.cpp:5111:8: note: 'write' was previously declared here
+ 5111 | size_t TFT_eSPI::write(uint8_t utf8)
+      |        ^
+lib/TFT_eSPI/TFT_eSPI.cpp:5111:8: note: code may be misoptimized unless '-fno-strict-aliasing' is used
+lib/TFT_eSPI/TFT_eSPI.h:475:10: warning: type of 'invertDisplay' does not match original declaration [-Wlto-type-mismatch]
+  475 |     void invertDisplay(bool i); // Tell TFT to invert all displayed colours
+      |          ^
+lib/TFT_eSPI/TFT_eSPI.cpp:4862:6: note: 'invertDisplay' was previously declared here
+ 4862 | void TFT_eSPI::invertDisplay(bool i)
+      |      ^
+lib/TFT_eSPI/TFT_eSPI.cpp:4862:6: note: code may be misoptimized unless '-fno-strict-aliasing' is used
+lib/TFT_eSPI/TFT_eSPI.h:455:22: warning: type of 'readPixel' does not match original declaration [-Wlto-type-mismatch]
+  455 |     virtual uint16_t readPixel(int32_t x, int32_t y);
+      |                      ^
+lib/TFT_eSPI/TFT_eSPI.cpp:1160:10: note: 'readPixel' was previously declared here
+ 1160 | uint16_t TFT_eSPI::readPixel(int32_t x0, int32_t y0)
+      |          ^
+lib/TFT_eSPI/TFT_eSPI.cpp:1160:10: note: code may be misoptimized unless '-fno-strict-aliasing' is used
+lib/TFT_eSPI/TFT_eSPI.h:776:14: warning: type of 'color565' does not match original declaration [-Wlto-type-mismatch]
+  776 |     uint16_t color565(uint8_t red, uint8_t green, uint8_t blue);
+      |              ^
+lib/TFT_eSPI/TFT_eSPI.cpp:4799:10: note: 'color565' was previously declared here
+ 4799 | uint16_t TFT_eSPI::color565(uint8_t r, uint8_t g, uint8_t b)
+      |          ^
+lib/TFT_eSPI/TFT_eSPI.h:526:10: warning: type of 'fillRectHGradient' does not match original declaration [-Wlto-type-mismatch]
+  526 |     void fillRectHGradient(int16_t x, int16_t y, int16_t w, int16_t h, uint32_t color1, uint32_t color2);
+      |          ^
+lib/TFT_eSPI/TFT_eSPI.cpp:4761:6: note: 'fillRectHGradient' was previously declared here
+ 4761 | void TFT_eSPI::fillRectHGradient(int16_t x, int16_t y, int16_t w, int16_t h, uint32_t color1, uint32_t color2)
+      |      ^
+lib/TFT_eSPI/TFT_eSPI.cpp:4761:6: note: code may be misoptimized unless '-fno-strict-aliasing' is used
+lib/TFT_eSPI/TFT_eSPI.h:525:10: warning: type of 'fillRectVGradient' does not match original declaration [-Wlto-type-mismatch]
+  525 |     void fillRectVGradient(int16_t x, int16_t y, int16_t w, int16_t h, uint32_t color1, uint32_t color2);
+      |          ^
+lib/TFT_eSPI/TFT_eSPI.cpp:4723:6: note: 'fillRectVGradient' was previously declared here
+ 4723 | void TFT_eSPI::fillRectVGradient(int16_t x, int16_t y, int16_t w, int16_t h, uint32_t color1, uint32_t color2)
+      |      ^
+lib/TFT_eSPI/TFT_eSPI.cpp:4723:6: note: code may be misoptimized unless '-fno-strict-aliasing' is used
+lib/TFT_eSPI/TFT_eSPI.h:593:10: warning: type of 'drawWideLine' does not match original declaration [-Wlto-type-mismatch]
+  593 |     void drawWideLine(
+      |          ^
+lib/TFT_eSPI/TFT_eSPI.cpp:4490:6: note: 'drawWideLine' was previously declared here
+ 4490 | void TFT_eSPI::drawWideLine(float ax, float ay, float bx, float by, float wd, uint32_t fg_color, uint32_t bg_color)
+      |      ^
+lib/TFT_eSPI/TFT_eSPI.cpp:4490:6: note: code may be misoptimized unless '-fno-strict-aliasing' is used
+lib/TFT_eSPI/TFT_eSPI.h:558:10: warning: type of 'drawArc' does not match original declaration [-Wlto-type-mismatch]
+  558 |     void drawArc(
+      |          ^
+lib/TFT_eSPI/TFT_eSPI.cpp:4089:6: note: 'drawArc' was previously declared here
+ 4089 | void TFT_eSPI::drawArc(int32_t x, int32_t y, int32_t r, int32_t ir,
+      |      ^
+lib/TFT_eSPI/TFT_eSPI.cpp:4089:6: note: code may be misoptimized unless '-fno-strict-aliasing' is used
+lib/TFT_eSPI/TFT_eSPI.h:742:9: warning: type of 'fontHeight' does not match original declaration [-Wlto-type-mismatch]
+  742 |         fontHeight(void);         // Returns pixel height of current font
+      |         ^
+lib/TFT_eSPI/TFT_eSPI.cpp:3196:9: note: 'fontHeight' was previously declared here
+ 3196 | int16_t TFT_eSPI::fontHeight(void)
+      |         ^
+lib/TFT_eSPI/TFT_eSPI.cpp:3196:9: note: code may be misoptimized unless '-fno-strict-aliasing' is used
+lib/TFT_eSPI/TFT_eSPI.h:741:9: warning: type of 'fontHeight' does not match original declaration [-Wlto-type-mismatch]
+  741 |         fontHeight(int16_t font), // Returns pixel height of specified font
+      |         ^
+lib/TFT_eSPI/TFT_eSPI.cpp:3180:9: note: 'fontHeight' was previously declared here
+ 3180 | int16_t TFT_eSPI::fontHeight(int16_t font)
+      |         ^
+lib/TFT_eSPI/TFT_eSPI.cpp:3180:9: note: code may be misoptimized unless '-fno-strict-aliasing' is used
+lib/TFT_eSPI/TFT_eSPI.h:723:13: warning: type of 'getTextDatum' does not match original declaration [-Wlto-type-mismatch]
+  723 |     uint8_t getTextDatum(void);
+      |             ^
+lib/TFT_eSPI/TFT_eSPI.cpp:3043:9: note: 'getTextDatum' was previously declared here
+ 3043 | uint8_t TFT_eSPI::getTextDatum(void)
+      |         ^
+lib/TFT_eSPI/TFT_eSPI.cpp:3043:9: note: code may be misoptimized unless '-fno-strict-aliasing' is used
+lib/TFT_eSPI/TFT_eSPI.h:722:10: warning: type of 'setTextDatum' does not match original declaration [-Wlto-type-mismatch]
+  722 |     void setTextDatum(uint8_t datum); // Set text datum position (default is top left), see Section 5 above
+      |          ^
+lib/TFT_eSPI/TFT_eSPI.cpp:3015:6: note: 'setTextDatum' was previously declared here
+ 3015 | void TFT_eSPI::setTextDatum(uint8_t d)
+      |      ^
+lib/TFT_eSPI/TFT_eSPI.cpp:3015:6: note: code may be misoptimized unless '-fno-strict-aliasing' is used
+lib/TFT_eSPI/TFT_eSPI.h:720:5: warning: type of 'setTextWrap' does not match original declaration [-Wlto-type-mismatch]
+  720 |     setTextWrap(bool wrapX, bool wrapY = false); // Turn on/off wrapping of text in TFT width and/or height
+      |     ^
+lib/TFT_eSPI/TFT_eSPI.cpp:3004:6: note: 'setTextWrap' was previously declared here
+ 3004 | void TFT_eSPI::setTextWrap(bool wrapX, bool wrapY)
+      |      ^
+lib/TFT_eSPI/TFT_eSPI.cpp:3004:6: note: code may be misoptimized unless '-fno-strict-aliasing' is used
+lib/TFT_eSPI/TFT_eSPI.h:713:9: warning: type of 'setTextColor' does not match original declaration [-Wlto-type-mismatch]
+  713 |         setTextColor(
+      |         ^
+lib/TFT_eSPI/TFT_eSPI.cpp:2949:6: note: 'setTextColor' was previously declared here
+ 2949 | void TFT_eSPI::setTextColor(uint16_t c, uint16_t b, bool bgfill)
+      |      ^
+lib/TFT_eSPI/TFT_eSPI.cpp:2949:6: note: code may be misoptimized unless '-fno-strict-aliasing' is used
+lib/TFT_eSPI/TFT_eSPI.h:712:10: warning: type of 'setTextColor' does not match original declaration [-Wlto-type-mismatch]
+  712 |     void setTextColor(uint16_t color), // Set character (glyph) color only (background not over-written)
+      |          ^
+lib/TFT_eSPI/TFT_eSPI.cpp:2934:6: note: 'setTextColor' was previously declared here
+ 2934 | void TFT_eSPI::setTextColor(uint16_t c)
+      |      ^
+lib/TFT_eSPI/TFT_eSPI.cpp:2934:6: note: code may be misoptimized unless '-fno-strict-aliasing' is used
+lib/TFT_eSPI/TFT_eSPI.h:717:9: warning: type of 'setTextSize' does not match original declaration [-Wlto-type-mismatch]
+  717 |         setTextSize(uint8_t size); // Set character size multiplier (this increases pixel size)
+      |         ^
+lib/TFT_eSPI/TFT_eSPI.cpp:2923:6: note: 'setTextSize' was previously declared here
+ 2923 | void TFT_eSPI::setTextSize(uint8_t s)
+      |      ^
+lib/TFT_eSPI/TFT_eSPI.cpp:2923:6: note: code may be misoptimized unless '-fno-strict-aliasing' is used
+lib/TFT_eSPI/TFT_eSPI.h:710:9: warning: type of 'getCursorY' does not match original declaration [-Wlto-type-mismatch]
+  710 |         getCursorY(void);     // Read current cursor y position
+      |         ^
+lib/TFT_eSPI/TFT_eSPI.cpp:2913:9: note: 'getCursorY' was previously declared here
+ 2913 | int16_t TFT_eSPI::getCursorY(void)
+      |         ^
+lib/TFT_eSPI/TFT_eSPI.cpp:2913:9: note: code may be misoptimized unless '-fno-strict-aliasing' is used
+lib/TFT_eSPI/TFT_eSPI.h:709:13: warning: type of 'getCursorX' does not match original declaration [-Wlto-type-mismatch]
+  709 |     int16_t getCursorX(void), // Read current cursor x position (moves with tft.print())
+      |             ^
+lib/TFT_eSPI/TFT_eSPI.cpp:2904:9: note: 'getCursorX' was previously declared here
+ 2904 | int16_t TFT_eSPI::getCursorX(void)
+      |         ^
+lib/TFT_eSPI/TFT_eSPI.cpp:2904:9: note: code may be misoptimized unless '-fno-strict-aliasing' is used
+lib/TFT_eSPI/TFT_eSPI.h:706:10: warning: type of 'setCursor' does not match original declaration [-Wlto-type-mismatch]
+  706 |     void setCursor(int16_t x, int16_t y),              // Set cursor for tft.print()
+      |          ^
+lib/TFT_eSPI/TFT_eSPI.cpp:2881:6: note: 'setCursor' was previously declared here
+ 2881 | void TFT_eSPI::setCursor(int16_t x, int16_t y)
+      |      ^
+lib/TFT_eSPI/TFT_eSPI.cpp:2881:6: note: code may be misoptimized unless '-fno-strict-aliasing' is used
+lib/TFT_eSPI/TFT_eSPI.h:616:9: warning: type of 'drawXBitmap' does not match original declaration [-Wlto-type-mismatch]
+  616 |         drawXBitmap(
+      |         ^
+lib/TFT_eSPI/TFT_eSPI.cpp:2857:6: note: 'drawXBitmap' was previously declared here
+ 2857 | void TFT_eSPI::drawXBitmap(int16_t x, int16_t y, const uint8_t *bitmap, int16_t w, int16_t h, uint16_t color, uint16_t bgcolor)
+      |      ^
+lib/TFT_eSPI/TFT_eSPI.cpp:2857:6: note: code may be misoptimized unless '-fno-strict-aliasing' is used
+lib/TFT_eSPI/TFT_eSPI.h:615:9: warning: type of 'drawXBitmap' does not match original declaration [-Wlto-type-mismatch]
+  615 |         drawXBitmap(int16_t x, int16_t y, const uint8_t *bitmap, int16_t w, int16_t h, uint16_t fgcolor),
+      |         ^
+lib/TFT_eSPI/TFT_eSPI.cpp:2833:6: note: 'drawXBitmap' was previously declared here
+ 2833 | void TFT_eSPI::drawXBitmap(int16_t x, int16_t y, const uint8_t *bitmap, int16_t w, int16_t h, uint16_t color)
+      |      ^
+lib/TFT_eSPI/TFT_eSPI.cpp:2833:6: note: code may be misoptimized unless '-fno-strict-aliasing' is used
+lib/TFT_eSPI/TFT_eSPI.h:538:9: warning: type of 'fillTriangle' does not match original declaration [-Wlto-type-mismatch]
+  538 |         fillTriangle(int32_t x1, int32_t y1, int32_t x2, int32_t y2, int32_t x3, int32_t y3, uint32_t color);
+      |         ^
+lib/TFT_eSPI/TFT_eSPI.cpp:2706:6: note: 'fillTriangle' was previously declared here
+ 2706 | void TFT_eSPI::fillTriangle ( int32_t x0, int32_t y0, int32_t x1, int32_t y1, int32_t x2, int32_t y2, uint32_t color)
+      |      ^
+lib/TFT_eSPI/TFT_eSPI.cpp:2706:6: note: code may be misoptimized unless '-fno-strict-aliasing' is used
+lib/TFT_eSPI/TFT_eSPI.h:537:9: warning: type of 'drawTriangle' does not match original declaration [-Wlto-type-mismatch]
+  537 |         drawTriangle(int32_t x1, int32_t y1, int32_t x2, int32_t y2, int32_t x3, int32_t y3, uint32_t color),
+      |         ^
+lib/TFT_eSPI/TFT_eSPI.cpp:2687:6: note: 'drawTriangle' was previously declared here
+ 2687 | void TFT_eSPI::drawTriangle(int32_t x0, int32_t y0, int32_t x1, int32_t y1, int32_t x2, int32_t y2, uint32_t color)
+      |      ^
+lib/TFT_eSPI/TFT_eSPI.cpp:2687:6: note: code may be misoptimized unless '-fno-strict-aliasing' is used
+lib/TFT_eSPI/TFT_eSPI.h:523:9: warning: type of 'fillRoundRect' does not match original declaration [-Wlto-type-mismatch]
+  523 |         fillRoundRect(int32_t x, int32_t y, int32_t w, int32_t h, int32_t radius, uint32_t color);
+      |         ^
+lib/TFT_eSPI/TFT_eSPI.cpp:2665:6: note: 'fillRoundRect' was previously declared here
+ 2665 | void TFT_eSPI::fillRoundRect(int32_t x, int32_t y, int32_t w, int32_t h, int32_t r, uint32_t color)
+      |      ^
+lib/TFT_eSPI/TFT_eSPI.cpp:2665:6: note: code may be misoptimized unless '-fno-strict-aliasing' is used
+lib/TFT_eSPI/TFT_eSPI.h:522:9: warning: type of 'drawRoundRect' does not match original declaration [-Wlto-type-mismatch]
+  522 |         drawRoundRect(int32_t x, int32_t y, int32_t w, int32_t h, int32_t radius, uint32_t color),
+      |         ^
+lib/TFT_eSPI/TFT_eSPI.cpp:2639:6: note: 'drawRoundRect' was previously declared here
+ 2639 | void TFT_eSPI::drawRoundRect(int32_t x, int32_t y, int32_t w, int32_t h, int32_t r, uint32_t color)
+      |      ^
+lib/TFT_eSPI/TFT_eSPI.cpp:2639:6: note: code may be misoptimized unless '-fno-strict-aliasing' is used
+lib/TFT_eSPI/TFT_eSPI.h:521:38: warning: type of 'drawRect' does not match original declaration [-Wlto-type-mismatch]
+  521 |     void fillScreen(uint32_t color), drawRect(int32_t x, int32_t y, int32_t w, int32_t h, uint32_t color),
+      |                                      ^
+lib/TFT_eSPI/TFT_eSPI.cpp:2618:6: note: 'drawRect' was previously declared here
+ 2618 | void TFT_eSPI::drawRect(int32_t x, int32_t y, int32_t w, int32_t h, uint32_t color)
+      |      ^
+lib/TFT_eSPI/TFT_eSPI.cpp:2618:6: note: code may be misoptimized unless '-fno-strict-aliasing' is used
+lib/TFT_eSPI/TFT_eSPI.h:439:10: warning: type of 'init' does not match original declaration [-Wlto-type-mismatch]
+  439 |     void init(uint8_t tc = TAB_COLOUR), begin(uint8_t tc = TAB_COLOUR);
+      |          ^
+lib/TFT_eSPI/TFT_eSPI.cpp:617:6: note: 'init' was previously declared here
+  617 | void TFT_eSPI::init(uint8_t tc)
+      |      ^
+lib/TFT_eSPI/TFT_eSPI.cpp:617:6: note: code may be misoptimized unless '-fno-strict-aliasing' is used
+lib/TFT_eSPI/TFT_eSPI.h:521:10: warning: type of 'fillScreen' does not match original declaration [-Wlto-type-mismatch]
+  521 |     void fillScreen(uint32_t color), drawRect(int32_t x, int32_t y, int32_t w, int32_t h, uint32_t color),
+      |          ^
+lib/TFT_eSPI/TFT_eSPI.cpp:2607:6: note: 'fillScreen' was previously declared here
+ 2607 | void TFT_eSPI::fillScreen(uint32_t color)
+      |      ^
+lib/TFT_eSPI/TFT_eSPI.cpp:2607:6: note: code may be misoptimized unless '-fno-strict-aliasing' is used
+lib/TFT_eSPI/TFT_eSPI.h:534:9: warning: type of 'fillEllipse' does not match original declaration [-Wlto-type-mismatch]
+  534 |         fillEllipse(int16_t x, int16_t y, int32_t rx, int32_t ry, uint16_t color),
+      |         ^
+lib/TFT_eSPI/TFT_eSPI.cpp:2562:6: note: 'fillEllipse' was previously declared here
+ 2562 | void TFT_eSPI::fillEllipse(int16_t x0, int16_t y0, int32_t rx, int32_t ry, uint16_t color)
+      |      ^
+lib/TFT_eSPI/TFT_eSPI.cpp:2562:6: note: code may be misoptimized unless '-fno-strict-aliasing' is used
+lib/TFT_eSPI/TFT_eSPI.h:533:9: warning: type of 'drawEllipse' does not match original declaration [-Wlto-type-mismatch]
+  533 |         drawEllipse(int16_t x, int16_t y, int32_t rx, int32_t ry, uint16_t color),
+      |         ^
+lib/TFT_eSPI/TFT_eSPI.cpp:2510:6: note: 'drawEllipse' was previously declared here
+ 2510 | void TFT_eSPI::drawEllipse(int16_t x0, int16_t y0, int32_t rx, int32_t ry, uint16_t color)
+      |      ^
+lib/TFT_eSPI/TFT_eSPI.cpp:2510:6: note: code may be misoptimized unless '-fno-strict-aliasing' is used
+lib/TFT_eSPI/TFT_eSPI.h:530:9: warning: type of 'fillCircle' does not match original declaration [-Wlto-type-mismatch]
+  530 |         fillCircle(int32_t x, int32_t y, int32_t r, uint32_t color),
+      |         ^
+lib/TFT_eSPI/TFT_eSPI.cpp:2438:6: note: 'fillCircle' was previously declared here
+ 2438 | void TFT_eSPI::fillCircle(int32_t x0, int32_t y0, int32_t r, uint32_t color)
+      |      ^
+lib/TFT_eSPI/TFT_eSPI.cpp:2438:6: note: code may be misoptimized unless '-fno-strict-aliasing' is used
+lib/TFT_eSPI/TFT_eSPI.h:528:10: warning: type of 'drawCircle' does not match original declaration [-Wlto-type-mismatch]
+  528 |     void drawCircle(int32_t x, int32_t y, int32_t r, uint32_t color),
+      |          ^
+lib/TFT_eSPI/TFT_eSPI.cpp:2299:6: note: 'drawCircle' was previously declared here
+ 2299 | void TFT_eSPI::drawCircle(int32_t x0, int32_t y0, int32_t r, uint32_t color)
+      |      ^
+lib/TFT_eSPI/TFT_eSPI.cpp:2299:6: note: code may be misoptimized unless '-fno-strict-aliasing' is used
+lib/TFT_eSPI/TFT_eSPI.h:607:10: warning: type of 'getSwapBytes' does not match original declaration [-Wlto-type-mismatch]
+  607 |     bool getSwapBytes(void);
+      |          ^
+lib/TFT_eSPI/TFT_eSPI.cpp:2214:6: note: 'getSwapBytes' was previously declared here
+ 2214 | bool TFT_eSPI::getSwapBytes(void)
+      |      ^
+lib/TFT_eSPI/TFT_eSPI.cpp:2214:6: note: code may be misoptimized unless '-fno-strict-aliasing' is used
+lib/TFT_eSPI/TFT_eSPI.h:606:10: warning: type of 'setSwapBytes' does not match original declaration [-Wlto-type-mismatch]
+  606 |     void setSwapBytes(bool swap);
+      |          ^
+lib/TFT_eSPI/TFT_eSPI.cpp:2204:6: note: 'setSwapBytes' was previously declared here
+ 2204 | void TFT_eSPI::setSwapBytes(bool swap)
+      |      ^
+lib/TFT_eSPI/TFT_eSPI.cpp:2204:6: note: code may be misoptimized unless '-fno-strict-aliasing' is used
+lib/TFT_eSPI/TFT_eSPI.h:654:10: warning: type of 'pushImage' does not match original declaration [-Wlto-type-mismatch]
+  654 |     void pushImage(
+      |          ^
+lib/TFT_eSPI/TFT_eSPI.cpp:1647:6: note: 'pushImage' was previously declared here
+ 1647 | void TFT_eSPI::pushImage(int32_t x, int32_t y, int32_t w, int32_t h, const uint8_t *data, bool bpp8,  uint16_t *cmap)
+      |      ^
+lib/TFT_eSPI/TFT_eSPI.cpp:1647:6: note: code may be misoptimized unless '-fno-strict-aliasing' is used
+lib/TFT_eSPI/TFT_eSPI.h:636:10: warning: type of 'pushImage' does not match original declaration [-Wlto-type-mismatch]
+  636 |     void pushImage(int32_t x, int32_t y, int32_t w, int32_t h, uint16_t *data);
+      |          ^
+lib/TFT_eSPI/TFT_eSPI.cpp:1472:6: note: 'pushImage' was previously declared here
+ 1472 | void TFT_eSPI::pushImage(int32_t x, int32_t y, int32_t w, int32_t h, uint16_t *data)
+      |      ^
+lib/TFT_eSPI/TFT_eSPI.cpp:1472:6: note: code may be misoptimized unless '-fno-strict-aliasing' is used
+lib/TFT_eSPI/TFT_eSPI.h:466:10: warning: type of 'setRotation' does not match original declaration [-Wlto-type-mismatch]
+  466 |     void setRotation(uint8_t r); // Set the display image orientation to 0, 1, 2 or 3
+      |          ^
+lib/TFT_eSPI/TFT_eSPI.cpp:831:6: note: 'setRotation' was previously declared here
+  831 | void TFT_eSPI::setRotation(uint8_t m)
+      |      ^
+lib/TFT_eSPI/TFT_eSPI.cpp:831:6: note: code may be misoptimized unless '-fno-strict-aliasing' is used
+lib/TFT_eSPI/TFT_eSPI.h:764:10: warning: type of 'writecommand' does not match original declaration [-Wlto-type-mismatch]
+  764 |     void writecommand(uint8_t c); // Send an 8-bit command, function resets DC/RS high ready for data
+      |          ^
+lib/TFT_eSPI/TFT_eSPI.cpp:1004:6: note: 'writecommand' was previously declared here
+ 1004 | void TFT_eSPI::writecommand(uint8_t c)
+      |      ^
+lib/TFT_eSPI/TFT_eSPI.cpp:1004:6: note: code may be misoptimized unless '-fno-strict-aliasing' is used
+lib/TFT_eSPI/TFT_eSPI.h:467:13: warning: type of 'getRotation' does not match original declaration [-Wlto-type-mismatch]
+  467 |     uint8_t getRotation(void);   // Read the current rotation
+      |             ^
+lib/TFT_eSPI/TFT_eSPI.cpp:915:9: note: 'getRotation' was previously declared here
+  915 | uint8_t TFT_eSPI::getRotation(void)
+      |         ^
+lib/TFT_eSPI/TFT_eSPI.cpp:915:9: note: code may be misoptimized unless '-fno-strict-aliasing' is used
+lib/TFT_eSPI/TFT_eSPI.h:449:9: warning: type of 'fillRect' does not match original declaration [-Wlto-type-mismatch]
+  449 |         fillRect(int32_t x, int32_t y, int32_t w, int32_t h, uint32_t color);
+      |         ^
+lib/TFT_eSPI/TFT_eSPI.cpp:4682:6: note: 'fillRect' was previously declared here
+ 4682 | void TFT_eSPI::fillRect(int32_t x, int32_t y, int32_t w, int32_t h, uint32_t color)
+      |      ^
+lib/TFT_eSPI/TFT_eSPI.cpp:4682:6: note: code may be misoptimized unless '-fno-strict-aliasing' is used
+lib/TFT_eSPI/TFT_eSPI.h:448:9: warning: type of 'drawFastHLine' does not match original declaration [-Wlto-type-mismatch]
+  448 |         drawFastHLine(int32_t x, int32_t y, int32_t w, uint32_t color),
+      |         ^
+lib/TFT_eSPI/TFT_eSPI.cpp:4652:6: note: 'drawFastHLine' was previously declared here
+ 4652 | void TFT_eSPI::drawFastHLine(int32_t x, int32_t y, int32_t w, uint32_t color)
+      |      ^
+lib/TFT_eSPI/TFT_eSPI.cpp:4652:6: note: code may be misoptimized unless '-fno-strict-aliasing' is used
+lib/TFT_eSPI/TFT_eSPI.h:447:9: warning: type of 'drawFastVLine' does not match original declaration [-Wlto-type-mismatch]
+  447 |         drawFastVLine(int32_t x, int32_t y, int32_t h, uint32_t color),
+      |         ^
+lib/TFT_eSPI/TFT_eSPI.cpp:4622:6: note: 'drawFastVLine' was previously declared here
+ 4622 | void TFT_eSPI::drawFastVLine(int32_t x, int32_t y, int32_t h, uint32_t color)
+      |      ^
+lib/TFT_eSPI/TFT_eSPI.cpp:4622:6: note: code may be misoptimized unless '-fno-strict-aliasing' is used
+lib/TFT_eSPI/TFT_eSPI.h:446:9: warning: type of 'drawLine' does not match original declaration [-Wlto-type-mismatch]
+  446 |         drawLine(int32_t xs, int32_t ys, int32_t xe, int32_t ye, uint32_t color),
+      |         ^
+lib/TFT_eSPI/TFT_eSPI.cpp:3907:6: note: 'drawLine' was previously declared here
+ 3907 | void TFT_eSPI::drawLine(int32_t x0, int32_t y0, int32_t x1, int32_t y1, uint32_t color)
+      |      ^
+lib/TFT_eSPI/TFT_eSPI.cpp:3907:6: note: code may be misoptimized unless '-fno-strict-aliasing' is used
+lib/TFT_eSPI/TFT_eSPI.h:444:18: warning: type of 'drawPixel' does not match original declaration [-Wlto-type-mismatch]
+  444 |     virtual void drawPixel(int32_t x, int32_t y, uint32_t color),
+      |                  ^
+lib/TFT_eSPI/TFT_eSPI.cpp:3604:6: note: 'drawPixel' was previously declared here
+ 3604 | void TFT_eSPI::drawPixel(int32_t x, int32_t y, uint32_t color)
+      |      ^
+lib/TFT_eSPI/TFT_eSPI.cpp:3604:6: note: code may be misoptimized unless '-fno-strict-aliasing' is used
+lib/TFT_eSPI/TFT_eSPI.h:445:9: warning: type of 'drawChar' does not match original declaration [-Wlto-type-mismatch]
+  445 |         drawChar(int32_t x, int32_t y, uint16_t c, uint32_t color, uint32_t bg, uint8_t size),
+      |         ^
+lib/TFT_eSPI/TFT_eSPI.cpp:3205:6: note: 'drawChar' was previously declared here
+ 3205 | void TFT_eSPI::drawChar(int32_t x, int32_t y, uint16_t c, uint32_t color, uint32_t bg, uint8_t size)
+      |      ^
+lib/TFT_eSPI/TFT_eSPI.cpp:3205:6: note: code may be misoptimized unless '-fno-strict-aliasing' is used
+lib/TFT_eSPI/TFT_eSPI.h:463:18: warning: type of 'begin_nin_write' does not match original declaration [-Wlto-type-mismatch]
+  463 |     virtual void begin_nin_write();
+      |                  ^
+lib/TFT_eSPI/TFT_eSPI.cpp:91:6: note: 'begin_nin_write' was previously declared here
+   91 | void TFT_eSPI::begin_nin_write(void){
+      |      ^
+lib/TFT_eSPI/TFT_eSPI.cpp:91:6: note: code may be misoptimized unless '-fno-strict-aliasing' is used
+lib/TFT_eSPI/Extensions/Sprite.h:83:12: warning: type of 'drawLine' does not match original declaration [-Wlto-type-mismatch]
+   83 |            drawLine(int32_t x0, int32_t y0, int32_t x1, int32_t y1, uint32_t color),
+      |            ^
+lib/TFT_eSPI/Extensions/Sprite.cpp:1690:6: note: 'drawLine' was previously declared here
+ 1690 | void TFT_eSprite::drawLine(int32_t x0, int32_t y0, int32_t x1, int32_t y1, uint32_t color)
+      |      ^
+lib/TFT_eSPI/Extensions/Sprite.cpp:1690:6: note: code may be misoptimized unless '-fno-strict-aliasing' is used
+lib/TFT_eSPI/TFT_eSPI.h:464:18: warning: type of 'end_nin_write' does not match original declaration [-Wlto-type-mismatch]
+  464 |     virtual void end_nin_write();
+      |                  ^
+lib/TFT_eSPI/TFT_eSPI.cpp:122:13: note: 'end_nin_write' was previously declared here
+  122 | inline void TFT_eSPI::end_nin_write(void){
+      |             ^
+lib/TFT_eSPI/TFT_eSPI.cpp:122:13: note: code may be misoptimized unless '-fno-strict-aliasing' is used
+lib/TFT_eSPI/Extensions/Sprite.h:88:12: warning: type of 'fillRect' does not match original declaration [-Wlto-type-mismatch]
+   88 |            fillRect(int32_t x, int32_t y, int32_t w, int32_t h, uint32_t color);
+      |            ^
+lib/TFT_eSPI/Extensions/Sprite.cpp:1872:6: note: 'fillRect' was previously declared here
+ 1872 | void TFT_eSprite::fillRect(int32_t x, int32_t y, int32_t w, int32_t h, uint32_t color)
+      |      ^
+lib/TFT_eSPI/Extensions/Sprite.cpp:1872:6: note: code may be misoptimized unless '-fno-strict-aliasing' is used
+lib/TFT_eSPI/Extensions/Sprite.h:85:12: warning: type of 'drawFastHLine' does not match original declaration [-Wlto-type-mismatch]
+   85 |            drawFastHLine(int32_t x, int32_t y, int32_t w, uint32_t color),
+      |            ^
+lib/TFT_eSPI/Extensions/Sprite.cpp:1809:6: note: 'drawFastHLine' was previously declared here
+ 1809 | void TFT_eSprite::drawFastHLine(int32_t x, int32_t y, int32_t w, uint32_t color)
+      |      ^
+lib/TFT_eSPI/Extensions/Sprite.cpp:1809:6: note: code may be misoptimized unless '-fno-strict-aliasing' is used
+lib/TFT_eSPI/Extensions/Sprite.h:134:12: warning: type of 'drawChar' does not match original declaration [-Wlto-type-mismatch]
+  134 |   int16_t  drawChar(uint16_t uniCode, int32_t x, int32_t y, uint8_t font),
+      |            ^
+lib/TFT_eSPI/Extensions/Sprite.cpp:2151:9: note: 'drawChar' was previously declared here
+ 2151 | int16_t TFT_eSprite::drawChar(uint16_t uniCode, int32_t x, int32_t y, uint8_t font)
+      |         ^
+lib/TFT_eSPI/Extensions/Sprite.cpp:2151:9: note: code may be misoptimized unless '-fno-strict-aliasing' is used
+lib/TFT_eSPI/Extensions/Sprite.h:59:12: warning: type of 'drawChar' does not match original declaration [-Wlto-type-mismatch]
+   59 |   void     drawChar(int32_t x, int32_t y, uint16_t c, uint32_t color, uint32_t bg, uint8_t size),
+      |            ^
+lib/TFT_eSPI/Extensions/Sprite.cpp:1984:6: note: 'drawChar' was previously declared here
+ 1984 | void TFT_eSprite::drawChar(int32_t x, int32_t y, uint16_t c, uint32_t color, uint32_t bg, uint8_t size)
+      |      ^
+lib/TFT_eSPI/Extensions/Sprite.cpp:1984:6: note: code may be misoptimized unless '-fno-strict-aliasing' is used
+lib/TFT_eSPI/Extensions/Sprite.h:84:12: warning: type of 'drawFastVLine' does not match original declaration [-Wlto-type-mismatch]
+   84 |            drawFastVLine(int32_t x, int32_t y, int32_t h, uint32_t color),
+      |            ^
+lib/TFT_eSPI/Extensions/Sprite.cpp:1748:6: note: 'drawFastVLine' was previously declared here
+ 1748 | void TFT_eSprite::drawFastVLine(int32_t x, int32_t y, int32_t h, uint32_t color)
+      |      ^
+lib/TFT_eSPI/Extensions/Sprite.cpp:1748:6: note: code may be misoptimized unless '-fno-strict-aliasing' is used
+lib/TFT_eSPI/Extensions/Sprite.h:56:12: warning: type of 'drawPixel' does not match original declaration [-Wlto-type-mismatch]
+   56 |   void     drawPixel(int32_t x, int32_t y, uint32_t color);
+      |            ^
+lib/TFT_eSPI/Extensions/Sprite.cpp:1630:6: note: 'drawPixel' was previously declared here
+ 1630 | void TFT_eSprite::drawPixel(int32_t x, int32_t y, uint32_t color)
+      |      ^
+lib/TFT_eSPI/Extensions/Sprite.cpp:1630:6: note: code may be misoptimized unless '-fno-strict-aliasing' is used
+lib/TFT_eSPI/Extensions/Sprite.h:139:12: warning: type of 'height' does not match original declaration [-Wlto-type-mismatch]
+  139 |            height(void);
+      |            ^
+lib/TFT_eSPI/Extensions/Sprite.cpp:1577:9: note: 'height' was previously declared here
+ 1577 | int16_t TFT_eSprite::height(void)
+      |         ^
+lib/TFT_eSPI/Extensions/Sprite.cpp:1577:9: note: code may be misoptimized unless '-fno-strict-aliasing' is used
+lib/TFT_eSPI/Extensions/Sprite.h:138:12: warning: type of 'width' does not match original declaration [-Wlto-type-mismatch]
+  138 |   int16_t  width(void),
+      |            ^
+lib/TFT_eSPI/Extensions/Sprite.cpp:1554:9: note: 'width' was previously declared here
+ 1554 | int16_t TFT_eSprite::width(void)
+      |         ^
+lib/TFT_eSPI/Extensions/Sprite.cpp:1554:9: note: code may be misoptimized unless '-fno-strict-aliasing' is used
+lib/TFT_eSPI/Extensions/Sprite.h:68:12: warning: type of 'pushColor' does not match original declaration [-Wlto-type-mismatch]
+   68 |            pushColor(uint16_t color),
+      |            ^
+lib/TFT_eSPI/Extensions/Sprite.cpp:1290:6: note: 'pushColor' was previously declared here
+ 1290 | void TFT_eSprite::pushColor(uint16_t color)
+      |      ^
+lib/TFT_eSPI/Extensions/Sprite.cpp:1290:6: note: code may be misoptimized unless '-fno-strict-aliasing' is used
+lib/TFT_eSPI/Extensions/Sprite.h:111:12: warning: type of 'readPixel' does not match original declaration [-Wlto-type-mismatch]
+  111 |   uint16_t readPixel(int32_t x0, int32_t y0);
+      |            ^
+lib/TFT_eSPI/Extensions/Sprite.cpp:960:10: note: 'readPixel' was previously declared here
+  960 | uint16_t TFT_eSprite::readPixel(int32_t x, int32_t y)
+      |          ^
+lib/TFT_eSPI/Extensions/Sprite.cpp:960:10: note: code may be misoptimized unless '-fno-strict-aliasing' is used
+lib/TFT_eSPI/TFT_eSPI.h:451:21: warning: type of 'drawChar' does not match original declaration [-Wlto-type-mismatch]
+  451 |     virtual int16_t drawChar(uint16_t uniCode, int32_t x, int32_t y, uint8_t font),
+      |                     ^
+lib/TFT_eSPI/TFT_eSPI.cpp:5245:9: note: 'drawChar' was previously declared here
+ 5245 | int16_t TFT_eSPI::drawChar(uint16_t uniCode, int32_t x, int32_t y, uint8_t font)
+      |         ^
+lib/TFT_eSPI/TFT_eSPI.cpp:5245:9: note: code may be misoptimized unless '-fno-strict-aliasing' is used
+lib/TFT_eSPI/TFT_eSPI.h:460:18: warning: type of 'pushColor' does not match original declaration [-Wlto-type-mismatch]
+  460 |     virtual void pushColor(uint16_t color);
+      |                  ^
+lib/TFT_eSPI/TFT_eSPI.cpp:3812:6: note: 'pushColor' was previously declared here
+ 3812 | void TFT_eSPI::pushColor(uint16_t color)
+      |      ^
+lib/TFT_eSPI/TFT_eSPI.cpp:3812:6: note: code may be misoptimized unless '-fno-strict-aliasing' is used
+lib/TFT_eSPI/Extensions/Sprite.h:135:12: warning: type of 'drawChar' does not match original declaration [-Wlto-type-mismatch]
+  135 |            drawChar(uint16_t uniCode, int32_t x, int32_t y);
+      |            ^
+lib/TFT_eSPI/Extensions/Sprite.cpp:2145:9: note: 'drawChar' was previously declared here
+ 2145 | int16_t TFT_eSprite::drawChar(uint16_t uniCode, int32_t x, int32_t y)
+      |         ^
+lib/TFT_eSPI/Extensions/Sprite.cpp:2145:9: note: code may be misoptimized unless '-fno-strict-aliasing' is used
+lib/TFT_eSPI/Extensions/Sprite.h:66:12: warning: type of 'setWindow' does not match original declaration [-Wlto-type-mismatch]
+   66 |            setWindow(int32_t x0, int32_t y0, int32_t x1, int32_t y1),
+      |            ^
+lib/TFT_eSPI/Extensions/Sprite.cpp:1253:6: note: 'setWindow' was previously declared here
+ 1253 | void TFT_eSprite::setWindow(int32_t x0, int32_t y0, int32_t x1, int32_t y1)
+      |      ^
+lib/TFT_eSPI/Extensions/Sprite.cpp:1253:6: note: code may be misoptimized unless '-fno-strict-aliasing' is used
+lib/TFT_eSPI/TFT_eSPI.h:452:9: warning: type of 'drawChar' does not match original declaration [-Wlto-type-mismatch]
+  452 |         drawChar(uint16_t uniCode, int32_t x, int32_t y), height(void), width(void);
+      |         ^
+lib/TFT_eSPI/TFT_eSPI.cpp:5239:9: note: 'drawChar' was previously declared here
+ 5239 | int16_t TFT_eSPI::drawChar(uint16_t uniCode, int32_t x, int32_t y)
+      |         ^
+lib/TFT_eSPI/TFT_eSPI.cpp:5239:9: note: code may be misoptimized unless '-fno-strict-aliasing' is used
+lib/TFT_eSPI/TFT_eSPI.h:457:18: warning: type of 'setWindow' does not match original declaration [-Wlto-type-mismatch]
+  457 |     virtual void setWindow(int32_t xs, int32_t ys, int32_t xe, int32_t ye); // Note: start + end coordinates
+      |                  ^
+lib/TFT_eSPI/TFT_eSPI.cpp:3382:6: note: 'setWindow' was previously declared here
+ 3382 | void TFT_eSPI::setWindow(int32_t x0, int32_t y0, int32_t x1, int32_t y1)
+      |      ^
+lib/TFT_eSPI/TFT_eSPI.cpp:3382:6: note: code may be misoptimized unless '-fno-strict-aliasing' is used
+lib/TFT_eSPI/TFT_eSPI.h:452:59: warning: type of 'height' does not match original declaration [-Wlto-type-mismatch]
+  452 |         drawChar(uint16_t uniCode, int32_t x, int32_t y), height(void), width(void);
+      |                                                           ^
+lib/TFT_eSPI/TFT_eSPI.cpp:3065:9: note: 'height' was previously declared here
+ 3065 | int16_t TFT_eSPI::height(void)
+      |         ^
+lib/TFT_eSPI/TFT_eSPI.cpp:3065:9: note: code may be misoptimized unless '-fno-strict-aliasing' is used
+lib/TFT_eSPI/TFT_eSPI.h:452:73: warning: type of 'width' does not match original declaration [-Wlto-type-mismatch]
+  452 |         drawChar(uint16_t uniCode, int32_t x, int32_t y), height(void), width(void);
+      |                                                                         ^
+lib/TFT_eSPI/TFT_eSPI.cpp:3054:9: note: 'width' was previously declared here
+ 3054 | int16_t TFT_eSPI::width(void)
+      |         ^
+lib/TFT_eSPI/TFT_eSPI.cpp:3054:9: note: code may be misoptimized unless '-fno-strict-aliasing' is used
+lib/TFT_eSPI/Extensions/Sprite.h:160:12: warning: type of 'end_nin_write' does not match original declaration [-Wlto-type-mismatch]
+  160 |   void     end_nin_write(void) { ; }
+      |            ^
+lib/TFT_eSPI/Extensions/Sprite.h:160:12: note: 'end_nin_write' was previously declared here
+  160 |   void     end_nin_write(void) { ; }
+      |            ^
+lib/TFT_eSPI/Extensions/Sprite.h:160:12: note: code may be misoptimized unless '-fno-strict-aliasing' is used
+lib/TFT_eSPI/Extensions/Sprite.h:159:12: warning: type of 'begin_nin_write' does not match original declaration [-Wlto-type-mismatch]
+  159 |   void     begin_nin_write(void) { ; }
+      |            ^
+lib/TFT_eSPI/Extensions/Sprite.h:159:12: note: 'begin_nin_write' was previously declared here
+  159 |   void     begin_nin_write(void) { ; }
+      |            ^
+lib/TFT_eSPI/Extensions/Sprite.h:159:12: note: code may be misoptimized unless '-fno-strict-aliasing' is used
+.pio/libdeps/lilygo-t-embed-cc1101/ESP Chameleon Ultra/src/chameleonUltra.cpp:32:7: warning: virtual table of type 'struct scanCallbacks' violates one definition rule [-Wodr]
+   32 | class scanCallbacks : public NimBLEAdvertisedDeviceCallbacks {
+      |       ^
+.pio/libdeps/lilygo-t-embed-cc1101/ESP Chameleon Ultra/src/chameleonUltra.cpp:32:7: note: the conflicting type defined in another translation unit
+.pio/libdeps/lilygo-t-embed-cc1101/NimBLE-Arduino/src/NimBLEScan.h:222:18: note: virtual method 'onResult'
+  222 |     virtual void onResult(const NimBLEAdvertisedDevice* advertisedDevice);
+      |                  ^
+.pio/libdeps/lilygo-t-embed-cc1101/ESP PN32BLE/src/pn532_ble.cpp:29:10: note: ought to match virtual method 'onResult' but does not
+   29 |     void onResult(const NimBLEAdvertisedDevice *advertisedDevice)
+      |          ^
+lto-wrapper: warning: using serial compilation of 77 LTRANS jobs
+lto-wrapper: note: see the '-flto' option documentation for more information
+In function 'sdctII',
+    inlined from 'dctIV' at .pio/libdeps/lilygo-t-embed-cc1101/ESP8266Audio/src/libmad/layer3.c:1786:5,
+    inlined from 'imdct36' at .pio/libdeps/lilygo-t-embed-cc1101/ESP8266Audio/src/libmad/layer3.c:1812:5,
+    inlined from 'III_imdct_l' at .pio/libdeps/lilygo-t-embed-cc1101/ESP8266Audio/src/libmad/layer3.c:2136:5:
+.pio/libdeps/lilygo-t-embed-cc1101/ESP8266Audio/src/libmad/layer3.c:1746:5: warning: 'fastsdct' accessing 72 bytes in a region of size 68 [-Wstringop-overflow=]
+ 1746 |     fastsdct(tmp, &X[1]);
+      |     ^
+.pio/libdeps/lilygo-t-embed-cc1101/ESP8266Audio/src/libmad/layer3.c:1746:5: note: referencing argument 2 of type 'mad_fixed_t[18]'
+.pio/libdeps/lilygo-t-embed-cc1101/ESP8266Audio/src/libmad/layer3.c: In function 'III_imdct_l':
+.pio/libdeps/lilygo-t-embed-cc1101/ESP8266Audio/src/libmad/layer3.c:1644:6: note: in a call to function 'fastsdct'
+ 1644 | void fastsdct(mad_fixed_t const x[9], mad_fixed_t y[18]) {
+      |      ^
+.pio/libdeps/lilygo-t-embed-cc1101/ESP8266Audio/src/libhelix-aac/sbrhuff.c: In function 'raac_DecodeSBRNoise':
+.pio/libdeps/lilygo-t-embed-cc1101/ESP8266Audio/src/libhelix-aac/sbrhuff.c:395:59: warning: writing 1 byte into a region of size 0 [-Wstringop-overflow=]
+  395 |                 sbrChan->noiseDataQuant[noiseFloor][band] = sf + sbrChan->noiseDataQuant[lastNoiseFloor][band];
+      |                                                           ^
+.pio/libdeps/lilygo-t-embed-cc1101/ESP8266Audio/src/libhelix-aac/sbr.h:260:27: note: at offset 10 into destination object 'noiseDataQuant' of size 10
+  260 |     signed char           noiseDataQuant[MAX_NUM_NOISE_FLOORS][MAX_NUM_NOISE_FLOOR_BANDS];
+      |                           ^
+.pio/libdeps/lilygo-t-embed-cc1101/ESP8266Audio/src/libhelix-aac/sbrhuff.c:389:59: warning: writing 1 byte into a region of size 0 [-Wstringop-overflow=]
+  389 |                 sbrChan->noiseDataQuant[noiseFloor][band] = sf + sbrChan->noiseDataQuant[noiseFloor][band - 1];
+      |                                                           ^
+.pio/libdeps/lilygo-t-embed-cc1101/ESP8266Audio/src/libhelix-aac/sbr.h:260:27: note: at offset 10 into destination object 'noiseDataQuant' of size 10
+  260 |     signed char           noiseDataQuant[MAX_NUM_NOISE_FLOORS][MAX_NUM_NOISE_FLOOR_BANDS];
+      |                           ^
+/home/runner/.platformio/packages/toolchain-xtensa-esp-elf/bin/../lib/gcc/xtensa-esp-elf/14.2.0/../../../../xtensa-esp-elf/bin/ld: /tmp/ccqupPcj.ltrans65.ltrans.o:(.literal+0x284): undefined reference to `_Z15sdrBankHeapInitv'
+/home/runner/.platformio/packages/toolchain-xtensa-esp-elf/bin/../lib/gcc/xtensa-esp-elf/14.2.0/../../../../xtensa-esp-elf/bin/ld: /tmp/ccqupPcj.ltrans65.ltrans.o:(.literal+0x288): undefined reference to `_Z22sdrBankReleaseForRadiov'
+/home/runner/.platformio/packages/toolchain-xtensa-esp-elf/bin/../lib/gcc/xtensa-esp-elf/14.2.0/../../../../xtensa-esp-elf/bin/ld: /tmp/ccqupPcj.ltrans65.ltrans.o: in function `_ZL17radioHasMemForBleb$constprop$0':
+/home/runner/work/Bruce_firmware/Bruce_firmware/src/core/radio_mem.h:192:(.text+0x2c9c): undefined reference to `_Z15sdrBankHeapInitv'
+/home/runner/.platformio/packages/toolchain-xtensa-esp-elf/bin/../lib/gcc/xtensa-esp-elf/14.2.0/../../../../xtensa-esp-elf/bin/ld: /home/runner/work/Bruce_firmware/Bruce_firmware/src/core/radio_mem.h:193:(.text+0x2ca2): undefined reference to `_Z22sdrBankReleaseForRadiov'
+/home/runner/.platformio/packages/toolchain-xtensa-esp-elf/bin/../lib/gcc/xtensa-esp-elf/14.2.0/../../../../xtensa-esp-elf/bin/ld: /tmp/ccqupPcj.ltrans65.ltrans.o: in function `_ZL18radioHasMemForWifib$constprop$0':
+/home/runner/work/Bruce_firmware/Bruce_firmware/src/core/radio_mem.h:154:(.text+0x2e56): undefined reference to `_Z15sdrBankHeapInitv'
+/home/runner/.platformio/packages/toolchain-xtensa-esp-elf/bin/../lib/gcc/xtensa-esp-elf/14.2.0/../../../../xtensa-esp-elf/bin/ld: /home/runner/work/Bruce_firmware/Bruce_firmware/src/core/radio_mem.h:155:(.text+0x2e5c): undefined reference to `_Z22sdrBankReleaseForRadiov'
+Memory region         Used Size  Region Size  %age Used
+     iram0_0_seg:      110336 B     358144 B     30.81%
+     iram0_2_seg:     3473204 B    8388576 B     41.40%
+     dram0_0_seg:      228392 B     341760 B     66.83%
+     drom0_0_seg:     4631464 B   33554400 B     13.80%
+    rtc_iram_seg:          96 B       8152 B      1.18%
+rtc_reserved_seg:          40 B         40 B    100.00%
+    rtc_slow_seg:          36 B       7680 B      0.47%
+  extern_ram_seg:     4653024 B   33554400 B     13.87%
+collect2: error: ld returned 1 exit status
+*** [.pio/build/lilygo-t-embed-cc1101/firmware.elf] Error 1
+========================= [FAILED] Took 159.62 seconds =========================
+
+Environment            Status    Duration
+---------------------  --------  ------------
+lilygo-t-embed-cc1101  FAILED    00:02:39.623
+==================== 1 failed, 0 succeeded in 00:02:39.623 ====================
