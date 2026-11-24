@@ -53,7 +53,6 @@ class App {
     }
     String logText() { String all;all.reserve(logs.size()*90);for(auto &s:logs) all+=s+"\n";return all; }
     bool start(WifiteMode mode,const WfTarget *target=nullptr,const char *pin=nullptr) {
-        bool start(WifiteMode mode,const WfTarget *target=nullptr,const char *pin=nullptr) {
         if(!platform) { platform=wf_platform_prepare(); if(!platform) {displayError("Wi-Fi initialization failed",true);return false;} }
         logs.clear();started=millis();if(mode==WifiteScan) {targets.clear();selected=0;}
         // The worker's 24 kB stack goes to PSRAM on boards that have it
@@ -68,7 +67,6 @@ class App {
         if(!job) {displayError("Cannot allocate WiFite worker",true);return false;}
         return true;
     }
-
     void finish() { drain();if(job) {wifite_free(job);job=nullptr;} }
     void background() {
         drawMainBorder();
