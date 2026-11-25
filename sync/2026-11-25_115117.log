@@ -1,0 +1,27 @@
+# Sync run 2026-11-25_115117
+Trigger: schedule
+Timestamp: 2026-11-25T11:51:18Z
+
+## Tags
+Upstream tags: 40
+Local tags:    40
+
+## Branch sync report
+=== dev ===
+Before: e73aec915a38f34588c80bf9af675daecee8f1a2
+Upstream ahead by: 3 commit(s)
+Action: merged
+After:  4b455e21051f1363b12d43dc6141844f605d1410
+Preserved: src/modules/rf/rf_jammer.cpp
+Preserved: src/modules/NRF24/nrf_jammer.cpp
+Preserved: src/core/menu_items/NRF24.cpp
+Workflows verify: OK
+Preserved: .github/workflows/
+Push: success (4b455e21051f1363b12d43dc6141844f605d1410)
+
+=== main ===
+Before: 2958e352e483826b004527c53ae1c866ad9281f2
+Upstream ahead by: 0 commit(s)
+Action: already up to date (merge was a no-op)
+After:  2958e352e483826b004527c53ae1c866ad9281f2
+
