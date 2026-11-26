@@ -1,0 +1,8 @@
+.pio/libdeps/m5stack-cardputer/NimBLE-Arduino/src/NimBLEScan.h:222:18: note: virtual method 'onResult'
+.pio/libdeps/m5stack-cardputer/ESP8266Audio/src/libmad/layer3.c:1746:5: warning: 'fastsdct' accessing 72 bytes in a region of size 68 [-Wstringop-overflow=]
+.pio/libdeps/m5stack-cardputer/ESP8266Audio/src/libmad/layer3.c:1746:5: note: referencing argument 2 of type 'mad_fixed_t[18]'
+.pio/libdeps/m5stack-cardputer/ESP8266Audio/src/libmad/layer3.c:1644:6: note: in a call to function 'fastsdct'
+.pio/libdeps/m5stack-cardputer/ESP8266Audio/src/libhelix-aac/sbrhuff.c:395:59: warning: writing 1 byte into a region of size 0 [-Wstringop-overflow=]
+.pio/libdeps/m5stack-cardputer/ESP8266Audio/src/libhelix-aac/sbr.h:260:27: note: at offset 10 into destination object 'noiseDataQuant' of size 10
+.pio/libdeps/m5stack-cardputer/ESP8266Audio/src/libhelix-aac/sbrhuff.c:389:59: warning: writing 1 byte into a region of size 0 [-Wstringop-overflow=]
+.pio/libdeps/m5stack-cardputer/ESP8266Audio/src/libhelix-aac/sbr.h:260:27: note: at offset 10 into destination object 'noiseDataQuant' of size 10
