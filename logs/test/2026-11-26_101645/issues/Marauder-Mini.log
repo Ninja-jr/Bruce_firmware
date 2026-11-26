@@ -1,0 +1,84 @@
+.pio/libdeps/Marauder-Mini/IRremoteESP8266/src/IRrecv.cpp:222:10: warning: '++' expression of 'volatile'-qualified type is deprecated [-Wvolatile]
+.pio/libdeps/Marauder-Mini/LibSSH-ESP32/src/libssh_esp32_compat.c:13:38: warning: initialization discards 'const' qualifier from pointer target type [-Wdiscarded-qualifiers]
+.pio/libdeps/Marauder-Mini/LibSSH-ESP32/src/libssh_esp32_compat.c:45:5: note: in expansion of macro 'LIBSSH_ESP32_COMPAT_USERNAME'
+.pio/libdeps/Marauder-Mini/LibSSH-ESP32/src/libssh_esp32_compat.c:45:50: warning: initialization discards 'const' qualifier from pointer target type [-Wdiscarded-qualifiers]
+.pio/libdeps/Marauder-Mini/LibSSH-ESP32/src/libssh_esp32_compat.c:46:44: warning: initialization discards 'const' qualifier from pointer target type [-Wdiscarded-qualifiers]
+.pio/libdeps/Marauder-Mini/LibSSH-ESP32/src/libssh_esp32_compat.c:46:60: warning: initialization discards 'const' qualifier from pointer target type [-Wdiscarded-qualifiers]
+.pio/libdeps/Marauder-Mini/LibSSH-ESP32/src/libssh_esp32_compat.c:22:37: warning: initialization discards 'const' qualifier from pointer target type [-Wdiscarded-qualifiers]
+.pio/libdeps/Marauder-Mini/LibSSH-ESP32/src/libssh_esp32_compat.c:47:5: note: in expansion of macro 'LIBSSH_ESP32_COMPAT_HOMEDIR'
+.pio/libdeps/Marauder-Mini/LibSSH-ESP32/src/libssh_esp32_compat.c:47:46: warning: initialization discards 'const' qualifier from pointer target type [-Wdiscarded-qualifiers]
+.pio/libdeps/Marauder-Mini/LibSSH-ESP32/src/scp.c:110:5: warning: 'ssh_scp_free' is deprecated [-Wdeprecated-declarations]
+.pio/libdeps/Marauder-Mini/LibSSH-ESP32/src/libssh/libssh.h:592:32: note: declared here
+.pio/libdeps/Marauder-Mini/LibSSH-ESP32/src/scp.c:303:9: warning: 'ssh_scp_close' is deprecated [-Wdeprecated-declarations]
+.pio/libdeps/Marauder-Mini/LibSSH-ESP32/src/scp.c:249:5: note: declared here
+.pio/libdeps/Marauder-Mini/LibSSH-ESP32/src/scp.c:577:5: warning: 'ssh_scp_push_file64' is deprecated [-Wdeprecated-declarations]
+.pio/libdeps/Marauder-Mini/LibSSH-ESP32/src/scp.c:472:5: note: declared here
+.pio/libdeps/Marauder-Mini/LibSSH-ESP32/src/scp.c:1039:9: warning: 'ssh_scp_accept_request' is deprecated [-Wdeprecated-declarations]
+.pio/libdeps/Marauder-Mini/LibSSH-ESP32/src/scp.c:985:5: note: declared here
+.pio/libdeps/Marauder-Mini/mquickjs/mquickjs.c:746:21: warning: assignment discards 'const' qualifier from pointer target type [-Wdiscarded-qualifiers]
+.pio/libdeps/Marauder-Mini/mquickjs/mquickjs.c:790:29: warning: assignment discards 'const' qualifier from pointer target type [-Wdiscarded-qualifiers]
+.pio/libdeps/Marauder-Mini/mquickjs/mquickjs.c:793:29: warning: assignment discards 'const' qualifier from pointer target type [-Wdiscarded-qualifiers]
+.pio/libdeps/Marauder-Mini/mquickjs/mquickjs.c:796:29: warning: assignment discards 'const' qualifier from pointer target type [-Wdiscarded-qualifiers]
+.pio/libdeps/Marauder-Mini/mquickjs/mquickjs.c:799:29: warning: assignment discards 'const' qualifier from pointer target type [-Wdiscarded-qualifiers]
+.pio/libdeps/Marauder-Mini/mquickjs/mquickjs.c:805:29: warning: assignment discards 'const' qualifier from pointer target type [-Wdiscarded-qualifiers]
+.pio/libdeps/Marauder-Mini/mquickjs/mquickjs.c:820:29: warning: assignment discards 'const' qualifier from pointer target type [-Wdiscarded-qualifiers]
+.pio/libdeps/Marauder-Mini/OneWire/OneWire.cpp:599:22: warning: extra tokens at end of #undef directive
+.pio/libdeps/Marauder-Mini/OneWire/OneWire.cpp:600:20: warning: extra tokens at end of #undef directive
+.pio/libdeps/Marauder-Mini/ESP32-PSRamFS/src/pfs.c:36:4: warning: #warning "Will use PSRAM or heap" [-Wcpp]
+lib/ESP32_Button/src/original/button_adc.c:199:13: warning: 'ADC_ATTEN_DB_11' is deprecated [-Wdeprecated-declarations]
+/home/runner/.platformio/packages/framework-arduinoespressif32-libs/esp32/include/hal/include/hal/adc_types.h:52:5: note: declared here
+lib/ESP32_Button/src/original/button_adc.c:204:9: warning: 'ADC_ATTEN_DB_11' is deprecated [-Wdeprecated-declarations]
+/home/runner/.platformio/packages/framework-arduinoespressif32-libs/esp32/include/hal/include/hal/adc_types.h:52:5: note: declared here
+lib/Bad_Usb_Lib/BleKeyboard.cpp:181:23: warning: 'void NimBLEHIDDevice::startServices()' is deprecated: Services are now started by the server when start() is called, this function is no longer needed and will be removed in a future release. [-Wdeprecated-declarations]
+.pio/libdeps/Marauder-Mini/NimBLE-Arduino/src/NimBLEHIDDevice.h:52:27: note: declared here
+src/core/config.cpp:886:27: warning: comparison is always false due to limited range of data type [-Wtype-limits]
+.pio/libdeps/Marauder-Mini/PNGdec/src/PNGdec.h:217:9: warning: "INTELSHORT" redefined
+.pio/libdeps/Marauder-Mini/AnimatedGIF/src/AnimatedGIF.h:289:9: note: this is the location of the previous definition
+.pio/libdeps/Marauder-Mini/PNGdec/src/PNGdec.h:218:9: warning: "INTELLONG" redefined
+.pio/libdeps/Marauder-Mini/AnimatedGIF/src/AnimatedGIF.h:290:9: note: this is the location of the previous definition
+src/core/menu_items/FileMenu.cpp:17:35: warning: implicit capture of 'this' via '[=]' is deprecated in C++20 [-Wdeprecated]
+src/core/menu_items/FileMenu.cpp:17:35: note: add explicit 'this' or '*this' capture
+src/core/menu_items/FileMenu.cpp:23:27: warning: implicit capture of 'this' via '[=]' is deprecated in C++20 [-Wdeprecated]
+src/core/menu_items/FileMenu.cpp:23:27: note: add explicit 'this' or '*this' capture
+src/core/ram_profile.cpp:24:54: warning: format '%u' expects argument of type 'unsigned int', but argument 5 has type 'uint32_t' {aka 'long unsigned int'} [-Wformat=]
+src/core/ram_profile.cpp:24:66: warning: format '%u' expects argument of type 'unsigned int', but argument 6 has type 'uint32_t' {aka 'long unsigned int'} [-Wformat=]
+src/core/ram_profile.cpp:24:86: warning: format '%u' expects argument of type 'unsigned int', but argument 7 has type 'uint32_t' {aka 'long unsigned int'} [-Wformat=]
+src/core/ram_profile.cpp:25:20: warning: format '%u' expects argument of type 'unsigned int', but argument 8 has type 'uint32_t' {aka 'long unsigned int'} [-Wformat=]
+src/core/ram_profile.cpp:25:28: warning: format '%u' expects argument of type 'unsigned int', but argument 9 has type 'uint32_t' {aka 'long unsigned int'} [-Wformat=]
+src/core/ram_profile.cpp:25:45: warning: format '%u' expects argument of type 'unsigned int', but argument 10 has type 'uint32_t' {aka 'long unsigned int'} [-Wformat=]
+src/core/serial_commands/storage_commands.cpp:269:10: warning: variable 'headerReceived' set but not used [-Wunused-but-set-variable]
+src/hal/inputs/touch.cpp:19:13: warning: 'void panelSize(int16_t&, int16_t&)' defined but not used [-Wunused-function]
+src/modules/bjs_interpreter/audio_js.cpp:23:10: warning: variable 'nonBlocking' set but not used [-Wunused-but-set-variable]
+src/modules/ble/fastpair_crypto.cpp:628:38: warning: format '%u' expects argument of type 'unsigned int', but argument 3 has type 'uint32_t' {aka 'long unsigned int'} [-Wformat=]
+src/modules/ble_api/services/BLESerialService.cpp:51:20: warning: 'bool NimBLEService::start()' is deprecated: NimBLEService::start() has no effect. Services are started when the server is started. [-Wdeprecated-declarations]
+.pio/libdeps/Marauder-Mini/NimBLE-Arduino/src/NimBLEService.h:51:10: note: declared here
+src/modules/ble_api/services/BatteryService.cpp:35:20: warning: 'bool NimBLEService::start()' is deprecated: NimBLEService::start() has no effect. Services are started when the server is started. [-Wdeprecated-declarations]
+.pio/libdeps/Marauder-Mini/NimBLE-Arduino/src/NimBLEService.h:51:10: note: declared here
+src/modules/rf/protocols/decoders/rf_decoder_psa.c:225:13: warning: variable 'original_buffer8' set but not used [-Wunused-but-set-variable]
+src/modules/rf/protocols/decoders/rf_decoder_secplus_v2.cpp:47:13: warning: 'void sp2_mix_order_encode(uint8_t, uint16_t*)' defined but not used [-Wunused-function]
+src/modules/rf/protocols/decoders/rf_decoder_somfy_keytis.cpp:47:16: warning: enumeration value 'ST_PREAMBLE_L' not handled in switch [-Wswitch]
+src/modules/rf/protocols/decoders/rf_decoder_somfy_telis.cpp:46:16: warning: enumeration value 'ST_PREAMBLE_L' not handled in switch [-Wswitch]
+src/modules/rf/protocols/decoders/rf_decoder_toyota_tpms.cpp:24:9: warning: variable 'sync_idx' set but not used [-Wunused-but-set-variable]
+src/modules/rfid/PN532.cpp:688:18: warning: suggest braces around empty body in an 'if' statement [-Wempty-body]
+src/modules/rfid/PN532KillerTools.cpp:775:20: warning: 'bool NimBLEService::start()' is deprecated: NimBLEService::start() has no effect. Services are started when the server is started. [-Wdeprecated-declarations]
+.pio/libdeps/Marauder-Mini/NimBLE-Arduino/src/NimBLEService.h:51:10: note: declared here
+src/modules/rfid/ST25R3916.cpp:1257:30: warning: comparison is always true due to limited range of data type [-Wtype-limits]
+src/modules/rfid/ST25R3916.cpp:27:20: warning: 'const char* _stateStr(rfalNfcState)' defined but not used [-Wunused-function]
+src/modules/wifi/channel_analyzer.cpp:30:5: warning: '++' expression of 'volatile'-qualified type is deprecated [-Wvolatile]
+src/modules/wifi/clients.cpp:443:6: warning: 'void {anonymous}::clearTerminalPendingState()' defined but not used [-Wunused-function]
+src/modules/wifi/clients.cpp:439:6: warning: 'void {anonymous}::setPendingEchoSuppression(const String&)' defined but not used [-Wunused-function]
+src/modules/wifi/clients.cpp:418:8: warning: 'String {anonymous}::getBufferedCommandInput()' defined but not used [-Wunused-function]
+src/modules/wifi/jam_detect.cpp:37:5: warning: '++' expression of 'volatile'-qualified type is deprecated [-Wvolatile]
+src/modules/wifi/jam_detect.cpp:43:58: warning: '++' expression of 'volatile'-qualified type is deprecated [-Wvolatile]
+src/modules/wifi/wifi_recover.cpp:614:1: warning: 'always_inline' function might not be inlinable unless also declared 'inline' [-Wattributes]
+src/modules/wifi/wifi_recover.cpp:594:1: warning: 'always_inline' function might not be inlinable unless also declared 'inline' [-Wattributes]
+src/modules/wifi/wifi_recover.cpp:478:1: warning: 'always_inline' function might not be inlinable unless also declared 'inline' [-Wattributes]
+src/modules/wifi/wifi_recover.cpp:444:1: warning: 'always_inline' function might not be inlinable unless also declared 'inline' [-Wattributes]
+src/modules/wifi/wifi_recover.cpp:594:1: warning: 'void hmac_sha1_20(const HmacSha1Pre&, const uint8_t*, uint8_t*)' defined but not used [-Wunused-function]
+src/modules/wire/logic_analyzer.cpp:418:18: warning: variable 't' set but not used [-Wunused-but-set-variable]
+src/modules/wire/logic_analyzer.cpp:630:22: warning: comparison is always false due to limited range of data type [-Wtype-limits]
+.pio/libdeps/Marauder-Mini/NimBLE-Arduino/src/nimble/nimble/host/src/ble_gap.c:9451:16: warning: type of 'is_ble_hs_resolv_enabled' does not match original declaration [-Wlto-type-mismatch]
+.pio/libdeps/Marauder-Mini/NimBLE-Arduino/src/nimble/nimble/host/src/ble_hs_resolv.c:331:1: note: return value type mismatch
+.pio/libdeps/Marauder-Mini/NimBLE-Arduino/src/nimble/nimble/host/src/ble_hs_resolv.c:331:1: note: type 'uint8_t' should match type 'int'
+.pio/libdeps/Marauder-Mini/NimBLE-Arduino/src/nimble/nimble/host/src/ble_hs_resolv.c:331:1: note: 'is_ble_hs_resolv_enabled' was previously declared here
+.pio/libdeps/Marauder-Mini/NimBLE-Arduino/src/NimBLEScan.h:222:18: note: virtual method 'onResult'

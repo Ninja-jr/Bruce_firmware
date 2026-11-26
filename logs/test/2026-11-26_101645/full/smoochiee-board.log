@@ -1,0 +1,343 @@
+Processing smoochiee-board (board: esp32s3; platform: https://github.com/pioarduino/platform-espressif32/releases/download/55.03.39/platform-espressif32.zip; framework: arduino)
+--------------------------------------------------------------------------------
+Library Manager: Installing git+https://github.com/sayacom/WireGuard-ESP32-Arduino#feature/esp-netif
+git version 2.56.1
+Cloning into '/home/runner/work/Bruce_firmware/Bruce_firmware/.pio/cache/tmp/pkg-installing-rpye5wi2'...
+Library Manager: WireGuard-ESP32@0.1.5+sha.90aa6b4 has been installed!
+Library Manager: Installing git+https://github.com/bmorcelli/IRremoteESP8266
+git version 2.56.1
+Cloning into '/home/runner/work/Bruce_firmware/Bruce_firmware/.pio/cache/tmp/pkg-installing-2o8zn904'...
+Library Manager: IRremoteESP8266@2.8.6+sha.22cd38c has been installed!
+Library Manager: Installing paulstoffregen/Time @ 1.6.1
+Unpacking 0% 10% 20% 30% 40% 50% 60% 70% 80% 90% 100%
+Library Manager: Time@1.6.1 has been installed!
+Library Manager: Installing symlink://lib/Adafruit-BusIO
+Library Manager: Adafruit BusIO@1.17.2-bruce.1 has been installed!
+Library Manager: Installing symlink://lib/Adafruit-PN532
+Library Manager: Adafruit PN532@1.3.3-bruce.1 has been installed!
+Library Manager: Resolving dependencies...
+Library Manager: Installing git+https://github.com/huckor/BER-TLV.git
+git version 2.56.1
+Cloning into '/home/runner/work/Bruce_firmware/Bruce_firmware/.pio/cache/tmp/pkg-installing-ryl58ao6'...
+Library Manager: BER-TLV@0.0.0+20261126093828.sha.bd61b70 has been installed!
+Library Manager: Installing git+https://github.com/rennancockles/Arduino_MFRC522v2.git
+git version 2.56.1
+Cloning into '/home/runner/work/Bruce_firmware/Bruce_firmware/.pio/cache/tmp/pkg-installing-z_rzs8ir'...
+Library Manager: RFID_MFRC522v2@2.0.6+sha.a6977df has been installed!
+Library Manager: Installing git+https://github.com/bmorcelli/ESP-ChameleonUltra
+git version 2.56.1
+Cloning into '/home/runner/work/Bruce_firmware/Bruce_firmware/.pio/cache/tmp/pkg-installing-uengo911'...
+Library Manager: ESP Chameleon Ultra@0.0.2+sha.f66f354 has been installed!
+Library Manager: Resolving dependencies...
+Library Manager: Installing h2zero/NimBLE-Arduino
+Library Manager: Installing git+https://github.com/bmorcelli/ESP-Amiibolink
+git version 2.56.1
+Cloning into '/home/runner/work/Bruce_firmware/Bruce_firmware/.pio/cache/tmp/pkg-installing-zlntkplo'...
+Library Manager: ESP Amiibolink@0.0.2+sha.fc26412 has been installed!
+Library Manager: Resolving dependencies...
+Library Manager: Installing h2zero/NimBLE-Arduino
+Library Manager: Installing git+https://github.com/rennancockles/SimpleCLI
+git version 2.56.1
+Cloning into '/home/runner/work/Bruce_firmware/Bruce_firmware/.pio/cache/tmp/pkg-installing-y2hbyvrh'...
+Library Manager: SimpleCLI@1.1.4+sha.b23d377 has been installed!
+Library Manager: Installing git+https://github.com/whywilson/ESP-PN532BLE
+git version 2.56.1
+Cloning into '/home/runner/work/Bruce_firmware/Bruce_firmware/.pio/cache/tmp/pkg-installing-y26mb5bp'...
+Library Manager: ESP PN32BLE@0.0.2+sha.542f121 has been installed!
+Library Manager: Resolving dependencies...
+Library Manager: Installing h2zero/NimBLE-Arduino
+Library Manager: Installing git+https://github.com/whywilson/ESP-PN532-UART
+git version 2.56.1
+Cloning into '/home/runner/work/Bruce_firmware/Bruce_firmware/.pio/cache/tmp/pkg-installing-moup6au3'...
+Library Manager: ESP PN532 UART@0.0.2+sha.879e586 has been installed!
+Library Manager: Installing git+https://github.com/whywilson/ESP-PN532Killer
+git version 2.56.1
+Cloning into '/home/runner/work/Bruce_firmware/Bruce_firmware/.pio/cache/tmp/pkg-installing-ltog1za5'...
+Library Manager: ESP PN532Killer@0.0.7+sha.71bf110 has been installed!
+Library Manager: Resolving dependencies...
+Library Manager: Installing whywilson/ESP-PN532-UART
+Library Manager: Installing bblanchon/ArduinoJson
+Unpacking 0% 10% 20% 30% 40% 50% 60% 70% 80% 90% 100%
+Library Manager: ArduinoJson@7.4.3 has been installed!
+Library Manager: Installing earlephilhower/ESP8266SAM @ ^1.1.0
+Unpacking 0% 10% 20% 30% 40% 50% 60% 70% 80% 90% 100%
+Library Manager: ESP8266SAM@1.1.0 has been installed!
+Library Manager: Installing mikalhart/TinyGPSPlus
+Unpacking 0% 10% 20% 30% 40% 50% 60% 70% 80% 90% 100%
+Library Manager: TinyGPSPlus@1.1.0 has been installed!
+Library Manager: Installing tinyu-zhao/FFT @ ^0.0.1
+Unpacking 0% 10% 20% 30% 40% 50% 60% 70%
+Library Manager: FFT@0.0.1 has been installed!
+Library Manager: Installing h2zero/NimBLE-Arduino @ 2.5.1
+Unpacking 0% 10% 20% 30% 40% 50% 60% 70% 80% 90% 100%
+Library Manager: NimBLE-Arduino@2.5.1 has been installed!
+Library Manager: Installing nrf24/RF24 @ 1.4.11
+Unpacking 0% 10% 20% 30% 40% 50% 60% 70% 80% 90% 100%
+Library Manager: RF24@1.4.11 has been installed!
+Library Manager: Installing Bodmer/JPEGDecoder
+Unpacking 0% 10% 20% 30% 40% 50% 60% 70% 80% 90% 100%
+Library Manager: JPEGDecoder@2.0.0 has been installed!
+Library Manager: Installing git+https://github.com/bmorcelli/SmartRC-CC1101-Driver-Lib/
+git version 2.56.1
+Cloning into '/home/runner/work/Bruce_firmware/Bruce_firmware/.pio/cache/tmp/pkg-installing-y2a5uqif'...
+Library Manager: SmartRC-CC1101-Driver-Lib@2.5.7+sha.7bba521 has been installed!
+Library Manager: Installing git+https://github.com/BruceDevices/mquickjs#0.0.6
+git version 2.56.1
+Cloning into '/home/runner/work/Bruce_firmware/Bruce_firmware/.pio/cache/tmp/pkg-installing-5fvyiqfh'...
+Note: switching to '169b5ea7723bf43d7be9631a14f9c2a1ed8c69e1'.
+
+You are in 'detached HEAD' state. You can look around, make experimental
+changes and commit them, and you can discard any commits you make in this
+state without impacting any branches by switching back to a branch.
+
+If you want to create a new branch to retain commits you create, you may
+do so (now or later) by using -c with the switch command. Example:
+
+  git switch -c <new-branch-name>
+
+Or undo this operation with:
+
+  git switch -
+
+Turn off this advice by setting config variable advice.detachedHead to false
+
+Library Manager: mquickjs@0.0.6+sha.169b5ea has been installed!
+Library Manager: Installing git+https://github.com/bmorcelli/OneWire#patch-1
+git version 2.56.1
+Cloning into '/home/runner/work/Bruce_firmware/Bruce_firmware/.pio/cache/tmp/pkg-installing-alcjlmco'...
+Library Manager: OneWire@2.3.8+sha.42e045e has been installed!
+Library Manager: Installing git+https://github.com/bmorcelli/ESP32-PsRamFS#patch-1
+git version 2.56.1
+Cloning into '/home/runner/work/Bruce_firmware/Bruce_firmware/.pio/cache/tmp/pkg-installing-mocfqqvd'...
+Library Manager: ESP32-PSRamFS@1.0.6+sha.5ace2e6 has been installed!
+Library Manager: Installing bitbank2/AnimatedGIF
+Unpacking 0% 10% 20% 30% 40% 50% 60% 70% 80% 90% 100%
+Library Manager: AnimatedGIF@2.2.3 has been installed!
+Library Manager: Installing bitbank2/PNGdec @ ^1.1.2
+Unpacking 0% 10% 20% 30% 40% 50% 60% 70% 80% 90% 100%
+Library Manager: PNGdec@1.1.6 has been installed!
+Library Manager: Installing ESP32Async/ESPAsyncWebServer
+Unpacking 0% 10% 20% 30% 40% 50% 60% 70% 80% 90% 100%
+Library Manager: ESPAsyncWebServer@3.12.1 has been installed!
+Library Manager: Resolving dependencies...
+Library Manager: Installing ESP32Async/AsyncTCP @ ^3.5.0
+Unpacking 0% 10% 20% 30% 40% 50% 60% 70% 80% 90% 100%
+Library Manager: AsyncTCP@3.6.1 has been installed!
+Library Manager: Installing fastled/FastLED @ 3.10.3
+Unpacking 0% 10% 20% 30% 40% 50% 60% 70% 80% 90% 100%
+Library Manager: FastLED@3.10.3 has been installed!
+Library Manager: Installing jgromes/RadioLib @ ^7.4.0
+Unpacking 0% 10% 20% 30% 40% 50% 60% 70% 80% 90% 100%
+Library Manager: RadioLib@7.8.1 has been installed!
+Library Manager: Installing git+https://github.com/lewisxhe/ST25R3916-fork#0c8e00f49d12881d1cff6d6f0879b90ce7ed4033
+git version 2.56.1
+Cloning into '/home/runner/work/Bruce_firmware/Bruce_firmware/.pio/cache/tmp/pkg-installing-oe0no1tx'...
+HEAD is now at 0c8e00f Rename the property name
+Library Manager: ST25R3916-fork@1.1.0+sha.0c8e00f has been installed!
+Library Manager: Installing git+https://github.com/lewisxhe/NFC-RFAL-fork#7bde4587ea44c36c178a43d083d7a7345c1e4cfe
+git version 2.56.1
+Cloning into '/home/runner/work/Bruce_firmware/Bruce_firmware/.pio/cache/tmp/pkg-installing-aju8j3rv'...
+HEAD is now at 7bde458 Rename the property name
+Library Manager: NFC-RFAL-fork@1.0.1+sha.7bde458 has been installed!
+Verbose mode can be enabled via `-v, --verbose` option
+[GZIP & EMBED INTO HEADER] - Processing 4 files.
+[DONE] Gzipped files embedded into /home/runner/work/Bruce_firmware/Bruce_firmware/include/webFiles.h
+a31c20af84d4aa73d94ac2ea57bcf6ac743bff534435e256d2acb5068abd1d53 a31c20af84d4aa73d94ac2ea57bcf6ac743bff534435e256d2acb5068abd1d53
+Patching library conflicts with ESP32 core...
+Patched: .pio/libdeps/smoochiee-board/ESP8266SAM/src/render.c
+Patched: .pio/libdeps/smoochiee-board/ESP8266SAM/src/render.c
+Patched: .pio/libdeps/smoochiee-board/JPEGDecoder/src/picojpeg.c
+Patched: .pio/libdeps/smoochiee-board/JPEGDecoder/src/picojpeg.c
+Patched: .pio/libdeps/smoochiee-board/ESP Amiibolink/src/amiibolink.h
+Patched: .pio/libdeps/smoochiee-board/ESP Chameleon Ultra/src/chameleonUltra.h
+Patched: .pio/libdeps/smoochiee-board/ESP PN32BLE/src/pn532_ble.h
+Patched: .pio/libdeps/smoochiee-board/ST25R3916-fork/src/rfal_rfst25r3916.cpp
+Patched: .pio/libdeps/smoochiee-board/ST25R3916-fork/src/rfal_rfst25r3916.cpp
+Patched: .pio/libdeps/smoochiee-board/ST25R3916-fork/src/rfal_rfst25r3916.cpp
+Patched: .pio/libdeps/smoochiee-board/ST25R3916-fork/src/rfal_rfst25r3916.h
+Patched: .pio/libdeps/smoochiee-board/ST25R3916-fork/src/rfal_rfst25r3916.cpp
+Patched: .pio/libdeps/smoochiee-board/ST25R3916-fork/src/st25r3916_interrupt.cpp
+Patched: .pio/libdeps/smoochiee-board/ST25R3916-fork/src/st25r3916_interrupt.cpp
+Patched: .pio/libdeps/smoochiee-board/ST25R3916-fork/src/rfal_rfst25r3916.cpp
+Patched: .pio/libdeps/smoochiee-board/NFC-RFAL-fork/src/rfal_nfca.h
+Patched: .pio/libdeps/smoochiee-board/NFC-RFAL-fork/src/rfal_nfca.cpp
+Patched: .pio/libdeps/smoochiee-board/NFC-RFAL-fork/src/rfal_nfca.cpp
+Patched: .pio/libdeps/smoochiee-board/NFC-RFAL-fork/src/rfal_nfca.cpp
+CONFIGURATION: https://docs.platformio.org/page/boards/espressif32/esp32s3.html
+PLATFORM: Espressif 32 (55.3.39) > Espressif ESP32-S3 (generic, 16M Flash 8M OPI PSRAM)
+HARDWARE: ESP32S3 240MHz, 320KB RAM, 16MB Flash
+DEBUG: Current (esp-builtin) On-board (esp-builtin) External (cmsis-dap, esp-bridge, esp-prog, esp-prog-2, iot-bus-jtag, jlink, minimodule, olimex-arm-usb-ocd, olimex-arm-usb-ocd-h, olimex-arm-usb-tiny-h, olimex-jtag-tiny, tumpa)
+PACKAGES: 
+ - contrib-piohome @ 3.4.4 
+ - framework-arduinoespressif32 @ 3.3.9 
+ - framework-arduinoespressif32-libs @ 5.5.4+sha.735507283d 
+ - tool-esp-rom-elfs @ 2024.10.11 
+ - tool-esptoolpy @ 5.3.0 
+ - tool-xtensa-esp-elf-gdb @ 17.1.0+20260402 
+ - toolchain-xtensa-esp-elf @ 14.2.0+20260121
+LDF: Library Dependency Finder -> https://bit.ly/configure-pio-ldf
+LDF Modes: Finder ~ chain, Compatibility ~ soft
+Library Manager: Installing LibSSH-ESP32
+Unpacking 0% 10% 20% 30% 40% 50% 60% 70% 80% 90% 100%
+Library Manager: LibSSH-ESP32@5.10.0 has been installed!
+Library Manager: Installing NTPClient @ 3.2.1
+Unpacking 0% 10% 20% 30% 40% 50% 60% 70% 80% 90% 100%
+Library Manager: NTPClient@3.2.1 has been installed!
+Library Manager: Installing ESP32Time @ 2.0.6
+Unpacking 0% 10% 20% 30% 40% 50% 60% 70% 80% 90% 100%
+Library Manager: ESP32Time@2.0.6 has been installed!
+Library Manager: Installing ESP8266Audio @ ^2.4.1
+Unpacking 0% 10% 20% 30% 40% 50% 60% 70% 80% 90% 100%
+Library Manager: ESP8266Audio@2.4.3 has been installed!
+Library Manager: Installing Adafruit Si4713 Library @ 1.2.3
+Unpacking 0% 10% 20% 30% 40% 50% 60% 70% 80% 90% 100%
+Library Manager: Adafruit Si4713 Library@1.2.3 has been installed!
+Library Manager: Resolving dependencies...
+Found 97 compatible libraries
+Scanning dependencies...
+Dependency Graph
+|-- WireGuard-ESP32 @ 0.1.5+sha.90aa6b4
+|-- IRremoteESP8266 @ 2.8.6+sha.22cd38c
+|-- Time @ 1.6.1
+|-- LibSSH-ESP32 @ 5.10.0
+|-- Adafruit BusIO @ 1.17.2-bruce.1
+|-- Adafruit PN532 @ 1.3.3-bruce.1
+|-- BER-TLV @ 0.0.0+20261126093828.sha.bd61b70
+|-- RFID_MFRC522v2 @ 2.0.6+sha.a6977df
+|-- ESP Chameleon Ultra @ 0.0.2+sha.f66f354
+|-- ESP Amiibolink @ 0.0.2+sha.fc26412
+|-- SimpleCLI @ 1.1.4+sha.b23d377
+|-- ESP PN32BLE @ 0.0.2+sha.542f121
+|-- ESP PN532 UART @ 0.0.2+sha.879e586
+|-- ESP PN532Killer @ 0.0.7+sha.71bf110
+|-- NTPClient @ 3.2.1
+|-- ESP32Time @ 2.0.6
+|-- FFat @ 3.3.9
+|-- ArduinoJson @ 7.4.3
+|-- ESP8266Audio @ 2.4.3
+|-- ESP8266SAM @ 1.1.0
+|-- TinyGPSPlus @ 1.1.0
+|-- FFT @ 0.0.1
+|-- NimBLE-Arduino @ 2.5.1
+|-- RF24 @ 1.4.11
+|-- Adafruit Si4713 Library @ 1.2.3
+|-- JPEGDecoder @ 2.0.0
+|-- SmartRC-CC1101-Driver-Lib @ 2.5.7+sha.7bba521
+|-- mquickjs @ 0.0.6+sha.169b5ea
+|-- OneWire @ 2.3.8+sha.42e045e
+|-- ESP32-PSRamFS @ 1.0.6+sha.5ace2e6
+|-- AnimatedGIF @ 2.2.3
+|-- PNGdec @ 1.1.6
+|-- ESPAsyncWebServer @ 3.12.1
+|-- FastLED @ 3.10.3
+|-- RadioLib @ 7.8.1
+|-- ST25R3916-fork @ 1.1.0+sha.0c8e00f
+|-- NFC-RFAL-fork @ 1.0.1+sha.7bde458
+|-- WiFi @ 3.3.9
+|-- BruceHAL @ 7.3.1
+|-- HTTPClient @ 3.3.9
+|-- LittleFS @ 3.3.9
+|-- CYD-touch
+|-- Preferences @ 3.3.9
+|-- ESP32_Button @ 0.0.1
+|-- RotaryEncoder @ 1.5.3
+|-- DisplayDrivers @ 0.0.2
+|-- SPI @ 3.3.9
+|-- SensorLib @ 0.4.1
+|-- Wire @ 3.3.9
+|-- utility
+|-- XPowersLib @ 0.3.3
+|-- FS @ 3.3.9
+|-- Ethernet @ 3.3.9
+|-- Networking @ 3.3.9
+|-- Bad_Usb_Lib
+|-- TFT_eSPI QRcode @ 1.0.0
+|-- AsyncTCP @ 3.6.1
+|-- DNSServer @ 3.3.9
+|-- BruceWifite @ 0.8.1-bruce
+|-- RTC
+|-- ESPmDNS @ 3.3.9
+|-- PN532_SRIX
+|-- NetworkClientSecure @ 3.3.9
+|-- SPIFFS @ 3.3.9
+Building in release mode
+Compiling .pio/build/smoochiee-board/src/core/wifi/webInterface.cpp.o
+Linking .pio/build/smoochiee-board/firmware.elf
+.pio/libdeps/smoochiee-board/ESP Chameleon Ultra/src/chameleonUltra.cpp:32:7: warning: virtual table of type 'struct scanCallbacks' violates one definition rule [-Wodr]
+   32 | class scanCallbacks : public NimBLEAdvertisedDeviceCallbacks {
+      |       ^
+.pio/libdeps/smoochiee-board/ESP Chameleon Ultra/src/chameleonUltra.cpp:32:7: note: the conflicting type defined in another translation unit
+.pio/libdeps/smoochiee-board/NimBLE-Arduino/src/NimBLEScan.h:222:18: note: virtual method 'onResult'
+  222 |     virtual void onResult(const NimBLEAdvertisedDevice* advertisedDevice);
+      |                  ^
+.pio/libdeps/smoochiee-board/ESP PN32BLE/src/pn532_ble.cpp:29:10: note: ought to match virtual method 'onResult' but does not
+   29 |     void onResult(const NimBLEAdvertisedDevice *advertisedDevice)
+      |          ^
+lto-wrapper: warning: using serial compilation of 71 LTRANS jobs
+lto-wrapper: note: see the '-flto' option documentation for more information
+Memory region         Used Size  Region Size  %age Used
+     iram0_0_seg:      110080 B     358144 B     30.74%
+     iram0_2_seg:     3265120 B    8388576 B     38.92%
+     dram0_0_seg:      227728 B     341760 B     66.63%
+     drom0_0_seg:     4280020 B   33554400 B     12.76%
+    rtc_iram_seg:          96 B       8152 B      1.18%
+rtc_reserved_seg:          40 B         40 B    100.00%
+    rtc_slow_seg:          36 B       7680 B      0.47%
+  extern_ram_seg:     4259808 B   33554400 B     12.70%
+                            Memory Type Usage Summary                             
+┏━━━━━━━━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━┳━━━━━━━━━━┳━━━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━━┓
+┃ Memory Type/Section ┃ Used [bytes] ┃ Used [%] ┃ Remain [bytes] ┃ Total [bytes] ┃
+┡━━━━━━━━━━━━━━━━━━━━━╇━━━━━━━━━━━━━━╇━━━━━━━━━━╇━━━━━━━━━━━━━━━━╇━━━━━━━━━━━━━━━┩
+│ Flash Code          │      3265120 │          │                │               │
+│    .text            │      3265120 │          │                │               │
+│ Flash Data          │       979728 │          │                │               │
+│    .rodata          │       979440 │          │                │               │
+│    .appdesc         │          288 │          │                │               │
+│ DIRAM               │       227654 │    66.61 │         114106 │        341760 │
+│    .bss             │       102208 │    29.91 │                │               │
+│    .text            │        93623 │    27.39 │                │               │
+│    .data            │        31823 │     9.31 │                │               │
+│ IRAM                │        16384 │    100.0 │              0 │         16384 │
+│    .text            │        15356 │    93.73 │                │               │
+│    .vectors         │         1028 │     6.27 │                │               │
+│ RTC FAST            │           92 │     1.12 │           8100 │          8192 │
+│    .text            │           92 │     1.12 │                │               │
+│ RTC SLOW            │            1 │     0.01 │           7679 │          7680 │
+│    .data            │            1 │     0.01 │                │               │
+└─────────────────────┴──────────────┴──────────┴────────────────┴───────────────┘
+Total image size: 4386771 bytes (.bin may be padded larger)
+Note: The reported total sizes may be smaller than those in the technical reference manual due to reserved memory and application configuration. The total flash size available for the application is not included by default, as it cannot be reliably determined due to the presence of other data like the bootloader, partition table, and application partition size. The total external RAM size is not included either, because the amount of RAM connected to the chip is detected at boot and is not known during the build.
+Retrieving maximum program size .pio/build/smoochiee-board/firmware.elf
+Checking size .pio/build/smoochiee-board/firmware.elf
+Advanced Memory Usage is available via "PlatformIO Home > Project Inspect"
+RAM:   [====      ]  40.9% (used 134032 bytes from 327680 bytes)
+Flash: [===       ]  26.1% (used 4386390 bytes from 16777216 bytes)
+Building .pio/build/smoochiee-board/firmware.bin with action:
+  $ERASETOOL --chip esp32s3 elf2image --flash-mode ${__get_board_flash_mode(__env__)} --flash-freq ${__get_board_f_image(__env__)} --flash-size 16MB --elf-sha256-offset 0xb0 -o "$TARGET" "$SOURCES"
+Building .pio/build/smoochiee-board/firmware.bin
+esptool v5.3.0
+Creating ESP32-S3 image...
+Merged 4 ELF sections.
+Successfully created ESP32-S3 image.
+Creating binary "firmware.factory.bin" with:
+    Offset   | File
+ -  0x0000   | bootloader.bin
+ -  0x8000   | partitions.bin
+ -  0xe000   | boot_app0.bin
+ -  0x10000  | firmware.bin
+Successfully created combined binary image.
+_merge_bins_callback([".pio/build/smoochiee-board/firmware.bin"], [".pio/build/smoochiee-board/firmware.elf"])
+[merge_bin] Merging binaries:
+  "/home/runner/.platformio/penv/bin/python" -m platformio pkg exec -p "tool-esptoolpy" -- esptool.py --chip esp32s3 merge-bin --output "/home/runner/work/Bruce_firmware/Bruce_firmware/Bruce-smoochiee-board.bin" 0x0 "/home/runner/work/Bruce_firmware/Bruce_firmware/.pio/build/smoochiee-board/bootloader.bin" 0x8000 "/home/runner/work/Bruce_firmware/Bruce_firmware/.pio/build/smoochiee-board/partitions.bin" 0x10000 "/home/runner/work/Bruce_firmware/Bruce_firmware/.pio/build/smoochiee-board/firmware.bin"
+"/home/runner/.platformio/penv/bin/python" -m platformio pkg exec -p "tool-esptoolpy" -- esptool.py --chip esp32s3 merge-bin --output "/home/runner/work/Bruce_firmware/Bruce_firmware/Bruce-smoochiee-board.bin" 0x0 "/home/runner/work/Bruce_firmware/Bruce_firmware/.pio/build/smoochiee-board/bootloader.bin" 0x8000 "/home/runner/work/Bruce_firmware/Bruce_firmware/.pio/build/smoochiee-board/partitions.bin" 0x10000 "/home/runner/work/Bruce_firmware/Bruce_firmware/.pio/build/smoochiee-board/firmware.bin"
+Using tool-esptoolpy@5.3.0 package
+Warning: DEPRECATED: 'esptool.py' is deprecated. Please use 'esptool' instead. The '.py' suffix will be removed in a future major release.
+esptool v5.3.0
+Wrote 0x43f070 bytes to file '/home/runner/work/Bruce_firmware/Bruce_firmware/Bruce-smoochiee-board.bin', ready to flash to offset 0x0.
+[merge_bin] Success -> /home/runner/work/Bruce_firmware/Bruce_firmware/Bruce-smoochiee-board.bin (4452464 bytes)
+======================== [SUCCESS] Took 172.10 seconds ========================
+
+Environment      Status    Duration
+---------------  --------  ------------
+smoochiee-board  SUCCESS   00:02:52.098
+========================= 1 succeeded in 00:02:52.098 =========================
