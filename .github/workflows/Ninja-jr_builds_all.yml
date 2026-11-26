@@ -207,6 +207,7 @@ jobs:
       - name: Upload full build log
         uses: actions/upload-artifact@v4
         if: always()
+        timeout-minutes: 5
         with:
           name: full-log-${{ matrix.board.env }}
           path: /tmp/full/${{ matrix.board.env }}.log
@@ -216,6 +217,7 @@ jobs:
       - name: Upload issues log
         uses: actions/upload-artifact@v4
         if: always()
+        timeout-minutes: 5
         with:
           name: issues-log-${{ matrix.board.env }}
           path: /tmp/issues/${{ matrix.board.env }}.log
@@ -231,11 +233,12 @@ jobs:
       - name: Upload Artifacts
         uses: actions/upload-artifact@v4
         if: always()
+        timeout-minutes: 5
         with:
           name: Bruce-${{ matrix.board.env }}-${{ steps.version.outputs.resolved }}
           path: Bruce-*.*
-          retention-days: 5
-          if-no-files-found: ignore
+          retention-days: 30
+          if-no-files-found: error
 
   collect_logs:
     name: Collect Build Logs
@@ -247,6 +250,7 @@ jobs:
     steps:
       - name: Download full logs
         uses: actions/download-artifact@v4
+        timeout-minutes: 10
         with:
           pattern: 'full-log-*'
           path: /tmp/logs/full
@@ -254,6 +258,7 @@ jobs:
 
       - name: Download issues logs
         uses: actions/download-artifact@v4
+        timeout-minutes: 10
         with:
           pattern: 'issues-log-*'
           path: /tmp/logs/issues
@@ -323,16 +328,25 @@ jobs:
           else
             BRANCH_NAME="${{ github.ref_name }}"
           fi
+          REMOTE_URL="https://x-access-token:${PAT}@github.com/${{ github.repository }}.git"
           git add logs/
           if ! git diff --cached --quiet; then
             git commit -m "chore: update build logs for ${BRANCH_NAME} [skip ci]"
-            git push https://x-access-token:${PAT}@github.com/${{ github.repository }}.git HEAD:logs
+            for attempt in 1 2 3 4 5; do
+              if git push "${REMOTE_URL}" HEAD:logs; then
+                break
+              fi
+              echo "Push attempt ${attempt} failed, rebasing and retrying..."
+              git fetch "${REMOTE_URL}" logs
+              git rebase FETCH_HEAD
+              sleep $((attempt * 2))
+            done
           else
             echo "No changes to commit"
           fi
 
       - name: Delete log artifacts
-        if: always()
+        if: success()
         uses: geekyeggo/delete-artifact@v5
         with:
           name: |
@@ -340,12 +354,18 @@ jobs:
             issues-log-*
           failOnError: false
 
+      - name: Clean up temporary log files
+        if: always()
+        run: rm -rf /tmp/logs
+
   post_compile_steps:
     name: Update Releases
     runs-on: ubuntu-latest
     environment: github_release
     needs: compile_sketch
     if: always() && (github.event_name == 'push' || github.event_name == 'workflow_dispatch' || github.ref_type == 'tag')
+    env:
+      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
     steps:
       - name: Download all artifacts
         uses: actions/download-artifact@v4
@@ -404,10 +424,10 @@ jobs:
               }
             }
             core.setOutput('beta', betaId.toString());
-            core.setOutput('last', lastId.toString())
+            core.setOutput('last', lastId.toString());
 
       - name: Delete old betaRelease assets
-        uses: actions/github-script@v6
+        uses: actions/github-script@v7
         with:
           script: |
             const release_id = ${{ steps.get_release.outputs.beta }};
@@ -437,7 +457,7 @@ jobs:
           generate_release_notes: false
 
       - name: Delete old lastRelease assets
-        uses: actions/github-script@v6
+        uses: actions/github-script@v7
         if: github.ref_type == 'tag'
         with:
           script: |
@@ -473,17 +493,22 @@ jobs:
     environment: github_release
     needs: [compile_sketch]
     if: always() && github.ref_type == 'tag'
+    env:
+      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
     steps:
-      - uses: actions/download-artifact@v4
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
         with:
           pattern: 'Bruce-*'
           merge-multiple: true
           path: artifacts
 
       - name: Create Release Ninja-Jr
-        uses: softprops/action-gh-release@v1
+        uses: softprops/action-gh-release@v2
         with:
           token: ${{ secrets.SYNC_PAT }}
           name: Bruce Release Ninja-Jr
           tag_name: ${{ github.ref_name }}
+          files: artifacts/Bruce-*.bin
+          fail_on_unmatched_files: false
           generate_release_notes: true
