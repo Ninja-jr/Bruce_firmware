@@ -251,7 +251,7 @@ bool wifiConnectMenu(wifi_mode_t mode) {
         case WIFI_STA: { // station mode
             int nets;
             if (!radioHasMemForWifi()) {
-                displayError("Low RAM: free BLE/SD first", true);
+                displayError(radioLowRamError("Low RAM: free BLE/SD"), true);
                 return false;
             }
             WiFi.mode(WIFI_MODE_STA);
@@ -431,7 +431,7 @@ bool wifiConnecttoKnownNet(void) {
 
     // No-PSRAM guard: refuse before the scan brings Wi-Fi up in low memory.
     if (!radioHasMemForWifi()) {
-        displayError("Low RAM: free BLE/SD first", true);
+        displayError(radioLowRamError("Low RAM: free BLE/SD"), true);
         return false;
     }
 
